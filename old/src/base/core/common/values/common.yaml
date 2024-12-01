@@ -9,7 +9,7 @@ variables:
       platforms:
       - linux/amd64
       - linux/arm64
-      push: "true"
+      push: true
     registries:
     - address: "" # eg. ghcr.io, docker.io, host:port
       username: ""

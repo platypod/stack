@@ -4,8 +4,9 @@ description: Kubernetes-based project packaging numerous miscellaneous services 
 runtime:
   name: yaml
   options:
-    compiler: "sh ./bin/merge_yaml.sh"
+    compiler: "sh ./bin/merge_yaml.sh --env $(pulumi)"
 
 encryptionsalt:
 variables:
+  stack-name: ${pulumi.stack}
 resources:

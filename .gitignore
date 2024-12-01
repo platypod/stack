@@ -1,2 +1,1 @@
-src/stacks/*/values.yaml
-Pulumi.*.yaml
+out
