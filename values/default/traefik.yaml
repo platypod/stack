@@ -1,0 +1,27 @@
+traefik:
+  domain: example.com
+  host: ${k8s.names.urls.prefix}${traefik.label}${k8s.names.urls.suffix}.${traefik.domain}
+  image:
+    registry: docker.io/
+    namespace: ""
+    repository: traefik
+    tag: v3.1
+  label: traefik
+  logging:
+    format: common
+    level: DEBUG
+  names:
+    container: ${k8s.names.containers.prefix}${traefik.label}${k8s.names.containers.suffix}
+    ingress: ${k8s.names.ingresses.prefix}${traefik.label}${k8s.names.ingresses.suffix}
+    pod: ${k8s.names.pods.prefix}${traefik.label}${k8s.names.pods.suffix}
+    role: ${k8s.names.roles.prefix}${traefik.label}${k8s.names.roles.suffix}
+    roleBinding: ${k8s.names.role-bindings.prefix}${traefik.label}${k8s.names.role-bindings.suffix}
+    service: ${k8s.names.services.prefix}${traefik.label}${k8s.names.services.suffix}
+    serviceAccount: ${k8s.names.service-accounts.prefix}${traefik.label}${k8s.names.service-accounts.suffix}
+  ports:
+    https:
+      name: https
+      port: 443
+      targetPort: 443
+  replicasNb: 1
+  tlsResolverName: letsencrypt

@@ -1,0 +1,6 @@
+acme:
+  email: whoever@mail.com
+  endpoint: https://acme-v02.api.letsencrypt.org/directory
+
+traefik:
+  domain: whatever.com

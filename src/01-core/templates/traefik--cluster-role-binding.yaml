@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+
+metadata:
+  name: {{ .Values.traefik.names.roleBinding }}
+  namespace: {{ .Values.namespaces.core }}
+
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.traefik.names.role }}
+
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.traefik.names.serviceAccount }}
+    namespace: {{ .Values.namespaces.core }}

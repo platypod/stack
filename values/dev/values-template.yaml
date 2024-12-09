@@ -1,0 +1,10 @@
+acme:
+  email: whoever@mail.com
+
+k8s:
+  names:
+    urls:
+      suffix: .${project.env}
+
+traefik:
+  domain: whatever.com

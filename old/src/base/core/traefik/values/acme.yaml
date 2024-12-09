@@ -1,5 +1,0 @@
-variables:
-  acme:
-    email: acme@mail.com
-    endpoint: https://acme-staging-v02.api.letsencrypt.org/directory
-    storage: acme.json

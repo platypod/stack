@@ -1,0 +1,3 @@
+namespaces:
+  core: ${k8s.names.namespaces.prefix}core${k8s.names.namespaces.suffix}
+  media: ${k8s.names.namespaces.prefix}media${k8s.names.namespaces.suffix}

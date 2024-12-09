@@ -1,0 +1,42 @@
+k8s:
+  names:
+    configMaps:
+      prefix: ""
+      suffix: "--config-map"
+    containers:
+      prefix: ""
+      suffix: "--container"
+    ingresses:
+      prefix: ""
+      suffix: "--ingress"
+    initContainers:
+      prefix: ""
+      suffix: "--init-container"
+    namespaces:
+      prefix: "${project.env}--${project.name}--"
+      suffix: "--namespace"
+    pods:
+      prefix: ""
+      suffix: "--pod"
+    roles:
+      prefix: ""
+      suffix: "--role"
+    roleBindings:
+      prefix: ""
+      suffix: "--role-binding"
+    services:
+      prefix: ""
+      suffix: "--service"
+    serviceAccounts:
+      prefix: ""
+      suffix: "--service-account"
+    urls:
+      prefix: ""
+      suffix: ""
+    volumes:
+      configMap:
+        prefix: ""
+        suffix: "--config-map-volume"
+      emptyDir:
+        prefix: ""
+        suffix: "--empty-dir-volume"

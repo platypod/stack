@@ -1,0 +1,7 @@
+jellyfin:
+  host: host.docker.internal
+  port: 8096
+  name: jellyfin
+  credentials:
+    username: guest
+    password: ""
