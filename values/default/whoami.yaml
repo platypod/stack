@@ -1,0 +1,8 @@
+whoami:
+  image: traefik/whoami
+  name: whoami
+  ports:
+    http:
+      name: whoami-http
+      targetPort: 80
+  replicasNb: 2

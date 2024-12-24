@@ -3,7 +3,6 @@ kind: ClusterRole
 
 metadata:
   name: {{ .Values.traefik.names.role }}
-  namespace: {{ .Values.namespaces.core }}
 
 rules:
   - apiGroups:

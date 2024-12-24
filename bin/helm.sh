@@ -6,7 +6,68 @@
 
 
 helm_env() {
-  local env='dev'
+  local cmd="$1"; shift
+  local env="$1"; shift
+  local name="$1"; shift
+  local src="$1"; shift
+
+  echo ">>> merge yaml files"
+  merge_yaml --env "${env}"
+
+  echo ">>> replace variables in yaml file"
+  replace_variables_in_yaml "${PLATYPOD__PATH__OUT_DIR}/values.${env}.yaml"
+
+  local call="helm ${cmd}"
+  call="${call} -f ${PLATYPOD__PATH__OUT_DIR}/values.${env}.yaml"
+  call="${call} ${name} ${src}"
+  call="${call} --namespace ${name} --create-namespace"
+  call="${call} $@"
+  echo ">>> ${call}"
+  eval "${call}"
+}
+
+
+install_or_upgrade_one() {
+  local env="${PLATYPOD__HELM__DEFAULT_ENV}"
+  local end_array="3ND-4RR4Y"
+  local src=""
+
+  set -- "$@" "${end_array}"
+
+  while [ "$1" != "${end_array}" ]; do
+    case "$1" in
+      "--env") env="$2"; shift;;
+      "--src") src="$2"; shift;;
+      *) set -- "$@" "$1" ;;
+    esac
+    shift
+  done
+  shift
+
+  if [ $# -eq 0 ]; then
+    set -- "${PLATYPOD__HELM__DEFAULT_ARGS}" "$@"
+  fi
+
+  local name="${env}--platypod-${src:7}"
+
+  echo "apiVersion: ${PLATYPOD__HELM__CHART__API_VERSION}" > "${src}/Chart.yaml"
+  echo "name: ${name}"                                    >> "${src}/Chart.yaml"
+  echo "version: ${PLATYPOD__HELM__CHART__VERSION}"       >> "${src}/Chart.yaml"
+  echo "appVersion: ${PLATYPOD__HELM__CHART__VERSION}"    >> "${src}/Chart.yaml"
+
+  local cmd="install"
+  if helm list --all-namespaces --short | grep -E "^${name}\$"; then
+    cmd="upgrade"
+  fi
+
+  helm_env "${cmd}" "${env}" "${name}" "${src}" "$@"
+
+  rm "${src}/Chart.yaml"
+}
+
+
+install_or_upgrade() {
+  local env="${PLATYPOD__HELM__DEFAULT_ENV}"
   local end_array="3ND-4RR4Y"
 
   set -- "$@" "${end_array}"
@@ -20,56 +81,9 @@ helm_env() {
   done
   shift
 
-  local cmd="$1"
-  shift
-
-  echo ">>> merge yaml files"
-  merge_yaml --env "${env}"
-
-  echo ">>> replace variables in yaml file"
-  replace_variables_in_yaml "${PLATYPOD__PATH__OUT_DIR}/values.${env}.yaml"
-
-  echo ">>> helm ${cmd} -f ${PLATYPOD__PATH__OUT_DIR}/values.${env}.yaml $@"
-  eval "helm ${cmd} -f ${PLATYPOD__PATH__OUT_DIR}/values.${env}.yaml $@"
-}
-
-
-install_or_upgrade_one() {
-  workdir="$1"
-  shift
-
-  if [ $# -eq 0 ]; then
-    set -- "${PLATYPOD__HELM__DEFAULT_ARGS}" "$@"
-  fi
-
-  if [ ! -f "${workdir}/Chart.yaml" ]; then return; fi
-  name="$(yq e ".name" "${workdir}/Chart.yaml")"
-
-  if helm list | awk '{if ($1 ~ /'"${name}"'/) {exit 1} else {next}}'; then
-    helm_env install "${name}" "${workdir}" "$@"
-  else
-    helm_env upgrade "${name}" "${workdir}" "$@"
-  fi
-}
-
-
-install_or_upgrade() {
-  find "${PLATYPOD__PATH__SRC_DIR}" -type d -depth 1|
+  find "${PLATYPOD__PATH__SRC_DIR}" -type d -depth 1 | sort |
     while read -r module_path; do
-      install_or_upgrade_one "${module_path}" "$@"
+      install_or_upgrade_one --src "${module_path}" --env "${env}" "$@"
     done
-  clean
-}
-
-
-dry_run_one() {
-  workdir="$1"
-  if [ ! -f "${workdir}/Chart.yaml" ]; then return; fi
-  name="$(yq e ".name" "${workdir}/Chart.yaml")"
-
-}
-
-
-dry_run() {
-  helm_env
+  #clean
 }

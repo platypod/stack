@@ -1,2 +1,3 @@
 out
 values/*/values.yaml
+bin/kubectl-config.sh

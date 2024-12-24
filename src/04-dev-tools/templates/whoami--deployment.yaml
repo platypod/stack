@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.whoami.name }}{{ .Values.k8s.names.services.suffix }}
+  labels:
+    app: {{ .Values.k8s.names.services.prefix }}{{ .Values.whoami.name }}{{ .Values.k8s.names.services.suffix }}
+
+spec:
+  replicas: {{ .Values.whoami.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ .Values.k8s.names.services.prefix }}{{ .Values.whoami.name }}{{ .Values.k8s.names.services.suffix }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.k8s.names.services.prefix }}{{ .Values.whoami.name }}{{ .Values.k8s.names.services.suffix }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.whoami.name }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.whoami.image }}
+        ports:
+        - name: {{ .Values.whoami.ports.http.name }}
+          containerPort: {{ .Values.whoami.ports.http.targetPort }}

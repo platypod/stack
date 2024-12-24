@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  namespace: {{ .Values.namespaces.core }}
   name: {{ .Values.traefik.names.pod }}
   labels:
     app: {{ .Values.traefik.names.pod }}
@@ -19,23 +18,23 @@ spec:
     spec:
       serviceAccountName: {{ .Values.traefik.names.serviceAccount }}
       containers:
-        - name: {{ .Values.traefik.names.container }}
-          image: {{ .Values.traefik.image.registry }}{{ .Values.traefik.image.namespace }}{{ .Values.traefik.image.repository }}:{{ .Values.traefik.image.tag }}
-          args:
-            # provide: file
-            - --providers.file.directory=/file-providers
-            # provider: kubernetes
-            - --providers.kubernetesingress=true
-            - --providers.kubernetesingress.allowEmptyServices=true
-            - --providers.kubernetesingress.namespaces={{ .Values.namespaces.core }}
-            # logging
-            - --log.level={{ .Values.traefik.logging.level }}
-            - --log.format={{ .Values.traefik.logging.format }}
-            - --accesslog
-            # letsencrypt resolver
-            - --certificatesresolvers.{{ .Values.traefik.tlsResolverName }}.acme.tlschallenge=true
-            - --certificatesresolvers.{{ .Values.traefik.tlsResolverName }}.acme.email={{ .Values.acme.email }}
-            - --certificatesresolvers.{{ .Values.traefik.tlsResolverName }}.acme.storage={{ .Values.acme.storage }}
-            - --certificatesresolvers.{{ .Values.traefik.tlsResolverName }}.acme.caserver={{ .Values.acme.endpoint }}
-            # entrypoints
-            - --entryPoints.{{ .Values.traefik.ports.https.name }}.address=:{{ .Values.traefik.ports.https.targetPort }}
+      - name: {{ .Values.traefik.names.container }}
+        image: {{ .Values.traefik.image.registry }}{{ .Values.traefik.image.namespace }}{{ .Values.traefik.image.repository }}:{{ .Values.traefik.image.tag }}
+        args:
+          # provider: file
+          - --providers.file.directory=/file-providers
+          # provider: kubernetes
+          - --providers.kubernetesingress=true
+          - --providers.kubernetesingress.allowEmptyServices=true
+          - --providers.kubernetesingress.labelselector=chartVersion={{ .Chart.Version }},env={{ .Values.project.env }}
+          # logging
+          - --log.level={{ .Values.traefik.logging.level }}
+          - --log.format={{ .Values.traefik.logging.format }}
+          - --accesslog
+          # letsencrypt resolver
+          - --certificatesresolvers.{{ .Values.traefik.tlsResolverName }}.acme.tlschallenge=true
+          - --certificatesresolvers.{{ .Values.traefik.tlsResolverName }}.acme.email={{ .Values.acme.email }}
+          - --certificatesresolvers.{{ .Values.traefik.tlsResolverName }}.acme.storage={{ .Values.acme.storage }}
+          - --certificatesresolvers.{{ .Values.traefik.tlsResolverName }}.acme.caserver={{ .Values.acme.endpoint }}
+          # entrypoints
+          - --entryPoints.{{ .Values.traefik.ports.https.name }}.address=:{{ .Values.traefik.ports.https.targetPort }}

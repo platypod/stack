@@ -1,4 +1,0 @@
-apiVersion: v3
-name: platypod-core
-description: Base module, setting up the reverse-proxy. Required before anything else.
-version: 0.0.1

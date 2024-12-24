@@ -6,5 +6,8 @@ k8s:
     urls:
       suffix: .${project.env}
 
+project:
+  env: dev
+
 traefik:
   domain: whatever.com

@@ -3,7 +3,6 @@ kind: ClusterRoleBinding
 
 metadata:
   name: {{ .Values.traefik.names.roleBinding }}
-  namespace: {{ .Values.namespaces.core }}
 
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -13,4 +12,4 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: {{ .Values.traefik.names.serviceAccount }}
-    namespace: {{ .Values.namespaces.core }}
+    namespace: {{ .Release.Namespace }}
