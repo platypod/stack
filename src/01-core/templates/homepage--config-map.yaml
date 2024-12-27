@@ -10,21 +10,23 @@ data:
   custom.css: ""
   custom.js: ""
   bookmarks.yaml: |
-    - Developer:
-        - Github:
-            - abbr: GH
-              href: https://github.com/
+    - Dev:
+      - Github:
+        - abbr: GH
+          href: https://github.com/
     - Social:
-        - Reddit:
-            - abbr: RE
-              href: https://reddit.com/
+      - Reddit:
+        - abbr: RE
+          href: https://reddit.com/
     - Entertainment:
-        - Invidious:
-            - abbr: In
-              href: https://api.invidious.io/
+      - Invidious:
+        - abbr: In
+          href: https://api.invidious.io/
   services.yaml: |
     - Media:
       - Jellyfin:
+          abbr: JE
+          href: https://{{ .Values.jellyfin.host }}
           widget:
             type: jellyfin
             url: https://{{ .Values.jellyfin.host }}
@@ -35,17 +37,29 @@ data:
             showEpisodeNumber: true # optional, defaults to false
             expandOneStreamToTwoRows: false # optional, defaults to true
     - Dev:
+      - Traefik:
+          abbr: TR
+          href: https://{{ .Values.traefik.host }}/dashboard/
+          widget:
+            type: traefik
+            url: https://{{ .Values.traefik.host }}
       - Who am I?:
-          href: {{ .Values.whoami.host }}
+          href: https://{{ .Values.whoami.host }}
           description: TODO
   widgets.yaml: |
+    # https://gethomepage.dev/widgets/info/resources/
     - resources:
         backend: resources
         expanded: true
+        units: metric
         cpu: true
         memory: true
+        uptime: true
         network: default
+    # https://gethomepage.dev/widgets/info/search/
     - search:
-        provider: duckduckgo
+        provider: [google, duckduckgo, brave]
+        focus: true
+        showSearchSuggestions: true
         target: _blank
   docker.yaml: ""

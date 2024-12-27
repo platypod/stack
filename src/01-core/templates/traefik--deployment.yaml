@@ -27,6 +27,9 @@ spec:
           - --providers.kubernetesingress=true
           - --providers.kubernetesingress.allowEmptyServices=true
           - --providers.kubernetesingress.labelselector=chartVersion={{ .Chart.Version }},env={{ .Values.project.env }}
+          - --providers.kubernetesingress.namespaces={{ .Values.k8s.namespace }}
+          # dashboard
+          - --api.insecure=true
           # logging
           - --log.level={{ .Values.traefik.logging.level }}
           - --log.format={{ .Values.traefik.logging.format }}
@@ -37,6 +40,7 @@ spec:
           - --certificatesresolvers.{{ .Values.traefik.tlsResolverName }}.acme.storage={{ .Values.acme.storage }}
           - --certificatesresolvers.{{ .Values.traefik.tlsResolverName }}.acme.caserver={{ .Values.acme.endpoint }}
           # entrypoints
+          - --entryPoints.{{ .Values.traefik.ports.dashboard.name }}.address=:{{ .Values.traefik.ports.dashboard.targetPort }}
           - --entryPoints.{{ .Values.traefik.ports.https.name }}.address=:{{ .Values.traefik.ports.https.targetPort }}
         volumeMounts:
         - mountPath: /file-providers/jellyfin-local-proxy.yaml

@@ -17,10 +17,14 @@ helm_env() {
   echo ">>> replace variables in yaml file"
   replace_variables_in_yaml "${PLATYPOD__PATH__OUT_DIR}/values.${env}.yaml"
 
+  local namespace="$(
+    yq e ".k8s.namespace" ${PLATYPOD__PATH__OUT_DIR}/values.${env}.yaml
+  )"
+
   local call="helm ${cmd}"
   call="${call} -f ${PLATYPOD__PATH__OUT_DIR}/values.${env}.yaml"
   call="${call} ${name} ${src}"
-  call="${call} --namespace ${name} --create-namespace"
+  call="${call} --namespace ${namespace} --create-namespace"
   call="${call} $@"
   echo ">>> ${call}"
   eval "${call}"

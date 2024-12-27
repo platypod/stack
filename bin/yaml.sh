@@ -29,7 +29,7 @@ merge_yaml() {
 extract_variables_to_replace_from_yaml() {
   rm -rf "${PLATYPOD__PATH__OUT_DIR}/${PLATYPOD__PATH__VALUES_TO_SUBSTITUTE}"
   for key in $(grep -o '\${[^}]*\}' "$1" | sort | uniq | tr -d '${}'); do
-    value=$(yq e ".${key}" "$1")
+    value="$(yq e ".${key}" "$1")"
     echo "$key=$value" >> "${PLATYPOD__PATH__OUT_DIR}/${PLATYPOD__PATH__VALUES_TO_SUBSTITUTE}"
   done
 }
