@@ -1,0 +1,22 @@
+homepage:
+  label: homepage
+  image:
+    registry: ghcr.io/
+    namespace: gethomepage/
+    repository: homepage
+    tag: v0.10.4
+  names:
+    configMap: ${k8s.names.volumes.configMaps.prefix}${homepage.label}${k8s.names.volumes.configMaps.suffix}
+    container: ${k8s.names.containers.prefix}${homepage.label}${k8s.names.containers.suffix}
+    emptyDir: ${k8s.names.volumes.emptyDirs.prefix}${homepage.label}${k8s.names.volumes.emptyDirs.suffix}
+    ingress: ${k8s.names.ingresses.prefix}${homepage.label}${k8s.names.ingresses.suffix}
+    pod: ${k8s.names.pods.prefix}${homepage.label}${k8s.names.pods.suffix}
+    role: ${k8s.names.roles.prefix}${homepage.label}${k8s.names.roles.suffix}
+    roleBinding: ${k8s.names.roleBindings.prefix}${homepage.label}${k8s.names.roleBindings.suffix}
+    secret: ${k8s.names.secrets.prefix}${homepage.label}${k8s.names.secrets.suffix}
+    service: ${k8s.names.services.prefix}${homepage.label}${k8s.names.services.suffix}
+    serviceAccount: ${k8s.names.serviceAccounts.prefix}${homepage.label}${k8s.names.serviceAccounts.suffix}
+  ports:
+    http:
+      name: homepage-http
+      targetPort: 3000

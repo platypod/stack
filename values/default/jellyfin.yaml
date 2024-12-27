@@ -1,7 +1,11 @@
 jellyfin:
-  host: host.docker.internal
-  port: 8096
-  name: jellyfin
+  host: ${k8s.names.urls.prefix}${jellyfin.label}${k8s.names.urls.suffix}.${traefik.domain}
   credentials:
     username: guest
     password: ""
+  label: jellyfin-local
+  names:
+    service: ${k8s.names.services.prefix}${jellyfin.label}${k8s.names.services.suffix}
+  proxy:
+    host: host.docker.internal
+    port: 8096

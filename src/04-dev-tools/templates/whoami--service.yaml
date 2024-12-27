@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 
 metadata:
-  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.whoami.name }}{{ .Values.k8s.names.services.suffix }}
+  name: {{ .Values.whoami.names.service }}
 
 spec:
   ports:
@@ -10,4 +10,4 @@ spec:
     name: {{ .Values.whoami.ports.http.name }}
     port: {{ .Values.whoami.ports.http.targetPort }}
   selector:
-    app: {{ .Values.k8s.names.services.prefix }}{{ .Values.whoami.name }}{{ .Values.k8s.names.services.suffix }}
+    app: {{ .Values.whoami.names.pod }}

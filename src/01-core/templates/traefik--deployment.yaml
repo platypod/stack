@@ -38,3 +38,11 @@ spec:
           - --certificatesresolvers.{{ .Values.traefik.tlsResolverName }}.acme.caserver={{ .Values.acme.endpoint }}
           # entrypoints
           - --entryPoints.{{ .Values.traefik.ports.https.name }}.address=:{{ .Values.traefik.ports.https.targetPort }}
+        volumeMounts:
+        - mountPath: /file-providers/jellyfin-local-proxy.yaml
+          name: {{ .Values.traefik.names.configMap }}
+          subPath: jellyfin-file-provider.yaml
+      volumes:
+      - name: {{ .Values.traefik.names.configMap }}
+        configMap:
+          name: {{ .Values.traefik.names.configMap }}

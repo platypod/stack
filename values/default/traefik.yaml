@@ -9,8 +9,9 @@ traefik:
   label: traefik
   logging:
     format: common
-    level: DEBUG
+    level: ERROR
   names:
+    configMap: ${k8s.names.volumes.configMaps.prefix}${traefik.label}${k8s.names.volumes.configMaps.suffix}
     container: ${k8s.names.containers.prefix}${traefik.label}${k8s.names.containers.suffix}
     ingress: ${k8s.names.ingresses.prefix}${traefik.label}${k8s.names.ingresses.suffix}
     pod: ${k8s.names.pods.prefix}${traefik.label}${k8s.names.pods.suffix}

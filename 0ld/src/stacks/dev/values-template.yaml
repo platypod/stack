@@ -1,8 +1,0 @@
-variables:
-  acme:
-    email: whoever@mail.com
-  domain: whatever.com
-  k8s:
-    namespace: dev
-  urls:
-    suffix: -dev

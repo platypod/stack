@@ -2,24 +2,29 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 
 metadata:
-  name: {{ .Values.whoami.names.ingress }}
+  name: {{ .Values.homepage.names.ingress }}
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: {{ .Values.traefik.ports.https.name }}
     traefik.ingress.kubernetes.io/router.tls: "true"
     traefik.ingress.kubernetes.io/router.tls.certresolver: {{ .Values.traefik.tlsResolverName }}
+    gethomepage.dev/description: Dynamically Detected Homepage
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/group: Cluster Management
+    gethomepage.dev/icon: homepage.png
+    gethomepage.dev/name: Homepage
   labels:
     chartVersion: {{ .Chart.Version }}
     env: {{ .Values.project.env }}
 
 spec:
   rules:
-  - host: {{ .Values.whoami.host }}
+  - host: {{ .Values.k8s.names.urls.prefix }}{{ .Values.homepage.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: {{ .Values.whoami.names.service }}
+            name: {{ .Values.homepage.names.service }}
             port:
-              number: {{ .Values.whoami.ports.http.targetPort }}
+              number: {{ .Values.homepage.ports.http.targetPort }}

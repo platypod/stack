@@ -1,4 +1,0 @@
-variables:
-  image-builder:
-    name: image-builder
-    tag: 0.1.0

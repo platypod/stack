@@ -2,22 +2,22 @@ apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.whoami.name }}{{ .Values.k8s.names.services.suffix }}
+  name: {{ .Values.whoami.names.pod }}
   labels:
-    app: {{ .Values.k8s.names.services.prefix }}{{ .Values.whoami.name }}{{ .Values.k8s.names.services.suffix }}
+    app: {{ .Values.whoami.names.pod }}
 
 spec:
   replicas: {{ .Values.whoami.replicasNb }}
   selector:
     matchLabels:
-      app: {{ .Values.k8s.names.services.prefix }}{{ .Values.whoami.name }}{{ .Values.k8s.names.services.suffix }}
+      app: {{ .Values.whoami.names.pod }}
   template:
     metadata:
       labels:
-        app: {{ .Values.k8s.names.services.prefix }}{{ .Values.whoami.name }}{{ .Values.k8s.names.services.suffix }}
+        app: {{ .Values.whoami.names.pod }}
     spec:
       containers:
-      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.whoami.name }}{{ .Values.k8s.names.containers.suffix }}
+      - name: {{ .Values.whoami.names.container }}
         image: {{ .Values.whoami.image }}
         ports:
         - name: {{ .Values.whoami.ports.http.name }}

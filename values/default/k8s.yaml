@@ -24,6 +24,9 @@ k8s:
     roleBindings:
       prefix: ""
       suffix: "--role-binding"
+    secrets:
+      prefix: ""
+      suffix: "--secret"
     services:
       prefix: ""
       suffix: "--service"
@@ -34,9 +37,9 @@ k8s:
       prefix: ""
       suffix: ""
     volumes:
-      configMap:
+      configMaps:
         prefix: ""
         suffix: "--config-map-volume"
-      emptyDir:
+      emptyDirs:
         prefix: ""
         suffix: "--empty-dir-volume"

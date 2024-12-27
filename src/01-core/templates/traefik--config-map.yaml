@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: {{ .Values.traefik.names.configMap }}
+
+data:
+  jellyfin-file-provider.yaml: |
+    http:
+      routers:
+        jellyfin-local:
+          entryPoints:
+          - {{ .Values.traefik.ports.https.name }}
+          tls:
+            certResolver: {{ .Values.traefik.tlsResolverName }}
+          service: jellyfin-local-proxy
+          rule: Host(`{{ .Values.jellyfin.host }}`)
+      services:
+        jellyfin-local-proxy:
+          loadBalancer:
+            passHostHeader: false
+            servers:
+            - url: http://{{ .Values.jellyfin.proxy.host }}:{{ .Values.jellyfin.proxy.port }}

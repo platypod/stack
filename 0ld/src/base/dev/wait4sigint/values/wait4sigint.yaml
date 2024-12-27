@@ -1,6 +1,0 @@
-variables:
-  wait4sigint:
-    image:
-      repository: alpine
-      tag: 3.6
-    name: wait4sigint

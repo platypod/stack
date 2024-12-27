@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ .Values.homepage.names.pod }}
+  labels:
+    app: {{ .Values.homepage.names.pod }}
+
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Values.homepage.names.pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.homepage.names.pod }}
+    spec:
+      automountServiceAccountToken: true
+      containers:
+      - name: {{ .Values.homepage.names.container }}
+        image: {{ .Values.homepage.image.registry }}{{ .Values.homepage.image.namespace }}{{ .Values.homepage.image.repository }}:{{ .Values.homepage.image.tag }}
+        ports:
+        - name: {{ .Values.homepage.ports.http.name }}
+          containerPort: {{ .Values.homepage.ports.http.targetPort }}
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /app/config/custom.js
+          name: {{ .Values.homepage.names.configMap }}
+          subPath: custom.js
+        - mountPath: /app/config/custom.css
+          name: {{ .Values.homepage.names.configMap }}
+          subPath: custom.css
+        - mountPath: /app/config/bookmarks.yaml
+          name: {{ .Values.homepage.names.configMap }}
+          subPath: bookmarks.yaml
+        - mountPath: /app/config/docker.yaml
+          name: {{ .Values.homepage.names.configMap }}
+          subPath: docker.yaml
+        - mountPath: /app/config/kubernetes.yaml
+          name: {{ .Values.homepage.names.configMap }}
+          subPath: kubernetes.yaml
+        - mountPath: /app/config/services.yaml
+          name: {{ .Values.homepage.names.configMap }}
+          subPath: services.yaml
+        - mountPath: /app/config/settings.yaml
+          name: {{ .Values.homepage.names.configMap }}
+          subPath: settings.yaml
+        - mountPath: /app/config/widgets.yaml
+          name: {{ .Values.homepage.names.configMap }}
+          subPath: widgets.yaml
+        - mountPath: /app/config/logs
+          name: {{ .Values.homepage.names.emptyDir }}
+      enableServiceLinks: true
+      serviceAccountName: {{ .Values.homepage.names.serviceAccount }}
+      volumes:
+      - name: {{ .Values.homepage.names.configMap }}
+        configMap:
+          name: {{ .Values.homepage.names.configMap }}
+      - name: {{ .Values.homepage.names.emptyDir }}
+        emptyDir: {}

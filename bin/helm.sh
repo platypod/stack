@@ -48,7 +48,7 @@ install_or_upgrade_one() {
     set -- "${PLATYPOD__HELM__DEFAULT_ARGS}" "$@"
   fi
 
-  local name="${env}--platypod-${src:7}"
+  local name="${env}--platypod--${src:$((${#PLATYPOD__PATH__SRC_DIR} + 4))}"
 
   echo "apiVersion: ${PLATYPOD__HELM__CHART__API_VERSION}" > "${src}/Chart.yaml"
   echo "name: ${name}"                                    >> "${src}/Chart.yaml"
@@ -83,7 +83,9 @@ install_or_upgrade() {
 
   find "${PLATYPOD__PATH__SRC_DIR}" -type d -depth 1 | sort |
     while read -r module_path; do
-      install_or_upgrade_one --src "${module_path}" --env "${env}" "$@"
+      # only process non-empty dirs
+      [ "$(ls -A "./${module_path}")" ] &&
+        install_or_upgrade_one --src "${module_path}" --env "${env}" "$@"
     done
-  #clean
+  clean
 }
