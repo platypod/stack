@@ -36,6 +36,16 @@ data:
             enableUser: true # optional, defaults to false
             showEpisodeNumber: true # optional, defaults to false
             expandOneStreamToTwoRows: false # optional, defaults to true
+      - Prowlarr:
+          abbr: PR
+          href: https://{{ .Values.prowlarr.host }}
+          widget:
+            type: prowlarr
+            url: https://{{ .Values.prowlarr.host }}
+            key: {{ .Values.prowlarr.apiKey }}
+      - FlareSolverr:
+          abbr: FS
+          href: https://{{ .Values.flaresolverr.host }}
     - Dev:
       - Traefik:
           abbr: TR
@@ -45,7 +55,7 @@ data:
             url: https://{{ .Values.traefik.host }}
       - Who am I?:
           href: https://{{ .Values.whoami.host }}
-          description: TODO
+          description: Tiny Go webserver that prints os information and HTTP request to output
   widgets.yaml: |
     # https://gethomepage.dev/widgets/info/resources/
     - resources:

@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+metadata:
+  name: {{ .Values.flaresolverr.names.ingress }}
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: {{ .Values.traefik.ports.https.name }}
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.tls.certresolver: {{ .Values.traefik.tlsResolverName }}
+  labels:
+    chartVersion: {{ .Chart.Version }}
+    env: {{ .Values.project.env }}
+
+spec:
+  rules:
+  - host: {{ .Values.flaresolverr.host }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Values.flaresolverr.names.service }}
+            port:
+              number: {{ .Values.flaresolverr.ports.http.targetPort }}

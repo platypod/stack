@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ .Values.flaresolverr.names.pod }}
+  labels:
+    app: {{ .Values.flaresolverr.names.pod }}
+
+spec:
+  replicas: {{ .Values.flaresolverr.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ .Values.flaresolverr.names.pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.flaresolverr.names.pod }}
+    spec:
+      containers:
+      - name: {{ .Values.flaresolverr.names.container }}
+        image: {{ .Values.flaresolverr.image }}
+        ports:
+        - name: {{ .Values.flaresolverr.ports.http.name }}
+          containerPort: {{ .Values.flaresolverr.ports.http.targetPort }}
+        env:
+        - name: CAPTCHA_SOLVER
+          value: {{ .Values.flaresolverr.captchaSolver }}
+        - name: LOG_LEVEL
+          value: {{ .Values.flaresolverr.log.level }}
+        - name: LOG_HTML
+          value: "{{ .Values.flaresolverr.log.html }}"
+        - name: PROMETHEUS_ENABLED
+          value: "{{ .Values.flaresolverr.prometheus.enabled }}"
+        - name: PROMETHEUS_PORT
+          value: "{{ .Values.flaresolverr.prometheus.port }}"

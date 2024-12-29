@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ .Values.prowlarr.names.pod }}
+  labels:
+    app: {{ .Values.prowlarr.names.pod }}
+
+spec:
+  replicas: {{ .Values.prowlarr.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ .Values.prowlarr.names.pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.prowlarr.names.pod }}
+    spec:
+      containers:
+      - name: {{ .Values.prowlarr.names.container }}
+        image: {{ .Values.prowlarr.image }}
+        ports:
+        - name: {{ .Values.prowlarr.ports.http.name }}
+          containerPort: {{ .Values.prowlarr.ports.http.targetPort }}
+        volumeMounts:
+        - mountPath: /config/config.xml
+          name: {{ .Values.prowlarr.names.configMap }}
+          subPath: config.xml
+      volumes:
+      - name: {{ .Values.prowlarr.names.configMap }}
+        configMap:
+          name: {{ .Values.prowlarr.names.configMap }}

@@ -20,7 +20,7 @@ merge_yaml() {
   done
 
   create_out_dir_if_not_exists
-  merge_yaml_files "values/default/*.y*ml" "values/${env}/*.y*ml" \
+  merge_yaml_files "values/default/*/*.y*ml" "values/${env}/*.y*ml" \
     > "${PLATYPOD__PATH__OUT_DIR}/values.${env}.yaml"
 }
 

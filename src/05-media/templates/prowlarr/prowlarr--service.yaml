@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.prowlarr.names.service }}
+
+spec:
+  ports:
+  - protocol: TCP
+    name: {{ .Values.prowlarr.ports.http.name }}
+    port: {{ .Values.prowlarr.ports.http.targetPort }}
+  selector:
+    app: {{ .Values.prowlarr.names.pod }}
