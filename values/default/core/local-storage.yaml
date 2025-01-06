@@ -1,0 +1,16 @@
+localStorage:
+  persistentVolumes:
+  - name: ${k8s.names.volumes.localStorages.prefix}shared-media${k8s.names.volumes.localStorages.suffix}
+    claim: ${k8s.names.persistentVolumeClaims.prefix}shared-media${k8s.names.persistentVolumeClaims.suffix}
+    path: /path/on/host/machine
+    capacityStorage: 100Gi
+    labels:
+      name: ${k8s.names.volumes.localStorages.prefix}shared-media${k8s.names.volumes.localStorages.suffix}
+    nodeAffinity:
+      required:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: kubernetes.io/hostname
+            operator: In
+            values:
+            - example-node

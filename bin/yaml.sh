@@ -27,10 +27,33 @@ merge_yaml() {
 
 
 extract_variables_to_replace_from_yaml() {
-  rm -rf "${PLATYPOD__PATH__OUT_DIR}/${PLATYPOD__PATH__VALUES_TO_SUBSTITUTE}"
+  local dst="${PLATYPOD__PATH__OUT_DIR}/${PLATYPOD__PATH__VALUES_TO_SUBSTITUTE}"
+  rm -f "${dst}"
+
   for key in $(grep -o '\${[^}]*\}' "$1" | sort | uniq | tr -d '${}'); do
     value="$(yq e ".${key}" "$1")"
-    echo "$key=$value" >> "${PLATYPOD__PATH__OUT_DIR}/${PLATYPOD__PATH__VALUES_TO_SUBSTITUTE}"
+    [ "${value}" == "null" ] && value="" && echo ">>> $key: $value"
+    echo "$key=$value" >> "${dst}"
+  done
+
+  local stop_looping
+  while [ -z "${stop_looping}" ]; do
+    stop_looping="true"
+    local sed_cmd=""
+    sed_cmd="$(for key in $(
+        grep -o '\${[^}]*\}' "${dst}" | sort | uniq | tr -d '${}'
+    ); do
+      unset stop_looping
+      value="$(yq e ".${key}" "$1")"
+      key="$(echo "${key}" | sed -r 's/([\$\.\*\/\[\{\}\^\\])/\\\1/g')"
+      value="$(echo "${value}" | sed -r 's/([\$\.\*\/\[\{\}\^\\])/\\\1/g')"
+      [ $(echo "${value}" | grep --silent '\${[^}]*\}') ] ||
+        echo "s/\\\${${key}}/${value}/g"
+    done | tr "\n" ";")"
+
+    rm -f "${dst}.ongoing-substitution"
+    sed "${sed_cmd}" < "${dst}" > "${dst}.ongoing-substitution" &&
+      mv "${dst}.ongoing-substitution" "${dst}"
   done
 }
 
@@ -38,21 +61,22 @@ extract_variables_to_replace_from_yaml() {
 build_replace_command() {
   cat "${PLATYPOD__PATH__OUT_DIR}/${PLATYPOD__PATH__VALUES_TO_SUBSTITUTE}" |
     while read -r var; do
-      key="$(echo "${var%%=*}" | sed -r 's/([\$\.\*\/\[\\\{\}^])/\\\1/g')"
-      value="$(echo "${var#*=}" | sed -r 's/([\$\.\*\/\[\\\{\}^])/\\\1/g')"
+      key="$(echo "${var%%=*}" | sed -r 's/([\$\.\*\/\[\{\}\^\\])/\\\1/g')"
+      value="$(echo "${var#*=}" | sed -r 's/([\$\.\*\/\[\{\}\^\\])/\\\1/g')"
       echo "s/\\\${${key}}/${value}/g"
     done | tr "\n" ";"
 }
 
 
 replace_variables_in_file() {
-  local sed_args="$(build_replace_command)"
-  sed "${sed_args}" < "$1" > "$1.tmp" && mv "$1.tmp" "$1"
-  rm "${PLATYPOD__PATH__OUT_DIR}/${PLATYPOD__PATH__VALUES_TO_SUBSTITUTE}"
+  local sed_args="$1"
+  local file="$2"
+  sed "${sed_args}" < "${file}" > "${file}.ongoing-substitution" &&
+    mv "${file}.ongoing-substitution" "${file}"
 }
 
 
 replace_variables_in_yaml() {
   extract_variables_to_replace_from_yaml "$1"
-  replace_variables_in_file "$1"
+  replace_variables_in_file "$(build_replace_command)" "$1"
 }

@@ -91,5 +91,5 @@ install_or_upgrade() {
       [ "$(ls -A "./${module_path}")" ] &&
         install_or_upgrade_one --src "${module_path}" --env "${env}" "$@"
     done
-  #clean
+  clean
 }

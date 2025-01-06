@@ -1,0 +1,23 @@
+{{- range $pv := .Values.localStorage.persistentVolumes }}
+apiVersion: v1
+kind: PersistentVolume
+
+metadata:
+  name: {{ $pv.name }}
+  labels:
+    {{- toYaml $pv.labels | nindent 4}}
+spec:
+  capacity:
+    storage: {{ $pv.capacityStorage }}
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: {{ $pv.path }}
+  nodeAffinity:
+    {{- toYaml $pv.nodeAffinity | nindent 4}}
+
+---
+{{ end }}

@@ -1,0 +1,19 @@
+{{- range $pv := .Values.localStorage.persistentVolumes }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+
+metadata:
+  name: {{ $pv.claim }}
+spec:
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: local-storage
+  resources:
+    requests:
+      storage: {{ $pv.capacityStorage }}
+  selector:
+    matchLabels:
+      {{- toYaml $pv.labels | nindent 4}}
+---
+{{ end }}
