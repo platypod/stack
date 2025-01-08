@@ -43,6 +43,13 @@ data:
             type: prowlarr
             url: https://{{ .Values.prowlarr.host }}
             key: {{ .Values.prowlarr.apiKey }}
+      - Radarr:
+          abbr: RR
+          href: https://{{ .Values.radarr.host }}
+          widget:
+            type: radarr
+            url: https://{{ .Values.radarr.host }}
+            key: {{ .Values.radarr.apiKey }}
       - FlareSolverr:
           abbr: FS
           href: https://{{ .Values.flaresolverr.host }}

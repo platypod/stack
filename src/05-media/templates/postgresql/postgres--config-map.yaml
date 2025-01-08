@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: {{ .Values.media.database.names.configMap }}
+
+data:
+  init-db.sh: |
+    #!/bin/bash
+    set -e
+
+    psql \
+        -v ON_ERROR_STOP=1 \
+        --username "$POSTGRES_USER" \
+        --dbname "$POSTGRES_DB" \
+    <<-EOSQL
+      CREATE USER {{ $.Values.media.database.credentials.username }} PASSWORD '{{ $.Values.media.database.credentials.password }}';
+      {{- range $app, $map := .Values.media.database.databases }}
+      {{- range $key, $dbName := $map }}
+
+      CREATE DATABASE "{{ $dbName }}";
+      GRANT ALL PRIVILEGES ON DATABASE "{{ $dbName }}" TO "{{ $.Values.media.database.credentials.username }}";
+  	  {{- end }}
+  	  {{- end }}
+    EOSQL

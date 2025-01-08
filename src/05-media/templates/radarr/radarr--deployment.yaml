@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ .Values.radarr.names.pod }}
+  labels:
+    app: {{ .Values.radarr.names.pod }}
+
+spec:
+  replicas: {{ .Values.radarr.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ .Values.radarr.names.pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.radarr.names.pod }}
+    spec:
+      containers:
+      - name: {{ .Values.radarr.names.container }}
+        image: {{ .Values.radarr.image }}
+        ports:
+        - name: {{ .Values.radarr.ports.http.name }}
+          containerPort: {{ .Values.radarr.ports.http.targetPort }}
+        env:
+        - name: PUID
+          value: "{{ .Values.media.system.userId }}"
+        - name: PGID
+          value: "{{ .Values.media.system.groupId }}"
+        - name: UMASK
+          value: "{{ .Values.media.system.umask }}"
+        volumeMounts:
+        - mountPath: /config
+          name: {{ .Values.media.storage.pv }}
+          subPath: apps/radarr/config
+        - mountPath: /files
+          name: {{ .Values.media.storage.pv }}
+          subPath: files
+        - mountPath: /config/config.xml
+          name: {{ .Values.radarr.names.configMap }}
+          subPath: config.xml
+      volumes:
+      - name: {{ .Values.media.storage.pv }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.media.storage.pvc }}
+      - name: {{ .Values.radarr.names.configMap }}
+        configMap:
+          name: {{ .Values.radarr.names.configMap }}

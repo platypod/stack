@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.media.database.names.service }}
+
+spec:
+  ports:
+  - protocol: TCP
+    name: {{ .Values.media.database.ports.http.name }}
+    port: {{ .Values.media.database.ports.http.targetPort }}
+  selector:
+    app: {{ .Values.media.database.names.pod }}
