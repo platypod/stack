@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: {{ .Values.sonarr.names.configMap }}
+
+data:
+  config.xml: |
+    <Config>
+      <BindAddress>*</BindAddress>
+      <Port>{{ .Values.sonarr.ports.http.targetPort }}</Port>
+      <SslPort>9898</SslPort>
+      <EnableSsl>False</EnableSsl>
+      <LaunchBrowser>True</LaunchBrowser>
+      <ApiKey>{{ .Values.sonarr.apiKey }}</ApiKey>
+      <AuthenticationMethod>External</AuthenticationMethod>
+      <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+      <Branch>master</Branch>
+      <LogLevel>info</LogLevel>
+      <SslCertPath></SslCertPath>
+      <SslCertPassword></SslCertPassword>
+      <UrlBase></UrlBase>
+      <InstanceName>sonarr</InstanceName>
+      <UpdateMechanism>Docker</UpdateMechanism>
+      <PostgresHost>{{ .Values.media.database.names.service }}</PostgresHost>
+      <PostgresPort>{{ .Values.media.database.ports.http.targetPort }}</PostgresPort>
+      <PostgresUser>{{ .Values.media.database.credentials.username }}</PostgresUser>
+      <PostgresPassword>{{ .Values.media.database.credentials.password }}</PostgresPassword>
+      <PostgresMainDb>{{ .Values.media.database.databases.sonarr.main }}</PostgresMainDb>
+      <PostgresLogDb>{{ .Values.media.database.databases.sonarr.logs }}</PostgresLogDb>
+    </Config>

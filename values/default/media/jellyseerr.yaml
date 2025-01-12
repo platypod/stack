@@ -1,0 +1,26 @@
+jellyseerr:
+  apiKey: MTczNjUwNTY0MTMwNmRmY2EzNWZhLWNjNzYtNDA1ZC05MDE4LTVkYTc1NWNjN2E0Yg==
+  host: ${k8s.names.urls.prefix}${jellyseerr.label}${k8s.names.urls.suffix}.${traefik.domain}
+  image: fallenbagel/jellyseerr:latest
+  label: jellyseerr
+  logLevel: INFO
+  database:
+    type: postgres
+    host: ${media.database.names.service}
+    port: ${media.database.ports.http.targetPort}
+    username: ${media.database.credentials.username}
+    password: ${media.database.credentials.password}
+    name: ${media.database.databases.jellyseerr.main}
+    logQueries: false
+  names:
+    configMap: ${k8s.names.volumes.configMaps.prefix}${jellyseerr.label}${k8s.names.volumes.configMaps.suffix}
+    container: ${k8s.names.containers.prefix}${jellyseerr.label}${k8s.names.containers.suffix}
+    initContainer: ${k8s.names.containers.prefix}${jellyseerr.label}-init${k8s.names.containers.suffix}
+    ingress: ${k8s.names.ingresses.prefix}${jellyseerr.label}${k8s.names.ingresses.suffix}
+    pod: ${k8s.names.pods.prefix}${jellyseerr.label}${k8s.names.pods.suffix}
+    service: ${k8s.names.services.prefix}${jellyseerr.label}${k8s.names.services.suffix}
+  ports:
+    http:
+      name: jellyseerr
+      targetPort: 5055
+  replicasNb: 1

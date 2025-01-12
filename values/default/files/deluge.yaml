@@ -1,0 +1,34 @@
+deluge:
+  host: ${k8s.names.urls.prefix}${deluge.label}${k8s.names.urls.suffix}.${traefik.domain}
+  image: lscr.io/linuxserver/deluge:latest
+  label: deluge
+  logLevel: info
+  credentials:
+    username: admin
+    password: deluge
+  download:
+    torrents: /downloads/torrent
+    ongoing: /downloads/ongoing
+    finished: /downloads/finished
+  names:
+    configMap: ${k8s.names.volumes.configMaps.prefix}${deluge.label}${k8s.names.volumes.configMaps.suffix}
+    container: ${k8s.names.containers.prefix}${deluge.label}${k8s.names.containers.suffix}
+    initContainer: ${k8s.names.containers.prefix}${deluge.label}-init${k8s.names.containers.suffix}
+    ingress: ${k8s.names.ingresses.prefix}${deluge.label}${k8s.names.ingresses.suffix}
+    pod: ${k8s.names.pods.prefix}${deluge.label}${k8s.names.pods.suffix}
+    service: ${k8s.names.services.prefix}${deluge.label}${k8s.names.services.suffix}
+  ports:
+    http:
+      name: deluge-webui
+      targetPort: 8112
+    tcp:
+      name: incoming-tcp
+      port: 6881
+      targetPort: 6881
+      protocol: TCP
+    udp:
+      name: incoming-udp
+      port: 6881
+      targetPort: 6881
+      protocol: UDP
+  replicasNb: 1

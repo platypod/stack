@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.deluge.names.service }}
+
+spec:
+  ports:
+  - protocol: TCP
+    name: {{ .Values.deluge.ports.http.name }}
+    port: {{ .Values.deluge.ports.http.targetPort }}
+  - protocol: TCP
+    name: {{ .Values.deluge.ports.tcp.name }}
+    port: {{ .Values.deluge.ports.tcp.targetPort }}
+  - protocol: UDP
+    name: {{ .Values.deluge.ports.udp.name }}
+    port: {{ .Values.deluge.ports.udp.targetPort }}
+  selector:
+    app: {{ .Values.deluge.names.pod }}

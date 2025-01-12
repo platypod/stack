@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.sonarr.names.service }}
+
+spec:
+  ports:
+  - protocol: TCP
+    name: {{ .Values.sonarr.ports.http.name }}
+    port: {{ .Values.sonarr.ports.http.targetPort }}
+  selector:
+    app: {{ .Values.sonarr.names.pod }}

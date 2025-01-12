@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ .Values.deluge.names.pod }}
+  labels:
+    app: {{ .Values.deluge.names.pod }}
+
+spec:
+  replicas: {{ .Values.deluge.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ .Values.deluge.names.pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.deluge.names.pod }}
+    spec:
+      containers:
+      - name: {{ .Values.deluge.names.container }}
+        image: {{ .Values.deluge.image }}
+        ports:
+        - name: {{ .Values.deluge.ports.http.name }}
+          containerPort: {{ .Values.deluge.ports.http.targetPort }}
+        - name: {{ .Values.deluge.ports.tcp.name }}
+          containerPort: {{ .Values.deluge.ports.tcp.targetPort }}
+        - name: {{ .Values.deluge.ports.udp.name }}
+          containerPort: {{ .Values.deluge.ports.udp.targetPort }}
+          protocol: UDP
+        env:
+        - name: PUID
+          value: "{{ .Values.media.system.userId }}"
+        - name: PGID
+          value: "{{ .Values.media.system.groupId }}"
+        - name: UMASK
+          value: "{{ .Values.media.system.umask }}"
+        - name: DELUGE_LOGLEVEL
+          value: "{{ .Values.deluge.logLevel }}"
+        volumeMounts:
+        - mountPath: /config
+          name: {{ .Values.media.storage.pv }}
+          subPath: apps/deluge/config
+        readinessProbe:
+          httpGet:
+            path: /
+            port: {{ .Values.deluge.ports.http.targetPort }}
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      initContainers:
+      - name: {{ .Values.deluge.names.initContainer }}
+        image: curlimages/curl:8.11.1
+        command: ['sh', '-c', '/init.sh']
+        volumeMounts:
+        - mountPath: /init.sh
+          name: {{ .Values.deluge.names.configMap }}
+          subPath: init.sh
+        - mountPath: /core.conf
+          name: {{ .Values.deluge.names.configMap }}
+          subPath: core.conf
+        - mountPath: /config
+          name: {{ .Values.media.storage.pv }}
+          subPath: apps/deluge/config
+      volumes:
+      - name: {{ .Values.media.storage.pv }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.media.storage.pvc }}
+      - name: {{ .Values.deluge.names.configMap }}
+        configMap:
+          name: {{ .Values.deluge.names.configMap }}
+          defaultMode: 0555

@@ -29,13 +29,20 @@ data:
           href: https://{{ .Values.jellyfin.host }}
           widget:
             type: jellyfin
-            url: https://{{ .Values.jellyfin.host }}
+            url: https://{{ .Values.jellyfin.host }}{{ .Values.jellyfin.baseUrl }}
             key: 6d65fa79175e41128fb097d3e2b3eec9
             enableBlocks: true # optional, defaults to false
             enableNowPlaying: true # optional, defaults to true
             enableUser: true # optional, defaults to false
             showEpisodeNumber: true # optional, defaults to false
             expandOneStreamToTwoRows: false # optional, defaults to true
+      - JellySeerr:
+          abbr: JS
+          href: https://{{ .Values.jellyseerr.host }}
+          widget:
+            type: jellyseerr
+            url: https://{{ .Values.jellyseerr.host }}
+            key: {{ .Values.jellyseerr.apiKey }}
       - Prowlarr:
           abbr: PR
           href: https://{{ .Values.prowlarr.host }}
@@ -44,15 +51,47 @@ data:
             url: https://{{ .Values.prowlarr.host }}
             key: {{ .Values.prowlarr.apiKey }}
       - Radarr:
-          abbr: RR
+          abbr: RA
           href: https://{{ .Values.radarr.host }}
           widget:
             type: radarr
             url: https://{{ .Values.radarr.host }}
             key: {{ .Values.radarr.apiKey }}
+      - Readarr:
+          abbr: RE
+          href: https://{{ .Values.readarr.host }}
+          widget:
+            type: readarr
+            url: https://{{ .Values.readarr.host }}
+            key: {{ .Values.readarr.apiKey }}
+      - Sonarr:
+          abbr: SR
+          href: https://{{ .Values.sonarr.host }}
+          widget:
+            type: sonarr
+            url: https://{{ .Values.sonarr.host }}
+            key: {{ .Values.sonarr.apiKey }}
       - FlareSolverr:
           abbr: FS
           href: https://{{ .Values.flaresolverr.host }}
+    - Files:
+      - Deluge:
+          abbr: DL
+          href: https://{{ .Values.deluge.host }}
+          widget:
+            type: deluge
+            url: https://{{ .Values.deluge.host }}
+            password: {{ .Values.deluge.credentials.password }}
+            enableLeechProgress: true
+      - QBitTorrent:
+          abbr: QB
+          href: https://{{ .Values.qbittorrent.host }}
+          widget:
+            type: qbittorrent
+            url: https://{{ .Values.qbittorrent.host }}
+            username: {{ .Values.qbittorrent.credentials.username }}
+            password: {{ .Values.qbittorrent.credentials.password }}
+            enableLeechProgress: true
     - Dev:
       - Traefik:
           abbr: TR

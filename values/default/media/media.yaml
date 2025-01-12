@@ -1,7 +1,7 @@
 media:
   storage:
     pv: ${k8s.names.volumes.localStorages.prefix}media${k8s.names.volumes.localStorages.suffix}
-    pvc: ${k8s.names.persistentVolumeClaims.prefix}shared-media${k8s.names.persistentVolumeClaims.suffix}
+    pvc: ${k8s.names.persistentVolumeClaims.prefix}media${k8s.names.persistentVolumeClaims.suffix}
     path: /path/on/host/machine
     capacityStorage: 100Gi
     node: media-hosting-node-s-name
@@ -23,6 +23,8 @@ media:
         name: pgsql
         targetPort: 5432
     databases:
+      jellyseerr:
+        main: jellyseerr
       prowlarr:
         main: prowlarrMain
         logs: prowlarrLogs
@@ -30,6 +32,7 @@ media:
         main: radarrMain
         logs: radarrLogs
       readarr:
+        cache: readarrCache
         main: readarrMain
         logs: readarrLogs
       sonarr:

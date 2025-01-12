@@ -1,0 +1,33 @@
+qbittorrent:
+  host: ${k8s.names.urls.prefix}${qbittorrent.label}${k8s.names.urls.suffix}.${traefik.domain}
+  image: linuxserver/qbittorrent:latest
+  label: qbittorrent
+  credentials:
+    username: qbittorrentUser
+    password: qbittorrentPassword
+  download:
+    torrents: /downloads/torrent
+    ongoing: /downloads/ongoing
+    finished: /downloads/finished
+  names:
+    configMap: ${k8s.names.volumes.configMaps.prefix}${qbittorrent.label}${k8s.names.volumes.configMaps.suffix}
+    container: ${k8s.names.containers.prefix}${qbittorrent.label}${k8s.names.containers.suffix}
+    initContainer: ${k8s.names.containers.prefix}${qbittorrent.label}-init${k8s.names.containers.suffix}
+    ingress: ${k8s.names.ingresses.prefix}${qbittorrent.label}${k8s.names.ingresses.suffix}
+    pod: ${k8s.names.pods.prefix}${qbittorrent.label}${k8s.names.pods.suffix}
+    service: ${k8s.names.services.prefix}${qbittorrent.label}${k8s.names.services.suffix}
+  ports:
+    http:
+      name: webui
+      targetPort: 8080
+    tcp:
+      name: incoming-tcp
+      port: 6882
+      targetPort: 6882
+      protocol: TCP
+    udp:
+      name: incoming-udp
+      port: 6882
+      targetPort: 6882
+      protocol: UDP
+  replicasNb: 1

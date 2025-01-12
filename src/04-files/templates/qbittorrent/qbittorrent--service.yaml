@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.qbittorrent.names.service }}
+
+spec:
+  ports:
+  - protocol: TCP
+    name: {{ .Values.qbittorrent.ports.http.name }}
+    port: {{ .Values.qbittorrent.ports.http.targetPort }}
+  - protocol: TCP
+    name: {{ .Values.qbittorrent.ports.tcp.name }}
+    port: {{ .Values.qbittorrent.ports.tcp.targetPort }}
+  - protocol: UDP
+    name: {{ .Values.qbittorrent.ports.udp.name }}
+    port: {{ .Values.qbittorrent.ports.udp.targetPort }}
+  selector:
+    app: {{ .Values.qbittorrent.names.pod }}

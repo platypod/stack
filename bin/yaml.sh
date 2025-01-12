@@ -32,7 +32,7 @@ extract_variables_to_replace_from_yaml() {
 
   for key in $(grep -o '\${[^}]*\}' "$1" | sort | uniq | tr -d '${}'); do
     value="$(yq e ".${key}" "$1")"
-    [ "${value}" == "null" ] && value="" && echo ">>> $key: $value"
+    [ "${value}" == "null" ] && value=""
     echo "$key=$value" >> "${dst}"
   done
 

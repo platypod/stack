@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ .Values.sonarr.names.pod }}
+  labels:
+    app: {{ .Values.sonarr.names.pod }}
+
+spec:
+  replicas: {{ .Values.sonarr.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ .Values.sonarr.names.pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.sonarr.names.pod }}
+    spec:
+      containers:
+      - name: {{ .Values.sonarr.names.container }}
+        image: {{ .Values.sonarr.image }}
+        ports:
+        - name: {{ .Values.sonarr.ports.http.name }}
+          containerPort: {{ .Values.sonarr.ports.http.targetPort }}
+        env:
+        - name: PUID
+          value: "{{ .Values.media.system.userId }}"
+        - name: PGID
+          value: "{{ .Values.media.system.groupId }}"
+        - name: UMASK
+          value: "{{ .Values.media.system.umask }}"
+        volumeMounts:
+        - mountPath: /config
+          name: {{ .Values.media.storage.pv }}
+          subPath: apps/sonarr/config
+        - mountPath: /files
+          name: {{ .Values.media.storage.pv }}
+          subPath: files
+        - mountPath: /config/config.xml
+          name: {{ .Values.sonarr.names.configMap }}
+          subPath: config.xml
+      volumes:
+      - name: {{ .Values.media.storage.pv }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.media.storage.pvc }}
+      - name: {{ .Values.sonarr.names.configMap }}
+        configMap:
+          name: {{ .Values.sonarr.names.configMap }}
