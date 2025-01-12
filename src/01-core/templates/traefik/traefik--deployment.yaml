@@ -42,6 +42,13 @@ spec:
           # entrypoints
           - --entryPoints.{{ .Values.traefik.ports.dashboard.name }}.address=:{{ .Values.traefik.ports.dashboard.targetPort }}
           - --entryPoints.{{ .Values.traefik.ports.https.name }}.address=:{{ .Values.traefik.ports.https.targetPort }}
+        ports:
+        - name: {{ .Values.traefik.ports.http.name }}
+          containerPort: {{ .Values.traefik.ports.http.targetPort }}
+        - name: {{ .Values.traefik.ports.https.name }}
+          containerPort: {{ .Values.traefik.ports.https.targetPort }}
+        - name: {{ .Values.traefik.ports.dashboard.name }}
+          containerPort: {{ .Values.traefik.ports.dashboard.targetPort }}
         volumeMounts:
         - mountPath: /file-providers/jellyfin-local-proxy.yaml
           name: {{ .Values.traefik.names.configMap }}

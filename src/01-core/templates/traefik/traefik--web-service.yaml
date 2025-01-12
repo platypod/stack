@@ -7,6 +7,10 @@ metadata:
 spec:
   ports:
     - protocol: TCP
+      port: {{ .Values.traefik.ports.http.port }}
+      targetPort: {{ .Values.traefik.ports.http.targetPort }}
+      name: {{ .Values.traefik.ports.http.name }}
+    - protocol: TCP
       port: {{ .Values.traefik.ports.https.port }}
       targetPort: {{ .Values.traefik.ports.https.targetPort }}
       name: {{ .Values.traefik.ports.https.name }}

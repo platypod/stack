@@ -27,6 +27,10 @@ traefik:
       name: traefik
       port: 9999
       targetPort: 9999
+    http:
+      name: http
+      port: 80
+      targetPort: 80
     https:
       name: https
       port: 443
