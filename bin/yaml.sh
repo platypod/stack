@@ -36,21 +36,21 @@ extract_variables_to_replace_from_yaml() {
     echo "$key=$value" >> "${dst}"
   done
 
-  local stop_looping
-  while [ -z "${stop_looping}" ]; do
-    stop_looping="true"
+  local loop="true"
+  while [ -n "${loop}" ]; do
+    unset loop
     local sed_cmd=""
     sed_cmd="$(for key in $(
         grep -o '\${[^}]*\}' "${dst}" | sort | uniq | tr -d '${}'
-    ); do
-      unset stop_looping
-      value="$(yq e ".${key}" "$1")"
-      key="$(echo "${key}" | sed -r 's/([\$\.\*\/\[\{\}\^\\])/\\\1/g')"
-      value="$(echo "${value}" | sed -r 's/([\$\.\*\/\[\{\}\^\\])/\\\1/g')"
-      [ $(echo "${value}" | grep --silent '\${[^}]*\}') ] ||
-        echo "s/\\\${${key}}/${value}/g"
-    done | tr "\n" ";")"
-
+      ); do
+        loop="loop_once_more_since_we_are_still_updating_values"
+        value="$(yq e ".${key}" "$1")"
+        key="$(echo "${key}" | sed -r 's/([\$\.\*\/\[\{\}\^\\])/\\\1/g')"
+        value="$(echo "${value}" | sed -r 's/([\$\.\*\/\[\{\}\^\\])/\\\1/g')"
+        [ $(echo "${value}" | grep --silent '\${[^}]*\}') ] ||
+          echo "s/\\\${${key}}/${value}/g"
+      done | tr "\n" ";"
+    )"
     rm -f "${dst}.ongoing-substitution"
     sed "${sed_cmd}" < "${dst}" > "${dst}.ongoing-substitution" &&
       mv "${dst}.ongoing-substitution" "${dst}"

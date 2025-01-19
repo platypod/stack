@@ -33,12 +33,12 @@ spec:
         - mountPath: /config
           name: {{ .Values.media.storage.pv }}
           subPath: apps/sonarr/config
-        - mountPath: /files
-          name: {{ .Values.media.storage.pv }}
-          subPath: files
         - mountPath: /config/config.xml
           name: {{ .Values.sonarr.names.configMap }}
           subPath: config.xml
+        - mountPath: {{ .Values.media.system.data.path }}
+          name: {{ .Values.media.storage.pv }}
+          subPath: data
       volumes:
       - name: {{ .Values.media.storage.pv }}
         persistentVolumeClaim:

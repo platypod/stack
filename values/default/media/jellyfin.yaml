@@ -1,6 +1,6 @@
 jellyfin:
   apiKey: 6d65fa79175e41128fb097d3e2b3eec9
-  baseUrl: /jellyfin
+  baseUrl:
   host: ${k8s.names.urls.prefix}${jellyfin.label}${k8s.names.urls.suffix}.${traefik.domain}
   credentials:
     username: guest

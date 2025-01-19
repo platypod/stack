@@ -14,6 +14,6 @@ spec:
       storage: {{ $pv.capacityStorage }}
   selector:
     matchLabels:
-      {{- toYaml $pv.labels | nindent 4}}
+      {{- toYaml $pv.labels | nindent 6}}
 ---
 {{ end }}

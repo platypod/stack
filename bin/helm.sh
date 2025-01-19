@@ -28,6 +28,7 @@ helm_env() {
   call="${call} $@"
   echo ">>> ${call}"
   eval "${call}"
+  echo ""
 }
 
 

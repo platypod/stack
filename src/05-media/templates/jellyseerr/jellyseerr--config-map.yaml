@@ -52,7 +52,7 @@ data:
      },
      "jellyfin": {
       "name": "Jellyfin",
-      "hostname": "https://{{ .Values.jellyfin.host }}:443",
+      "hostname": "http://{{ .Values.jellyfin.proxy.host }}:{{ .Values.jellyfin.proxy.port }}",
       "urlBase": "{{ .Values.jellyfin.baseUrl }}",
       "externalHostname": "",
       "jellyfinForgotPasswordUrl": "",

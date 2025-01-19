@@ -5,8 +5,100 @@ metadata:
   name: {{ .Values.qbittorrent.names.configMap }}
 
 data:
-  init.sh: |
-    #!/bin/sh
-    exit 0
-  core.conf: |
-    WebUI\Password_PBKDF2="@ByteArray(ARQ77eY1NUZaQsuDHbIMCA==:0WMRkYTUWVT9wVvdDtHAjU9b3b7uB8NR1Gur2hmQCvCDpm39Q+PsJRJPaCU51dEiz+dTzh8qbPsL8WkFljQYFQ==)"
+  update_password.py: |
+    import hashlib
+    import os
+    import getpass
+    import base64
+    import configparser
+    import sys
+
+    def generate_qbittorrent_hash():
+        password = "{{ .Values.qbittorrent.credentials.password }}"
+        salt = os.urandom(16)
+        iterations = 100000
+        algorithm = 'sha512'
+        dk = hashlib.pbkdf2_hmac(algorithm, password.encode(), salt, iterations)
+        encoded_salt = base64.b64encode(salt).decode()
+        encoded_hash = base64.b64encode(dk).decode()
+        return f'@ByteArray({encoded_salt}:{encoded_hash})'
+
+    def update_config_file(config_path):
+        if not os.path.exists(config_path):
+            print(f"Error: Config file not found at {config_path}")
+            sys.exit(1)
+
+        config = configparser.ConfigParser()
+        config.optionxform = str
+        config.read(config_path)
+
+        if 'Preferences' not in config:
+            config['Preferences'] = {}
+
+        config['Preferences']['WebUI\\Password_PBKDF2'] = generate_qbittorrent_hash()
+
+        with open(config_path, 'w') as configfile:
+            config.write(configfile)
+
+        print(f"Password updated in {config_path}")
+
+    if __name__ == "__main__":
+        # Specify the path to your qBittorrent.conf file
+        config_path = "/config/qBittorrent/qBittorrent.conf"
+        update_config_file(config_path)
+  qBittorrent.conf: |
+    [Application]
+    FileLogger\Age=1
+    FileLogger\AgeType=1
+    FileLogger\Backup=true
+    FileLogger\DeleteOld=true
+    FileLogger\Enabled=true
+    FileLogger\MaxSizeBytes=66560
+    FileLogger\Path=/config/qBittorrent/logs
+
+    [AutoRun]
+    enabled=false
+    program=
+
+    [BitTorrent]
+    Session\AddTorrentStopped=false
+    Session\DefaultSavePath={{ .Values.qbittorrent.download.finished }}
+    Session\ExcludedFileNames=
+    Session\Port={{ .Values.qbittorrent.ports.tcp.targetPort }}
+    Session\QueueingSystemEnabled=true
+    Session\SSL\Port=40881
+    Session\ShareLimitAction=Stop
+    Session\TempPath={{ .Values.qbittorrent.download.ongoing }}
+
+    [Core]
+    AutoDeleteAddedTorrentFile=Never
+
+    [LegalNotice]
+    Accepted=true
+
+    [Meta]
+    MigrationVersion=8
+
+    [Network]
+    PortForwardingEnabled=false
+    Proxy\HostnameLookupEnabled=false
+    Proxy\Profiles\BitTorrent=true
+    Proxy\Profiles\Misc=true
+    Proxy\Profiles\RSS=true
+
+    [Preferences]
+    Connection\PortRangeMin=6881
+    Connection\UPnP=false
+    Downloads\SavePath={{ .Values.qbittorrent.download.finished }}
+    Downloads\TempPath={{ .Values.qbittorrent.download.ongoing }}
+    General\Locale=en
+    MailNotification\req_auth=true
+    WebUI\Address=*
+    WebUI\AuthSubnetWhitelist=@Invalid()
+    WebUI\Username={{ .Values.qbittorrent.credentials.username }}
+    WebUI\Password_PBKDF2="@ByteArray(placeholder-replaced-by-init-script)"
+    WebUI\ServerDomains=*
+
+    [RSS]
+    AutoDownloader\DownloadRepacks=true
+    AutoDownloader\SmartEpisodeFilter=s(\\d+)e(\\d+), (\\d+)x(\\d+), "(\\d{4}[.\\-]\\d{1,2}[.\\-]\\d{1,2})", "(\\d{1,2}[.\\-]\\d{1,2}[.\\-]\\d{4})"

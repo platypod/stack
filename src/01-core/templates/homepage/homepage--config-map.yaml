@@ -14,19 +14,23 @@ data:
       - Github:
         - abbr: GH
           href: https://github.com/
+          description: Code versionning server.
     - Social:
       - Reddit:
         - abbr: RE
           href: https://reddit.com/
+          description: Social network.
     - Entertainment:
       - Invidious:
         - abbr: In
           href: https://api.invidious.io/
+          description: Youtube alternative without advertisement.
   services.yaml: |
     - Media:
       - Jellyfin:
           abbr: JE
           href: https://{{ .Values.jellyfin.host }}
+          description: Media server with streaming capacities.
           widget:
             type: jellyfin
             url: https://{{ .Values.jellyfin.host }}{{ .Values.jellyfin.baseUrl }}
@@ -39,6 +43,7 @@ data:
       - JellySeerr:
           abbr: JS
           href: https://{{ .Values.jellyseerr.host }}
+          description: Media catalog to pick movies and series.
           widget:
             type: jellyseerr
             url: https://{{ .Values.jellyseerr.host }}
@@ -46,6 +51,7 @@ data:
       - Prowlarr:
           abbr: PR
           href: https://{{ .Values.prowlarr.host }}
+          description: Indexer manager, used as proxy between the collection managers and the torrent trackers or usenet indexers.
           widget:
             type: prowlarr
             url: https://{{ .Values.prowlarr.host }}
@@ -53,6 +59,7 @@ data:
       - Radarr:
           abbr: RA
           href: https://{{ .Values.radarr.host }}
+          description: Movies collection manager, used to monitor RSS feeds and manage movies downloads.
           widget:
             type: radarr
             url: https://{{ .Values.radarr.host }}
@@ -60,6 +67,7 @@ data:
       - Readarr:
           abbr: RE
           href: https://{{ .Values.readarr.host }}
+          description: Books collection manager, used to monitor RSS feeds and manage books downloads.
           widget:
             type: readarr
             url: https://{{ .Values.readarr.host }}
@@ -67,6 +75,7 @@ data:
       - Sonarr:
           abbr: SR
           href: https://{{ .Values.sonarr.host }}
+          description: Series collection manager, used to monitor RSS feeds and manage series downloads.
           widget:
             type: sonarr
             url: https://{{ .Values.sonarr.host }}
@@ -74,10 +83,22 @@ data:
       - FlareSolverr:
           abbr: FS
           href: https://{{ .Values.flaresolverr.host }}
+          description: Proxy server used to bypass CloudFlare's anti-bot protection.
     - Files:
+      - Transmission:
+          abbr: TR
+          href: https://{{ .Values.transmission.host }}
+          description: Torrenting service.
+          widget:
+            type: transmission
+            url: https://{{ .Values.transmission.host }}
+            username: {{ .Values.transmission.credentials.username }}
+            password: {{ .Values.transmission.credentials.password }}
+            rpcUrl: /transmission/
       - Deluge:
           abbr: DL
           href: https://{{ .Values.deluge.host }}
+          description: Torrenting service.
           widget:
             type: deluge
             url: https://{{ .Values.deluge.host }}
@@ -86,6 +107,7 @@ data:
       - QBitTorrent:
           abbr: QB
           href: https://{{ .Values.qbittorrent.host }}
+          description: Torrenting service.
           widget:
             type: qbittorrent
             url: https://{{ .Values.qbittorrent.host }}
@@ -96,6 +118,7 @@ data:
       - Traefik:
           abbr: TR
           href: https://{{ .Values.traefik.host }}/dashboard/
+          description: Reverse-proxy exposing this stack to the users.
           widget:
             type: traefik
             url: https://{{ .Values.traefik.host }}

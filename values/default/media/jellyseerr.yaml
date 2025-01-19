@@ -3,7 +3,7 @@ jellyseerr:
   host: ${k8s.names.urls.prefix}${jellyseerr.label}${k8s.names.urls.suffix}.${traefik.domain}
   image: fallenbagel/jellyseerr:latest
   label: jellyseerr
-  logLevel: INFO
+  logLevel: DEBUG
   database:
     type: postgres
     host: ${media.database.names.service}

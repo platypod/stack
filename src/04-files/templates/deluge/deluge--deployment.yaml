@@ -40,6 +40,9 @@ spec:
         - mountPath: /config
           name: {{ .Values.media.storage.pv }}
           subPath: apps/deluge/config
+        - mountPath: {{ .Values.media.system.data.path }}
+          name: {{ .Values.media.storage.pv }}
+          subPath: files/media/data
         readinessProbe:
           httpGet:
             path: /

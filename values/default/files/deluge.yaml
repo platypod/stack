@@ -7,9 +7,9 @@ deluge:
     username: admin
     password: deluge
   download:
-    torrents: /downloads/torrent
-    ongoing: /downloads/ongoing
-    finished: /downloads/finished
+    torrents: ${media.system.downloads.torrents}/${deluge.label}
+    ongoing: ${media.system.downloads.ongoing}/${deluge.label}
+    finished: ${media.system.downloads.finished}
   names:
     configMap: ${k8s.names.volumes.configMaps.prefix}${deluge.label}${k8s.names.volumes.configMaps.suffix}
     container: ${k8s.names.containers.prefix}${deluge.label}${k8s.names.containers.suffix}

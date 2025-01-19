@@ -43,3 +43,9 @@ media:
     userId: 501
     groupId: 20
     umask: 002
+    data:
+      path: /data
+    downloads:
+      ongoing: /data/downloads/ongoing
+      finished: /data/downloads/finished
+      torrents: /data/downloads/torrents

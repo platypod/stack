@@ -13,7 +13,7 @@ data:
       <EnableSsl>False</EnableSsl>
       <LaunchBrowser>True</LaunchBrowser>
       <ApiKey>{{ .Values.readarr.apiKey }}</ApiKey>
-      <AuthenticationMethod>External</AuthenticationMethod>
+      <AuthenticationMethod>None</AuthenticationMethod>
       <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
       <Branch>master</Branch>
       <LogLevel>info</LogLevel>

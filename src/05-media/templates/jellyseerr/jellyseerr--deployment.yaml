@@ -50,7 +50,7 @@ spec:
       initContainers:
       - name: {{ .Values.jellyseerr.names.initContainer }}
         image: busybox:1.28
-        command: ['sh', '-c', "cp /settings.json /app/config/settings.json"]
+        command: ['sh', '-c', "cp -f /settings.json /app/config/settings.json.not-used"]
         volumeMounts:
         - mountPath: /app/config
           name: {{ .Values.media.storage.pv }}

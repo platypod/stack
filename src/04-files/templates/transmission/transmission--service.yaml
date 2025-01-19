@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.transmission.names.service }}
+
+spec:
+  ports:
+  - protocol: TCP
+    name: {{ .Values.transmission.ports.http.name }}
+    port: {{ .Values.transmission.ports.http.targetPort }}
+  - protocol: TCP
+    name: {{ .Values.transmission.ports.tcp.name }}
+    port: {{ .Values.transmission.ports.tcp.targetPort }}
+  - protocol: UDP
+    name: {{ .Values.transmission.ports.udp.name }}
+    port: {{ .Values.transmission.ports.udp.targetPort }}
+  selector:
+    app: {{ .Values.transmission.names.pod }}

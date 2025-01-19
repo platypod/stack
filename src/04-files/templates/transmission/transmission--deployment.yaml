@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ .Values.transmission.names.pod }}
+  labels:
+    app: {{ .Values.transmission.names.pod }}
+
+spec:
+  replicas: {{ .Values.transmission.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ .Values.transmission.names.pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.transmission.names.pod }}
+    spec:
+      containers:
+      - name: {{ .Values.transmission.names.container }}
+        image: {{ .Values.transmission.image }}
+        ports:
+        - name: {{ .Values.transmission.ports.http.name }}
+          containerPort: {{ .Values.transmission.ports.http.targetPort }}
+        - name: {{ .Values.transmission.ports.tcp.name }}
+          containerPort: {{ .Values.transmission.ports.tcp.targetPort }}
+        - name: {{ .Values.transmission.ports.udp.name }}
+          containerPort: {{ .Values.transmission.ports.udp.targetPort }}
+          protocol: UDP
+        env:
+        - name: PUID
+          value: "{{ .Values.media.system.userId }}"
+        - name: PGID
+          value: "{{ .Values.media.system.groupId }}"
+        - name: UMASK
+          value: "{{ .Values.media.system.umask }}"
+        - name: PEERPORT
+          value: "{{ .Values.transmission.ports.tcp.targetPort }}"
+        - name: USER
+          value: "{{ .Values.transmission.credentials.username }}"
+        - name: PASS
+          value: "{{ .Values.transmission.credentials.password }}"
+        volumeMounts:
+        - mountPath: /config/settings.json
+          name: {{ .Values.transmission.names.configMap }}
+          subPath: settings.json
+        - mountPath: /config
+          name: {{ .Values.media.storage.pv }}
+          subPath: apps/transmission/config
+        - mountPath: {{ .Values.media.system.data.path }}
+          name: {{ .Values.media.storage.pv }}
+          subPath: files/media/data
+      volumes:
+      - name: {{ .Values.media.storage.pv }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.media.storage.pvc }}
+      - name: {{ .Values.transmission.names.configMap }}
+        configMap:
+          name: {{ .Values.transmission.names.configMap }}
+          defaultMode: 0555

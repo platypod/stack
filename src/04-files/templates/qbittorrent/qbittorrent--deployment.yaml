@@ -39,27 +39,24 @@ spec:
         - name: TORRENTING_PORT
           value: "{{ .Values.qbittorrent.ports.tcp.targetPort }}"
         volumeMounts:
-        - mountPath: /config
+        - mountPath: /config/qBittorrent
           name: {{ .Values.media.storage.pv }}
           subPath: apps/qbittorrent/config
-        readinessProbe:
-          httpGet:
-            path: /
-            port: {{ .Values.qbittorrent.ports.http.targetPort }}
-          initialDelaySeconds: 10
-          periodSeconds: 10
+        - mountPath: {{ .Values.media.system.data.path }}
+          name: {{ .Values.media.storage.pv }}
+          subPath: files/media/data
       initContainers:
       - name: {{ .Values.qbittorrent.names.initContainer }}
-        image: curlimages/curl:8.11.1
-        command: ['sh', '-c', 'exit 0']
+        image: python:3-slim
+        command: ['sh', '-c', 'cp -f /qBittorrent.conf /config/qBittorrent/ && python /update_password.py']
         volumeMounts:
-        - mountPath: /init.sh
+        - mountPath: /update_password.py
           name: {{ .Values.qbittorrent.names.configMap }}
-          subPath: init.sh
-        - mountPath: /core.confaa
+          subPath: update_password.py
+        - mountPath: /qBittorrent.conf
           name: {{ .Values.qbittorrent.names.configMap }}
-          subPath: core.conf
-        - mountPath: /config
+          subPath: qBittorrent.conf
+        - mountPath: /config/qBittorrent
           name: {{ .Values.media.storage.pv }}
           subPath: apps/qbittorrent/config
       volumes:

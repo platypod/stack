@@ -6,9 +6,9 @@ qbittorrent:
     username: qbittorrentUser
     password: qbittorrentPassword
   download:
-    torrents: /downloads/torrent
-    ongoing: /downloads/ongoing
-    finished: /downloads/finished
+    torrents: ${media.system.downloads.torrents}/${qbittorrent.label}
+    ongoing: ${media.system.downloads.ongoing}/${qbittorrent.label}
+    finished: ${media.system.downloads.finished}
   names:
     configMap: ${k8s.names.volumes.configMaps.prefix}${qbittorrent.label}${k8s.names.volumes.configMaps.suffix}
     container: ${k8s.names.containers.prefix}${qbittorrent.label}${k8s.names.containers.suffix}
