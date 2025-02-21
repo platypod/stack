@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: {{ .Values.authelia.names.configMap }}
+
+data:
+  setup.sh: |
+    #!/bin/sh
+    cp /users_database.yml /config/users_database.yml
+    cp /configuration.yml /config/configuration.yml
+  users_database.yml: |
+    users:
+      {{- toYaml .Values.authelia.users | nindent 6}}
+  configuration.yml: |
+    theme: dark
+    identity_validation:
+        reset_password:
+            jwt_secret: {{ .Values.authelia.secrets.jwt }}
+
+    server:
+        address: tcp://0.0.0.0:{{ .Values.authelia.ports.http.targetPort }}/
+        endpoints:
+            authz:
+                forward-auth:
+                    implementation: 'ForwardAuth'
+
+    log:
+        level: {{ .Values.authelia.log.level }}
+        format: {{ .Values.authelia.log.format }}
+        file_path: "/config/authelia.log"
+        keep_stdout: true
+
+    totp:
+        disable: false
+        issuer: authelia.com
+        algorithm: sha1
+        digits: 6
+        period: 30
+        skew: 1
+        secret_size: 32
+
+    access_control:
+        default_policy: deny
+        rules:
+          {{- toYaml .Values.authelia.rules | nindent 8}}
+
+    telemetry:
+        metrics:
+            enabled: true
+            address: "tcp://0.0.0.0:{{ .Values.authelia.ports.metrics.targetPort }}"
+            buffers:
+                read: 4096
+                write: 4096
+            timeouts:
+                read: 6s
+                write: 6s
+                idle: 30s
+
+    authentication_backend:
+        file:
+            path: /config/users_database.yml
+            watch: false
+            # customize passwords based on https://docs.authelia.com/configuration/authentication/file.html
+            password:
+                algorithm: argon2id
+                iterations: 1
+                salt_length: 16
+                parallelism: 8
+                memory: 1024 # blocks this much of the RAM. Tune this.
+
+    session:
+        name: authelia_session
+        secret: {{ .Values.authelia.secrets.session }}
+        expiration: 1h
+        inactivity: 15m
+        cookies:
+            - domain: {{ .Values.traefik.domain }}
+              authelia_url: https://{{ .Values.authelia.host }}
+              default_redirection_url: https://{{ .Values.homepage.host }}
+
+    regulation:
+        max_retries: 5
+        find_time: 120
+        ban_time: 300
+
+    storage:
+        encryption_key: {{ .Values.authelia.secrets.encryptionKey }}
+        postgres:
+            address: 'tcp://{{ .Values.authelia.database.names.service }}:{{ .Values.authelia.database.ports.http.targetPort }}'
+            database: '{{ .Values.authelia.database.name }}'
+            schema: 'public'
+            username: '{{ .Values.authelia.database.credentials.username }}'
+            password: '{{ .Values.authelia.database.credentials.password }}'
+            timeout: '5s'
+
+    notifier:
+        filesystem:
+            filename: /config/notification.txt
+
+    password_policy:
+        standard:
+            enabled: false
+            min_length: 8
+            max_length: 0
+            require_uppercase: false
+            require_lowercase: false
+            require_number: false
+            require_special: false
+        zxcvbn:
+            enabled: true
+            min_score: 3

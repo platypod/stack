@@ -23,8 +23,9 @@ spec:
         args:
           # provider: file
           - --providers.file.directory=/file-providers
+          # provider: kubernetesCRD (required for authelia middleware)
+          - --providers.kubernetescrd=true
           # provider: kubernetes
-          - --providers.kubernetesingress=true
           - --providers.kubernetesingress.allowEmptyServices=true
           - --providers.kubernetesingress.labelselector=chartVersion={{ .Chart.Version }},env={{ .Values.project.env }}
           - --providers.kubernetesingress.namespaces={{ .Values.k8s.namespace }}
@@ -35,16 +36,23 @@ spec:
           - --log.format={{ .Values.traefik.logging.format }}
           - --accesslog
           # letsencrypt resolver
-          - --certificatesresolvers.{{ .Values.traefik.tlsResolverName }}.acme.tlschallenge=true
-          - --certificatesresolvers.{{ .Values.traefik.tlsResolverName }}.acme.email={{ .Values.acme.email }}
-          - --certificatesresolvers.{{ .Values.traefik.tlsResolverName }}.acme.storage={{ .Values.acme.storage }}
-          - --certificatesresolvers.{{ .Values.traefik.tlsResolverName }}.acme.caserver={{ .Values.acme.endpoint }}
+          {{ if .Values.acme.challenge.dns.enable }}
+          - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.dnschallenge=true
+          {{ end }}
+          {{ if .Values.acme.challenge.tls.enable }}
+          - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.tlschallenge=true
+          {{ end }}
+          - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.email={{ .Values.acme.email }}
+          - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.storage=/etc/traefik/acme/acme.json
+          - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.caserver={{ .Values.acme.endpoint }}
           # entrypoints
           - --entryPoints.{{ .Values.traefik.ports.dashboard.name }}.address=:{{ .Values.traefik.ports.dashboard.targetPort }}
           - --entryPoints.{{ .Values.traefik.ports.https.name }}.address=:{{ .Values.traefik.ports.https.targetPort }}
+        env:
+          {{ if .Values.acme.challenge.dns.enable }}
+          {{- toYaml .Values.acme.challenge.dns.env | nindent 5}}
+          {{ end }}
         ports:
-        - name: {{ .Values.traefik.ports.http.name }}
-          containerPort: {{ .Values.traefik.ports.http.targetPort }}
         - name: {{ .Values.traefik.ports.https.name }}
           containerPort: {{ .Values.traefik.ports.https.targetPort }}
         - name: {{ .Values.traefik.ports.dashboard.name }}
@@ -53,7 +61,14 @@ spec:
         - mountPath: /file-providers/jellyfin-local-proxy.yaml
           name: {{ .Values.traefik.names.configMap }}
           subPath: jellyfin-file-provider.yaml
+        - mountPath: /etc/traefik/acme
+          name: {{ .Values.traefik.storage.pv }}
+          subPath: apps/traefik/acme
       volumes:
       - name: {{ .Values.traefik.names.configMap }}
         configMap:
           name: {{ .Values.traefik.names.configMap }}
+      - name: {{ .Values.traefik.storage.pv }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.traefik.storage.pvc }}
+

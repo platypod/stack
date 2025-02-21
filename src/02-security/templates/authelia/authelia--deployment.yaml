@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ .Values.authelia.names.pod }}
+  labels:
+    app: {{ .Values.authelia.names.pod }}
+
+spec:
+  replicas: {{ .Values.authelia.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ .Values.authelia.names.pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.authelia.names.pod }}
+    spec:
+      enableServiceLinks: false
+      containers:
+      - name: {{ .Values.authelia.names.container }}
+        image: {{ .Values.authelia.image }}
+        ports:
+        - name: {{ .Values.authelia.ports.http.name }}
+          containerPort: {{ .Values.authelia.ports.http.targetPort }}
+        - name: {{ .Values.authelia.ports.metrics.name }}
+          containerPort: {{ .Values.authelia.ports.metrics.targetPort }}
+        volumeMounts:
+        - mountPath: /config
+          name: {{ .Values.authelia.storage.pv }}
+          subPath: apps/authelia/config
+      initContainers:
+      - name: {{ .Values.authelia.names.initContainer }}
+        image: busybox:1.28
+        command: ['sh', '-c', '/setup.sh']
+        volumeMounts:
+        - mountPath: /config
+          name: {{ .Values.authelia.storage.pv }}
+          subPath: apps/authelia/config
+        - mountPath: /setup.sh
+          name: {{ .Values.authelia.names.configMap }}
+          subPath: setup.sh
+        - mountPath: /users_database.yml
+          name: {{ .Values.authelia.names.configMap }}
+          subPath: users_database.yml
+        - mountPath: /configuration.yml
+          name: {{ .Values.authelia.names.configMap }}
+          subPath: configuration.yml
+      volumes:
+      - name: {{ .Values.authelia.storage.pv }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.authelia.storage.pvc }}
+      - name: {{ .Values.authelia.names.configMap }}
+        configMap:
+          name: {{ .Values.authelia.names.configMap }}
+          defaultMode: 0500

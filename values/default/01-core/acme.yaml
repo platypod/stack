@@ -1,0 +1,21 @@
+acme:
+  email: acme@mail.com
+  endpoint: https://acme-staging-v02.api.letsencrypt.org/directory
+  challenge:
+    dns:
+      enable: false
+      env:
+      - name: OVH_ENDPOINT
+        value: ""
+      - name: OVH_APPLICATION_KEY
+        value: ""
+      - name: OVH_APPLICATION_SECRET
+        value: ""
+      - name: OVH_CONSUMER_KEY
+        value: ""
+      - name: OVH_CLIENT_ID
+        value: ""
+      - name: OVH_CLIENT_SECRET
+        value: ""
+    tls:
+      enable: true

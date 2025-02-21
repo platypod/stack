@@ -1,7 +1,7 @@
 readarr:
   apiKey: 1b229188fe9e4488a2333c2135b1a054
   host: ${k8s.names.urls.prefix}${readarr.label}${k8s.names.urls.suffix}.${traefik.domain}
-  image: lscr.io/linuxserver/readarr:nightly
+  image: lscr.io/linuxserver/readarr:develop
   label: readarr
   names:
     configMap: ${k8s.names.volumes.configMaps.prefix}${readarr.label}${k8s.names.volumes.configMaps.suffix}

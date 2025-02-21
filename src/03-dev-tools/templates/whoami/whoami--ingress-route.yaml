@@ -1,0 +1,20 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+
+metadata:
+  name: {{ .Values.whoami.names.ingress }}
+
+spec:
+  entryPoints:
+  - {{ .Values.traefik.ports.https.name }}
+
+  routes:
+  - kind: Rule
+    match: Host(`{{ .Values.whoami.host }}`)
+    services:
+    - kind: Service
+      name: {{ .Values.whoami.names.service }}
+      port: {{ .Values.whoami.ports.http.targetPort }}
+
+  tls:
+    certResolver: {{ .Values.traefik.resolverName }}

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ .Values.authelia.database.names.pod }}
+  labels:
+    app: {{ .Values.authelia.database.names.pod }}
+
+spec:
+  replicas: {{ .Values.authelia.database.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ .Values.authelia.database.names.pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.authelia.database.names.pod }}
+    spec:
+      containers:
+      - name: {{ .Values.authelia.database.names.container }}
+        image: {{ .Values.authelia.database.image }}
+        ports:
+        - name: {{ .Values.authelia.database.ports.http.name }}
+          containerPort: {{ .Values.authelia.database.ports.http.targetPort }}
+        env:
+        - name: POSTGRES_USER
+          value: "{{ .Values.authelia.database.credentials.username }}"
+        - name: POSTGRES_PASSWORD
+          value: "{{ .Values.authelia.database.credentials.password }}"
+        - name: POSTGRES_DB
+          value: "{{ .Values.authelia.database.name }}"
+        volumeMounts:
+        - mountPath: /var/lib/postgresql
+          name: {{ .Values.authelia.storage.pv }}
+          subPath: apps/authelia/db
+      volumes:
+      - name: {{ .Values.authelia.storage.pv }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.authelia.storage.pvc }}

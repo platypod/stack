@@ -1,0 +1,41 @@
+bookstack:
+  appKey: base64:gJJbTsv2CTPeHrCOmu0crY65zypAC747jgMHvYEUlto=
+  appDebug: false
+  host: ${k8s.names.urls.prefix}${bookstack.label}${k8s.names.urls.suffix}.${traefik.domain}
+  image: lscr.io/linuxserver/bookstack:latest
+  label: bookstack
+  database:
+    host: ${k8s.names.urls.prefix}${bookstack.database.label}${k8s.names.urls.suffix}.${traefik.domain}
+    name: ${bookstack.label}
+    credentials:
+      username: ${bookstack.label}User
+      password: ${bookstack.label}Password
+      rootPassword: ${bookstack.label}RootPassword
+    image: mysql:9
+    label: ${bookstack.label}-db
+    names:
+      configMap: ${k8s.names.volumes.configMaps.prefix}${bookstack.database.label}${k8s.names.volumes.configMaps.suffix}
+      container: ${k8s.names.containers.prefix}${bookstack.database.label}${k8s.names.containers.suffix}
+      ingress: ${k8s.names.ingresses.prefix}${bookstack.database.label}${k8s.names.ingresses.suffix}
+      pod: ${k8s.names.pods.prefix}${bookstack.database.label}${k8s.names.pods.suffix}
+      service: ${k8s.names.services.prefix}${bookstack.database.label}${k8s.names.services.suffix}
+    ports:
+      http:
+        name: mysql
+        targetPort: 3306
+    replicasNb: 1
+  names:
+    configMap: ${k8s.names.volumes.configMaps.prefix}${bookstack.label}${k8s.names.volumes.configMaps.suffix}
+    container: ${k8s.names.containers.prefix}${bookstack.label}${k8s.names.containers.suffix}
+    initContainer: ${k8s.names.containers.prefix}${bookstack.label}-init${k8s.names.containers.suffix}
+    ingress: ${k8s.names.ingresses.prefix}${bookstack.label}${k8s.names.ingresses.suffix}
+    pod: ${k8s.names.pods.prefix}${bookstack.label}${k8s.names.pods.suffix}
+    service: ${k8s.names.services.prefix}${bookstack.label}${k8s.names.services.suffix}
+  ports:
+    http:
+      name: http
+      targetPort: 80
+  replicasNb: 1
+  system:
+    userId: 501
+    groupId: 20

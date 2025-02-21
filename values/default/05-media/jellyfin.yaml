@@ -1,5 +1,5 @@
 jellyfin:
-  apiKey: 6d65fa79175e41128fb097d3e2b3eec9
+  apiKey: 08275f613c8045298b0dea99253cc6fc
   baseUrl:
   host: ${k8s.names.urls.prefix}${jellyfin.label}${k8s.names.urls.suffix}.${traefik.domain}
   credentials:

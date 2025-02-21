@@ -18,7 +18,7 @@ traefik:
     role: ${k8s.names.roles.prefix}${traefik.label}${k8s.names.roles.suffix}
     roleBinding: ${k8s.names.roleBindings.prefix}${traefik.label}${k8s.names.roleBindings.suffix}
     services:
-      web: ${k8s.names.services.prefix}${traefik.label}-web${k8s.names.services.suffix}
+      web: ${k8s.names.services.prefix}${traefik.label}${k8s.names.services.suffix}
       dashboard: ${k8s.names.services.prefix}${traefik.label}-dashboard${k8s.names.services.suffix}
     serviceAccount: ${k8s.names.serviceAccounts.prefix}${traefik.label}${k8s.names.serviceAccounts.suffix}
   ports:
@@ -27,13 +27,9 @@ traefik:
       name: traefik
       port: 9999
       targetPort: 9999
-    http:
-      name: http
-      port: 80
-      targetPort: 80
     https:
       name: https
       port: 443
       targetPort: 443
   replicasNb: 1
-  tlsResolverName: letsencrypt
+  resolverName: letsencrypt

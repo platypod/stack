@@ -22,6 +22,8 @@ merge_yaml() {
   create_out_dir_if_not_exists
   merge_yaml_files "values/default/*/*.y*ml" "values/${env}/*.y*ml" \
     > "${PLATYPOD__PATH__OUT_DIR}/values.${env}.yaml"
+  yq --inplace 'sort_keys(..)' "${PLATYPOD__PATH__OUT_DIR}/values.${env}.yaml"
+  cp "${PLATYPOD__PATH__OUT_DIR}/values.${env}.yaml" "${PLATYPOD__PATH__OUT_DIR}/values.${env}.yaml.before-substitution"
 }
 
 
@@ -52,31 +54,41 @@ extract_variables_to_replace_from_yaml() {
       done | tr "\n" ";"
     )"
     rm -f "${dst}.ongoing-substitution"
-    sed "${sed_cmd}" < "${dst}" > "${dst}.ongoing-substitution" &&
+    if sed "${sed_cmd}" < "${dst}" > "${dst}.ongoing-substitution"; then
       mv "${dst}.ongoing-substitution" "${dst}"
+    else
+      echo "${sed_cmd}" | sed 's/;/;\n/g' > "${PLATYPOD__PATH__OUT_DIR}/failed.sed"
+      exit 500
+    fi
   done
 }
 
 
 build_replace_command() {
+  local dst="${PLATYPOD__PATH__OUT_DIR}/${PLATYPOD__PATH__SED_COMMAND}"
+  rm -f "${dst}"
   cat "${PLATYPOD__PATH__OUT_DIR}/${PLATYPOD__PATH__VALUES_TO_SUBSTITUTE}" |
     while read -r var; do
       key="$(echo "${var%%=*}" | sed -r 's/([\$\.\*\/\[\{\}\^\\])/\\\1/g')"
       value="$(echo "${var#*=}" | sed -r 's/([\$\.\*\/\[\{\}\^\\])/\\\1/g')"
-      echo "s/\\\${${key}}/${value}/g"
-    done | tr "\n" ";"
+      echo "s/\\\${${key}}/${value}/g;" >> "${dst}"
+    done
 }
 
 
 replace_variables_in_file() {
-  local sed_args="$1"
-  local file="$2"
-  sed "${sed_args}" < "${file}" > "${file}.ongoing-substitution" &&
-    mv "${file}.ongoing-substitution" "${file}"
+  local sed_file="${PLATYPOD__PATH__OUT_DIR}/${PLATYPOD__PATH__SED_COMMAND}"
+  local src="$1"
+  if sed -f "${sed_file}" < "${src}" > "${src}.ongoing-substitution"; then
+    mv "${src}.ongoing-substitution" "${src}"
+  else
+    exit 500
+  fi
 }
 
 
 replace_variables_in_yaml() {
   extract_variables_to_replace_from_yaml "$1"
-  replace_variables_in_file "$(build_replace_command)" "$1"
+  build_replace_command
+  replace_variables_in_file "$1"
 }

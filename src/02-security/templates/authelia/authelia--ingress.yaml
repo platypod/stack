@@ -2,24 +2,24 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 
 metadata:
-  name: {{ .Values.sonarr.names.ingress }}
+  name: {{ .Values.authelia.names.ingress }}
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: {{ .Values.traefik.ports.https.name }}
     traefik.ingress.kubernetes.io/router.tls: "true"
-    traefik.ingress.kubernetes.io/router.tls.certresolver: {{ .Values.traefik.tlsResolverName }}
+    traefik.ingress.kubernetes.io/router.tls.certresolver: {{ .Values.traefik.resolverName }}
   labels:
     chartVersion: {{ .Chart.Version }}
     env: {{ .Values.project.env }}
 
 spec:
   rules:
-  - host: {{ .Values.sonarr.host }}
+  - host: {{ .Values.authelia.host }}
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: {{ .Values.sonarr.names.service }}
+            name: {{ .Values.authelia.names.service }}
             port:
-              number: {{ .Values.sonarr.ports.http.targetPort }}
+              number: {{ .Values.authelia.ports.http.targetPort }}

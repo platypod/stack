@@ -12,7 +12,7 @@ data:
           entryPoints:
           - {{ .Values.traefik.ports.https.name }}
           tls:
-            certResolver: {{ .Values.traefik.tlsResolverName }}
+            certResolver: {{ .Values.traefik.resolverName }}
           service: jellyfin-local-proxy
           rule: Host(`{{ .Values.jellyfin.host }}`)
       services:

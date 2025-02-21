@@ -2,7 +2,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 
 metadata:
-  name: {{ .Values.flaresolverr.names.ingress }}
+  name: {{ .Values.authelia.database.names.ingress }}
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: {{ .Values.traefik.ports.https.name }}
     traefik.ingress.kubernetes.io/router.tls: "true"
@@ -13,13 +13,13 @@ metadata:
 
 spec:
   rules:
-  - host: {{ .Values.flaresolverr.host }}
+  - host: {{ .Values.authelia.database.host }}
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: {{ .Values.flaresolverr.names.service }}
+            name: {{ .Values.authelia.database.names.service }}
             port:
-              number: {{ .Values.flaresolverr.ports.http.targetPort }}
+              number: {{ .Values.authelia.database.ports.http.targetPort }}

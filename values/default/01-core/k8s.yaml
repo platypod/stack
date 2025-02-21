@@ -1,39 +1,39 @@
 k8s:
-  namespace: ${project.env}--${project.name}
+  namespace: ${project.env}-${project.name}
   names:
     containers:
       prefix: ""
-      suffix: "--container"
+      suffix: ""
     ingresses:
       prefix: ""
-      suffix: "--ingress"
+      suffix: ""
     initContainers:
       prefix: ""
-      suffix: "--init-container"
+      suffix: ""
     namespaces:
-      prefix: "${project.env}--${project.name}--"
-      suffix: "--namespace"
+      prefix: ""
+      suffix: ""
     persistentVolumeClaims:
       prefix: ""
-      suffix: "--pvc"
+      suffix: ""
     pods:
       prefix: ""
-      suffix: "--pod"
+      suffix: ""
     roles:
       prefix: ""
-      suffix: "--role"
+      suffix: ""
     roleBindings:
       prefix: ""
-      suffix: "--role-binding"
+      suffix: ""
     secrets:
       prefix: ""
-      suffix: "--secret"
+      suffix: ""
     services:
       prefix: ""
-      suffix: "--service"
+      suffix: ""
     serviceAccounts:
       prefix: ""
-      suffix: "--service-account"
+      suffix: ""
     urls:
       prefix: ""
       suffix: ""

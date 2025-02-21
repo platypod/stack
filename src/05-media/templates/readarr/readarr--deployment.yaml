@@ -38,7 +38,7 @@ spec:
           subPath: config.xml
         - mountPath: {{ .Values.media.system.data.path }}
           name: {{ .Values.media.storage.pv }}
-          subPath: media/data
+          subPath: data
       volumes:
       - name: {{ .Values.media.storage.pv }}
         persistentVolumeClaim:

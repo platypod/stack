@@ -1,4 +1,5 @@
 homepage:
+  host: ${k8s.names.urls.prefix}${homepage.label}${k8s.names.urls.suffix}.${traefik.domain}
   label: homepage
   image:
     registry: ghcr.io/
