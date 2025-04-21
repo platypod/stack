@@ -1,44 +1,4 @@
 media:
-  storage:
-    pv: ${k8s.names.volumes.localStorages.prefix}media${k8s.names.volumes.localStorages.suffix}
-    pvc: ${k8s.names.persistentVolumeClaims.prefix}media${k8s.names.persistentVolumeClaims.suffix}
-    path: /path/on/host/machine
-    capacityStorage: 100Gi
-    node: media-hosting-node-s-name
-  database:
-    host: ${k8s.names.urls.prefix}${media.database.label}${k8s.names.urls.suffix}.${traefik.domain}
-    credentials:
-      username: postgresMedia
-      password: postgresPassword
-    image: postgres:17
-    label: media-db
-    names:
-      configMap: ${k8s.names.volumes.configMaps.prefix}${media.database.label}${k8s.names.volumes.configMaps.suffix}
-      container: ${k8s.names.containers.prefix}${media.database.label}${k8s.names.containers.suffix}
-      ingress: ${k8s.names.ingresses.prefix}${media.database.label}${k8s.names.ingresses.suffix}
-      pod: ${k8s.names.pods.prefix}${media.database.label}${k8s.names.pods.suffix}
-      service: ${k8s.names.services.prefix}${media.database.label}${k8s.names.services.suffix}
-    ports:
-      http:
-        name: pgsql
-        targetPort: 5432
-    databases:
-      jellyseerr:
-        main: jellyseerr
-      prowlarr:
-        main: prowlarrMain
-        logs: prowlarrLogs
-      radarr:
-        main: radarrMain
-        logs: radarrLogs
-      readarr:
-        cache: readarrCache
-        main: readarrMain
-        logs: readarrLogs
-      sonarr:
-        main: sonarrMain
-        logs: sonarrLogs
-    replicasNb: 1
   system:
     userId: 501
     groupId: 20
@@ -46,6 +6,6 @@ media:
     data:
       path: /data
     downloads:
-      ongoing: /data/downloads/ongoing
-      finished: /data/downloads/finished
-      torrents: /data/downloads/torrents
+      ongoing: ${media.system.data.path}/ongoing
+      finished: ${media.system.data.path}/finished
+      torrents: ${media.system.data.path}/torrents

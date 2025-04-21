@@ -1,23 +1,28 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.qbittorrent.label .Values.k8s.names.pods.suffix }}
+{{- $configMap := "config-map" }}
+{{- $appVolume := "app-volume" }}
+{{- $mediaVolume := "media-volume" }}
+
 apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: {{ .Values.qbittorrent.names.pod }}
+  name: {{ $pod }}
   labels:
-    app: {{ .Values.qbittorrent.names.pod }}
+    app: {{ $pod }}
 
 spec:
   replicas: {{ .Values.qbittorrent.replicasNb }}
   selector:
     matchLabels:
-      app: {{ .Values.qbittorrent.names.pod }}
+      app: {{ $pod }}
   template:
     metadata:
       labels:
-        app: {{ .Values.qbittorrent.names.pod }}
+        app: {{ $pod }}
     spec:
       containers:
-      - name: {{ .Values.qbittorrent.names.container }}
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.qbittorrent.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.qbittorrent.image }}
         ports:
         - name: {{ .Values.qbittorrent.ports.http.name }}
@@ -40,29 +45,32 @@ spec:
           value: "{{ .Values.qbittorrent.ports.tcp.targetPort }}"
         volumeMounts:
         - mountPath: /config/qBittorrent
-          name: {{ .Values.media.storage.pv }}
-          subPath: apps/qbittorrent/config
+          name: {{ $appVolume }}
+          subPath: qbittorrent/config
         - mountPath: {{ .Values.media.system.data.path }}
-          name: {{ .Values.media.storage.pv }}
-          subPath: files/media/data
+          name: {{ $mediaVolume }}
+          subPath: downloads/qbittorrent
       initContainers:
-      - name: {{ .Values.qbittorrent.names.initContainer }}
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.qbittorrent.label }}-init{{ .Values.k8s.names.containers.suffix }}
         image: python:3-slim
         command: ['sh', '-c', 'cp -f /qBittorrent.conf /config/qBittorrent/ && python /update_password.py']
         volumeMounts:
         - mountPath: /update_password.py
-          name: {{ .Values.qbittorrent.names.configMap }}
+          name: {{ $configMap }}
           subPath: update_password.py
         - mountPath: /qBittorrent.conf
-          name: {{ .Values.qbittorrent.names.configMap }}
+          name: {{ $configMap }}
           subPath: qBittorrent.conf
         - mountPath: /config/qBittorrent
-          name: {{ .Values.media.storage.pv }}
-          subPath: apps/qbittorrent/config
+          name: {{ $appVolume }}
+          subPath: qbittorrent/config
       volumes:
-      - name: {{ .Values.media.storage.pv }}
+      - name: {{ $mediaVolume }}
         persistentVolumeClaim:
-          claimName: {{ .Values.media.storage.pvc }}
-      - name: {{ .Values.qbittorrent.names.configMap }}
+          claimName: {{ .Values.transmission.pvc.media }}
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.transmission.pvc.app }}
+      - name: {{ $configMap }}
         configMap:
-          name: {{ .Values.qbittorrent.names.configMap }}
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.qbittorrent.label }}{{ .Values.k8s.names.configMaps.suffix }}

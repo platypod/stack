@@ -13,29 +13,22 @@ bookstack:
       rootPassword: ${bookstack.label}RootPassword
     image: mysql:9
     label: ${bookstack.label}-db
-    names:
-      configMap: ${k8s.names.volumes.configMaps.prefix}${bookstack.database.label}${k8s.names.volumes.configMaps.suffix}
-      container: ${k8s.names.containers.prefix}${bookstack.database.label}${k8s.names.containers.suffix}
-      ingress: ${k8s.names.ingresses.prefix}${bookstack.database.label}${k8s.names.ingresses.suffix}
-      pod: ${k8s.names.pods.prefix}${bookstack.database.label}${k8s.names.pods.suffix}
-      service: ${k8s.names.services.prefix}${bookstack.database.label}${k8s.names.services.suffix}
     ports:
       http:
         name: mysql
         targetPort: 3306
     replicasNb: 1
-  names:
-    configMap: ${k8s.names.volumes.configMaps.prefix}${bookstack.label}${k8s.names.volumes.configMaps.suffix}
-    container: ${k8s.names.containers.prefix}${bookstack.label}${k8s.names.containers.suffix}
-    initContainer: ${k8s.names.containers.prefix}${bookstack.label}-init${k8s.names.containers.suffix}
-    ingress: ${k8s.names.ingresses.prefix}${bookstack.label}${k8s.names.ingresses.suffix}
-    pod: ${k8s.names.pods.prefix}${bookstack.label}${k8s.names.pods.suffix}
-    service: ${k8s.names.services.prefix}${bookstack.label}${k8s.names.services.suffix}
+  oidc:
+    clientId: dpxqruPll6Oo3BU9JTiWOzCQvzrFRwmAhY4ctWhffH2QwiYoeBRF39cn2hh6whvU
+    clientSecret: $pbkdf2-sha512$310000$c8p78n7pUMln0jzvd4aK4Q$JNRBzwAo0ek5qKn50cFzzvE9RXV88h1wJn5KGiHrD0YKtZaR/nCb2CJPOsKaPK0hjf.9yHxzQGZziziccp6Yng  # digest of 'insecure_secret'
   ports:
     http:
       name: http
       targetPort: 80
   replicasNb: 1
+  storage:
+    pvc: ${k8s.names.persistentVolumeClaims.prefix}${storage.defaultVolumes.apps}${k8s.names.persistentVolumeClaims.suffix}
+
   system:
     userId: 501
     groupId: 20

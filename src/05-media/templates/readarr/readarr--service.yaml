@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 
 metadata:
-  name: {{ .Values.readarr.names.service }}
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.readarr.label }}{{ .Values.k8s.names.services.suffix }}
 
 spec:
   ports:
@@ -10,4 +10,4 @@ spec:
     name: {{ .Values.readarr.ports.http.name }}
     port: {{ .Values.readarr.ports.http.targetPort }}
   selector:
-    app: {{ .Values.readarr.names.pod }}
+    app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.readarr.label }}{{ .Values.k8s.names.pods.suffix }}

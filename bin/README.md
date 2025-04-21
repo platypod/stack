@@ -1,0 +1,1 @@
+- Add uninstall methods

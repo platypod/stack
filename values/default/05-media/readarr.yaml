@@ -3,14 +3,11 @@ readarr:
   host: ${k8s.names.urls.prefix}${readarr.label}${k8s.names.urls.suffix}.${traefik.domain}
   image: lscr.io/linuxserver/readarr:develop
   label: readarr
-  names:
-    configMap: ${k8s.names.volumes.configMaps.prefix}${readarr.label}${k8s.names.volumes.configMaps.suffix}
-    container: ${k8s.names.containers.prefix}${readarr.label}${k8s.names.containers.suffix}
-    ingress: ${k8s.names.ingresses.prefix}${readarr.label}${k8s.names.ingresses.suffix}
-    pod: ${k8s.names.pods.prefix}${readarr.label}${k8s.names.pods.suffix}
-    service: ${k8s.names.services.prefix}${readarr.label}${k8s.names.services.suffix}
   ports:
     http:
       name: readarr-http
       targetPort: 8787
+  pvc:
+    app: ${storage.defaultVolumes.apps}
+    media: ${storage.defaultVolumes.media}
   replicasNb: 1

@@ -3,12 +3,6 @@ prowlarr:
   host: ${k8s.names.urls.prefix}${prowlarr.label}${k8s.names.urls.suffix}.${traefik.domain}
   image: linuxserver/prowlarr:latest
   label: prowlarr
-  names:
-    configMap: ${k8s.names.volumes.configMaps.prefix}${prowlarr.label}${k8s.names.volumes.configMaps.suffix}
-    container: ${k8s.names.containers.prefix}${prowlarr.label}${k8s.names.containers.suffix}
-    ingress: ${k8s.names.ingresses.prefix}${prowlarr.label}${k8s.names.ingresses.suffix}
-    pod: ${k8s.names.pods.prefix}${prowlarr.label}${k8s.names.pods.suffix}
-    service: ${k8s.names.services.prefix}${prowlarr.label}${k8s.names.services.suffix}
   ports:
     http:
       name: prowlarr-http

@@ -6,11 +6,6 @@ flaresolverr:
   log:
     level: info
     html: false
-  names:
-    container: ${k8s.names.containers.prefix}${flaresolverr.label}${k8s.names.containers.suffix}
-    ingress: ${k8s.names.ingresses.prefix}${flaresolverr.label}${k8s.names.ingresses.suffix}
-    pod: ${k8s.names.pods.prefix}${flaresolverr.label}${k8s.names.pods.suffix}
-    service: ${k8s.names.services.prefix}${flaresolverr.label}${k8s.names.services.suffix}
   ports:
     http:
       name: flaresolvr-http

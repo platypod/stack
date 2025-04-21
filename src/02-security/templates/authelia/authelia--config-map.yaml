@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 
 metadata:
-  name: {{ .Values.authelia.names.configMap }}
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.configMaps.suffix }}
 
 data:
   setup.sh: |
@@ -17,6 +17,23 @@ data:
     identity_validation:
         reset_password:
             jwt_secret: {{ .Values.authelia.secrets.jwt }}
+
+    #identity_providers:
+    #    oidc:
+    #        ## See: https://www.authelia.com/c/oidc
+    #        clients:
+    #              - client_id: '{{ .Values.bookstack.oidc.clientId }}'
+    #                client_name: 'BookStack'
+    #                client_secret: '{{ .Values.bookstack.oidc.clientSecret }}'
+    #                public: false
+    #                authorization_policy: 'one_factor'
+    #                redirect_uris:
+    #                      - 'https://{{ .Values.bookstack.host}}/oidc/callback'
+    #                scopes:
+    #                      - 'openid'
+    #                      - 'profile'
+    #                      - 'email'
+    #                userinfo_signed_response_alg: 'none'
 
     server:
         address: tcp://0.0.0.0:{{ .Values.authelia.ports.http.targetPort }}/
@@ -87,7 +104,7 @@ data:
     storage:
         encryption_key: {{ .Values.authelia.secrets.encryptionKey }}
         postgres:
-            address: 'tcp://{{ .Values.authelia.database.names.service }}:{{ .Values.authelia.database.ports.http.targetPort }}'
+            address: 'tcp://{{ .Values.k8s.names.services.prefix }}{{ .Values.authelia.database.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.authelia.database.ports.http.targetPort }}'
             database: '{{ .Values.authelia.database.name }}'
             schema: 'public'
             username: '{{ .Values.authelia.database.credentials.username }}'

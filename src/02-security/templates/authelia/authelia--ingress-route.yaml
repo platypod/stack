@@ -1,0 +1,23 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+
+metadata:
+  name: {{ .Values.k8s.names.ingresses.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.ingresses.suffix }}
+
+spec:
+  entryPoints:
+  - {{ .Values.traefik.ports.https.name }}
+
+  routes:
+  - kind: Rule
+    match: Host(`{{ .Values.authelia.host }}`)
+    middlewares:
+    - name: {{ .Values.k8s.names.middlewares.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.middlewares.suffix }}
+      namespace: {{ .Values.k8s.namespace }}
+    services:
+    - kind: Service
+      name: {{ .Values.k8s.names.services.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.services.suffix }}
+      port: {{ .Values.authelia.ports.http.targetPort }}
+
+  tls:
+    certResolver: {{ .Values.traefik.resolverName }}

@@ -3,14 +3,11 @@ radarr:
   host: ${k8s.names.urls.prefix}${radarr.label}${k8s.names.urls.suffix}.${traefik.domain}
   image: linuxserver/radarr:latest
   label: radarr
-  names:
-    configMap: ${k8s.names.volumes.configMaps.prefix}${radarr.label}${k8s.names.volumes.configMaps.suffix}
-    container: ${k8s.names.containers.prefix}${radarr.label}${k8s.names.containers.suffix}
-    ingress: ${k8s.names.ingresses.prefix}${radarr.label}${k8s.names.ingresses.suffix}
-    pod: ${k8s.names.pods.prefix}${radarr.label}${k8s.names.pods.suffix}
-    service: ${k8s.names.services.prefix}${radarr.label}${k8s.names.services.suffix}
   ports:
     http:
       name: radarr-http
       targetPort: 7878
+  pvc:
+    app: ${storage.defaultVolumes.apps}
+    media: ${storage.defaultVolumes.media}
   replicasNb: 1

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 
 metadata:
-  name: {{ .Values.jellyseerr.names.configMap }}
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.configMaps.suffix }}
 
 data:
   settings.json: |
@@ -63,7 +63,7 @@ data:
      "radarr": [
       {
        "name": "Radarr",
-       "hostname": "{{ .Values.radarr.names.service }}",
+       "hostname": "{{ .Values.k8s.names.services.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.services.suffix }}",
        "port": {{ .Values.radarr.ports.http.targetPort }},
        "apiKey": "{{ .Values.radarr.apiKey }}",
        "useSsl": true,
@@ -83,7 +83,7 @@ data:
      "sonarr": [
       {
        "name": "Sonarr",
-       "hostname": "{{ .Values.sonarr.names.service }}",
+       "hostname": "{{ .Values.k8s.names.services.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.services.suffix }}",
        "port": {{ .Values.sonarr.ports.http.targetPort }},
        "apiKey": "{{ .Values.sonarr.apiKey }}",
        "useSsl": false,

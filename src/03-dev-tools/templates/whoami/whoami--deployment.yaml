@@ -1,23 +1,25 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.whoami.label .Values.k8s.names.pods.suffix }}
+
 apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: {{ .Values.whoami.names.pod }}
+  name: {{ $pod }}
   labels:
-    app: {{ .Values.whoami.names.pod }}
+    app: {{ $pod }}
 
 spec:
   replicas: {{ .Values.whoami.replicasNb }}
   selector:
     matchLabels:
-      app: {{ .Values.whoami.names.pod }}
+      app: {{ $pod }}
   template:
     metadata:
       labels:
-        app: {{ .Values.whoami.names.pod }}
+        app: {{ $pod }}
     spec:
       containers:
-      - name: {{ .Values.whoami.names.container }}
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.whoami.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.whoami.image }}
         ports:
         - name: {{ .Values.whoami.ports.http.name }}

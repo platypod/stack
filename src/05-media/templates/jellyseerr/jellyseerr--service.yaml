@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 
 metadata:
-  name: {{ .Values.jellyseerr.names.service }}
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.services.suffix }}
 
 spec:
   ports:
@@ -10,4 +10,4 @@ spec:
     name: {{ .Values.jellyseerr.ports.http.name }}
     port: {{ .Values.jellyseerr.ports.http.targetPort }}
   selector:
-    app: {{ .Values.jellyseerr.names.pod }}
+    app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.pods.suffix }}

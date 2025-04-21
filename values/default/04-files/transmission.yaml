@@ -6,15 +6,9 @@ transmission:
     username: transmission
     password: transmission
   download:
-    torrents: ${media.system.downloads.torrents}/${transmission.label}
-    ongoing: ${media.system.downloads.ongoing}/${transmission.label}
+    torrents: ${media.system.downloads.torrents}
+    ongoing: ${media.system.downloads.ongoing}
     finished: ${media.system.downloads.finished}
-  names:
-    configMap: ${k8s.names.volumes.configMaps.prefix}${transmission.label}${k8s.names.volumes.configMaps.suffix}
-    container: ${k8s.names.containers.prefix}${transmission.label}${k8s.names.containers.suffix}
-    ingress: ${k8s.names.ingresses.prefix}${transmission.label}${k8s.names.ingresses.suffix}
-    pod: ${k8s.names.pods.prefix}${transmission.label}${k8s.names.pods.suffix}
-    service: ${k8s.names.services.prefix}${transmission.label}${k8s.names.services.suffix}
   ports:
     http:
       name: webui
@@ -29,4 +23,7 @@ transmission:
       port: 51413
       targetPort: 51413
       protocol: UDP
+  pvc:
+    app: ${storage.defaultVolumes.apps}
+    media: ${storage.defaultVolumes.media}
   replicasNb: 1

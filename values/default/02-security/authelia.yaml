@@ -10,12 +10,6 @@ authelia:
       password: ${authelia.label}Password
     image: postgres:17
     label: ${authelia.label}-db
-    names:
-      configMap: ${k8s.names.volumes.configMaps.prefix}${authelia.database.label}${k8s.names.volumes.configMaps.suffix}
-      container: ${k8s.names.containers.prefix}${authelia.database.label}${k8s.names.containers.suffix}
-      ingress: ${k8s.names.ingresses.prefix}${authelia.database.label}${k8s.names.ingresses.suffix}
-      pod: ${k8s.names.pods.prefix}${authelia.database.label}${k8s.names.pods.suffix}
-      service: ${k8s.names.services.prefix}${authelia.database.label}${k8s.names.services.suffix}
     ports:
       http:
         name: pgsql
@@ -26,14 +20,6 @@ authelia:
   log:
     level: info
     format: text
-  names:
-    configMap: ${k8s.names.volumes.configMaps.prefix}${authelia.label}${k8s.names.volumes.configMaps.suffix}
-    container: ${k8s.names.containers.prefix}${authelia.label}${k8s.names.containers.suffix}
-    initContainer: ${k8s.names.containers.prefix}${authelia.label}-init${k8s.names.containers.suffix}
-    ingress: ${k8s.names.ingresses.prefix}${authelia.label}${k8s.names.ingresses.suffix}
-    middleware: authelia-forwardauth
-    pod: ${k8s.names.pods.prefix}${authelia.label}${k8s.names.pods.suffix}
-    service: ${k8s.names.services.prefix}${authelia.label}${k8s.names.services.suffix}
   ports:
     http:
       name: authelia
@@ -43,35 +29,50 @@ authelia:
       targetPort: 9959
   replicasNb: 1
   rules:
-    - domain:
+    - subject:
+      - group:media
+      policy: one_factor
+      domain:
+      - ${bazarr.host}
       - ${flaresolverr.host}
       - ${radarr.host}
       - ${prowlarr.host}
       - ${readarr.host}
       - ${sonarr.host}
+
+    - subject:
+      - group:download
       policy: one_factor
-      subject:
-      - group:admins
-    - domain:
-      - ${homepage.host}
+      domain:
       - ${deluge.host}
       - ${qbittorrent.host}
       - ${transmission.host}
-      - ${bookstack.host}
+
+    - subject:
+      - group:dev
       policy: one_factor
-      subject:
-      - group:users
-    - domain:
-        - ${traefik.host}
-        - ${authelia.host}
-        - ${whoami.host}
-        - ${jellyfin.host}
-        - ${jellyseerr.host}
-      policy: bypass
+      domain:
+      - ${authelia.database.host}
+      - ${bookstack.database.host}
+      - ${bookstack.host}
+      - ${dbeaver.host}
+      - ${database.host}
+      - ${whoami.host}
+
+    - policy: bypass
+      domain:
+      - ${authelia.host}
+      - ${homepage.host}
+      - ${jellyfin.host}
+      - ${jellyseerr.host}
+      - ${traefik.host}
   secrets:
     encryptionKey: verySecretMuchSecureNeverGonnaBeGuessedWoah
     jwt: verySecretMuchSecureNeverGonnaBeGuessedWoooow
     session: verySecretMuchSecureNeverGonnaBeGuessedWoowee
+  storage:
+    pvc: ${storage.defaultVolumes.apps}
+
   users:
     admin:
       displayname: platypodAdmin

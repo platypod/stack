@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 
 metadata:
-  name: {{ .Values.qbittorrent.names.configMap }}
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.qbittorrent.label }}{{ .Values.k8s.names.configMaps.suffix }}
 
 data:
   update_password.py: |

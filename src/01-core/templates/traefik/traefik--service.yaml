@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 
 metadata:
-  name: {{ .Values.traefik.names.services.web }}
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.services.suffix }}
 
 spec:
   externalTrafficPolicy: Local
@@ -12,5 +12,5 @@ spec:
       targetPort: {{ .Values.traefik.ports.https.targetPort }}
       name: {{ .Values.traefik.ports.https.name }}
   selector:
-    app: {{ .Values.traefik.names.pod }}
+    app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.pods.suffix }}
   type: LoadBalancer

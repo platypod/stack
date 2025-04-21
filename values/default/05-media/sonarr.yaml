@@ -3,14 +3,11 @@ sonarr:
   host: ${k8s.names.urls.prefix}${sonarr.label}${k8s.names.urls.suffix}.${traefik.domain}
   image: linuxserver/sonarr:latest
   label: sonarr
-  names:
-    configMap: ${k8s.names.volumes.configMaps.prefix}${sonarr.label}${k8s.names.volumes.configMaps.suffix}
-    container: ${k8s.names.containers.prefix}${sonarr.label}${k8s.names.containers.suffix}
-    ingress: ${k8s.names.ingresses.prefix}${sonarr.label}${k8s.names.ingresses.suffix}
-    pod: ${k8s.names.pods.prefix}${sonarr.label}${k8s.names.pods.suffix}
-    service: ${k8s.names.services.prefix}${sonarr.label}${k8s.names.services.suffix}
   ports:
     http:
       name: sonarr-http
       targetPort: 8989
+  pvc:
+    app: ${storage.defaultVolumes.apps}
+    media: ${storage.defaultVolumes.media}
   replicasNb: 1

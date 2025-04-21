@@ -1,32 +1,43 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.prowlarr.label .Values.k8s.names.pods.suffix }}
+{{- $configMap := "config-map" }}
+
 apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: {{ .Values.prowlarr.names.pod }}
+  name: {{ $pod }}
   labels:
-    app: {{ .Values.prowlarr.names.pod }}
+    app: {{ $pod }}
 
 spec:
   replicas: {{ .Values.prowlarr.replicasNb }}
   selector:
     matchLabels:
-      app: {{ .Values.prowlarr.names.pod }}
+      app: {{ $pod }}
   template:
     metadata:
       labels:
-        app: {{ .Values.prowlarr.names.pod }}
+        app: {{ $pod }}
     spec:
       containers:
-      - name: {{ .Values.prowlarr.names.container }}
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.prowlarr.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.prowlarr.image }}
         ports:
         - name: {{ .Values.prowlarr.ports.http.name }}
           containerPort: {{ .Values.prowlarr.ports.http.targetPort }}
+        env:
+        - name: PUID
+          value: "{{ .Values.media.system.userId }}"
+        - name: PGID
+          value: "{{ .Values.media.system.groupId }}"
+        - name: UMASK
+          value: "{{ .Values.media.system.umask }}"
         volumeMounts:
         - mountPath: /config/config.xml
-          name: {{ .Values.prowlarr.names.configMap }}
+          name: {{ $configMap }}
           subPath: config.xml
       volumes:
-      - name: {{ .Values.prowlarr.names.configMap }}
+      - name: {{ $configMap }}
         configMap:
-          name: {{ .Values.prowlarr.names.configMap }}
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.prowlarr.label }}{{ .Values.k8s.names.configMaps.suffix }}
+  

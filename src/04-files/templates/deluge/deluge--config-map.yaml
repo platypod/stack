@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 
 metadata:
-  name: {{ .Values.deluge.names.configMap }}
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.deluge.label }}{{ .Values.k8s.names.configMaps.suffix }}
 
 data:
   init.sh: |

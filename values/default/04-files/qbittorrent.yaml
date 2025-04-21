@@ -9,13 +9,6 @@ qbittorrent:
     torrents: ${media.system.downloads.torrents}/${qbittorrent.label}
     ongoing: ${media.system.downloads.ongoing}/${qbittorrent.label}
     finished: ${media.system.downloads.finished}
-  names:
-    configMap: ${k8s.names.volumes.configMaps.prefix}${qbittorrent.label}${k8s.names.volumes.configMaps.suffix}
-    container: ${k8s.names.containers.prefix}${qbittorrent.label}${k8s.names.containers.suffix}
-    initContainer: ${k8s.names.containers.prefix}${qbittorrent.label}-init${k8s.names.containers.suffix}
-    ingress: ${k8s.names.ingresses.prefix}${qbittorrent.label}${k8s.names.ingresses.suffix}
-    pod: ${k8s.names.pods.prefix}${qbittorrent.label}${k8s.names.pods.suffix}
-    service: ${k8s.names.services.prefix}${qbittorrent.label}${k8s.names.services.suffix}
   ports:
     http:
       name: webui
@@ -31,3 +24,7 @@ qbittorrent:
       targetPort: 6882
       protocol: UDP
   replicasNb: 1
+  storage:
+    pvc:
+      app: ${storage.defaultVolumes.apps}
+      media: ${storage.defaultVolumes.media}

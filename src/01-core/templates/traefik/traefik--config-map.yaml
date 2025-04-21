@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 
 metadata:
-  name: {{ .Values.traefik.names.configMap }}
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.configMaps.suffix }}
 
 data:
   jellyfin-file-provider.yaml: |

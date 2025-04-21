@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 
 metadata:
-  name: {{ .Values.bookstack.names.service }}
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.bookstack.label }}{{ .Values.k8s.names.services.suffix }}
 
 spec:
   ports:
@@ -10,4 +10,4 @@ spec:
     name: {{ .Values.bookstack.ports.http.name }}
     port: {{ .Values.bookstack.ports.http.targetPort }}
   selector:
-    app: {{ .Values.bookstack.names.pod }}
+    app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.bookstack.label }}{{ .Values.k8s.names.pods.suffix }}

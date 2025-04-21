@@ -2,14 +2,14 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 
 metadata:
-  name: {{ .Release.Namespace }}--{{ .Values.traefik.names.roleBinding }}
+  name: {{ .Values.k8s.namespace }}--{{ .Values.k8s.names.roleBindings.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.roleBindings.suffix }}
 
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ .Release.Namespace }}--{{ .Values.traefik.names.role }}
+  name: {{ .Values.k8s.namespace }}--{{ .Values.k8s.names.roles.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.roles.suffix }}
 
 subjects:
   - kind: ServiceAccount
-    name: {{ .Values.traefik.names.serviceAccount }}
-    namespace: {{ .Release.Namespace }}
+    name: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.serviceAccounts.suffix }}
+    namespace: {{ .Values.k8s.namespace }}

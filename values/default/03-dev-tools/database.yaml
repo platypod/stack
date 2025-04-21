@@ -1,0 +1,34 @@
+database:
+  host: ${k8s.names.urls.prefix}${database.label}${k8s.names.urls.suffix}.${traefik.domain}
+  credentials:
+    username: postgresMedia
+    password: postgresPassword
+  image: postgres:17
+  label: transverse-db
+  ports:
+    http:
+      name: pgsql
+      targetPort: 5432
+  databases:
+    cloudBeaver:
+      main: cloudBeaver
+    jellyseerr:
+      main: jellyseerr
+    bazarr:
+      main: bazarrMain
+      logs: bazarrLogs
+    prowlarr:
+      main: prowlarrMain
+      logs: prowlarrLogs
+    radarr:
+      main: radarrMain
+      logs: radarrLogs
+    readarr:
+      cache: readarrCache
+      main: readarrMain
+      logs: readarrLogs
+    sonarr:
+      main: sonarrMain
+      logs: sonarrLogs
+  replicasNb: 1
+  pvc: ${storage.defaultVolumes.apps}

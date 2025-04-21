@@ -1,23 +1,27 @@
+{{- $configMapVolume := "config-map" }}
+{{- $emptyDirVolume := "empty-dir-volume" }}
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.homepage.label .Values.k8s.names.pods.suffix }}
+
 apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: {{ .Values.homepage.names.pod }}
+  name: {{ $pod }}
   labels:
-    app: {{ .Values.homepage.names.pod }}
+    app: {{ $pod }}
 
 spec:
   selector:
     matchLabels:
-      app: {{ .Values.homepage.names.pod }}
+      app: {{ $pod }}
   template:
     metadata:
       labels:
-        app: {{ .Values.homepage.names.pod }}
+        app: {{ $pod }}
     spec:
       automountServiceAccountToken: true
       containers:
-      - name: {{ .Values.homepage.names.container }}
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.homepage.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.homepage.image.registry }}{{ .Values.homepage.image.namespace }}{{ .Values.homepage.image.repository }}:{{ .Values.homepage.image.tag }}
         ports:
         - name: {{ .Values.homepage.ports.http.name }}
@@ -25,36 +29,36 @@ spec:
           protocol: TCP
         volumeMounts:
         - mountPath: /app/config/custom.js
-          name: {{ .Values.homepage.names.configMap }}
+          name: {{ $configMapVolume }}
           subPath: custom.js
         - mountPath: /app/config/custom.css
-          name: {{ .Values.homepage.names.configMap }}
+          name: {{ $configMapVolume }}
           subPath: custom.css
         - mountPath: /app/config/bookmarks.yaml
-          name: {{ .Values.homepage.names.configMap }}
+          name: {{ $configMapVolume }}
           subPath: bookmarks.yaml
         - mountPath: /app/config/docker.yaml
-          name: {{ .Values.homepage.names.configMap }}
+          name: {{ $configMapVolume }}
           subPath: docker.yaml
         - mountPath: /app/config/kubernetes.yaml
-          name: {{ .Values.homepage.names.configMap }}
+          name: {{ $configMapVolume }}
           subPath: kubernetes.yaml
         - mountPath: /app/config/services.yaml
-          name: {{ .Values.homepage.names.configMap }}
+          name: {{ $configMapVolume }}
           subPath: services.yaml
         - mountPath: /app/config/settings.yaml
-          name: {{ .Values.homepage.names.configMap }}
+          name: {{ $configMapVolume }}
           subPath: settings.yaml
         - mountPath: /app/config/widgets.yaml
-          name: {{ .Values.homepage.names.configMap }}
+          name: {{ $configMapVolume }}
           subPath: widgets.yaml
         - mountPath: /app/config/logs
-          name: {{ .Values.homepage.names.emptyDir }}
+          name: {{ $emptyDirVolume }}
       enableServiceLinks: true
-      serviceAccountName: {{ .Values.homepage.names.serviceAccount }}
+      serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ .Values.homepage.label }}{{ .Values.k8s.names.serviceAccounts.suffix }}
       volumes:
-      - name: {{ .Values.homepage.names.configMap }}
+      - name: {{ $configMapVolume }}
         configMap:
-          name: {{ .Values.homepage.names.configMap }}
-      - name: {{ .Values.homepage.names.emptyDir }}
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.homepage.label }}{{ .Values.k8s.names.configMaps.suffix }}
+      - name: {{ $emptyDirVolume }}
         emptyDir: {}

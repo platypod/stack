@@ -2,7 +2,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 
 metadata:
-  name: {{ .Release.Namespace }}--{{ .Values.homepage.names.role }}
+  name: {{ .Values.k8s.namespace }}--{{ .Values.k8s.names.roles.prefix }}{{ .Values.homepage.label }}{{ .Values.k8s.names.roles.suffix }}
 
 rules:
   - apiGroups:

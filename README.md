@@ -4,3 +4,6 @@
     - Proposer une version documentaire de la procédure.
 - Documenter le besoin d'installer les CRDs Traefik pour le middleware d'Authelia
 - Documenter les pics de traffic liés au crawling après la signature de certificats LE https://acme-staging-v02.api.letsencrypt.org/acme/chall/185205204/16091071464/G1RTuw
+- Ajouter la gestion des langues et des sous-titres à la stack multimédia - Voir https://github.com/PCJones/radarr-sonarr-german-dual-language?tab=readme-ov-file#i-dont-want-dual-language-i-want-to-prefer-german-but-use-english-as-fallback-or-vice-versa
+- Ajouter l'activation/désactivation des utilisateurs par défault sur Authelia
+- Créer plusieurs utilisateurs et compartimenter les droits sur la postgresql transverses (dev-tools)

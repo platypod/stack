@@ -1,7 +1,13 @@
 k8s:
   namespace: ${project.env}-${project.name}
   names:
+    configMaps:
+      prefix: ""
+      suffix: ""
     containers:
+      prefix: ""
+      suffix: ""
+    emptyDirs:
       prefix: ""
       suffix: ""
     ingresses:
@@ -10,10 +16,16 @@ k8s:
     initContainers:
       prefix: ""
       suffix: ""
+    middlewares:
+      prefix: ""
+      suffix: ""
     namespaces:
       prefix: ""
       suffix: ""
     persistentVolumeClaims:
+      prefix: ""
+      suffix: ""
+    persistentVolumes:
       prefix: ""
       suffix: ""
     pods:
@@ -37,13 +49,3 @@ k8s:
     urls:
       prefix: ""
       suffix: ""
-    volumes:
-      configMaps:
-        prefix: ""
-        suffix: "--config-map-volume"
-      emptyDirs:
-        prefix: ""
-        suffix: "--empty-dir-volume"
-      localStorages:
-        prefix: ""
-        suffix: "--local-storage-volume"

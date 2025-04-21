@@ -1,24 +1,27 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.traefik.label .Values.k8s.names.pods.suffix }}
+{{- $configMap := "config-map" }}
+
 apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: {{ .Values.traefik.names.pod }}
+  name: {{ $pod }}
   labels:
-    app: {{ .Values.traefik.names.pod }}
+    app: {{ $pod }}
 
 spec:
   replicas: {{ .Values.traefik.replicasNb }}
   selector:
     matchLabels:
-      app: {{ .Values.traefik.names.pod }}
+      app: {{ $pod }}
   template:
     metadata:
       labels:
-        app: {{ .Values.traefik.names.pod }}
+        app: {{ $pod }}
     spec:
-      serviceAccountName: {{ .Values.traefik.names.serviceAccount }}
+      serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.serviceAccounts.suffix }}
       containers:
-      - name: {{ .Values.traefik.names.container }}
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.traefik.image.registry }}{{ .Values.traefik.image.namespace }}{{ .Values.traefik.image.repository }}:{{ .Values.traefik.image.tag }}
         args:
           # provider: file
@@ -59,16 +62,16 @@ spec:
           containerPort: {{ .Values.traefik.ports.dashboard.targetPort }}
         volumeMounts:
         - mountPath: /file-providers/jellyfin-local-proxy.yaml
-          name: {{ .Values.traefik.names.configMap }}
+          name: {{ $configMap }}
           subPath: jellyfin-file-provider.yaml
         - mountPath: /etc/traefik/acme
-          name: {{ .Values.traefik.storage.pv }}
-          subPath: apps/traefik/acme
+          name: {{ .Values.traefik.storage.pvc }}
+          subPath: traefik/acme
       volumes:
-      - name: {{ .Values.traefik.names.configMap }}
+      - name: {{ $configMap }}
         configMap:
-          name: {{ .Values.traefik.names.configMap }}
-      - name: {{ .Values.traefik.storage.pv }}
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.configMaps.suffix }}
+      - name: {{ .Values.traefik.storage.pvc }}
         persistentVolumeClaim:
           claimName: {{ .Values.traefik.storage.pvc }}
 

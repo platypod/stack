@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 
 metadata:
-  name: {{ .Values.homepage.names.configMap }}
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.homepage.label }}{{ .Values.k8s.names.configMaps.suffix }}
 
 data:
   kubernetes.yaml: ""
@@ -33,7 +33,7 @@ data:
           description: Media server with streaming capacities.
           widget:
             type: jellyfin
-            url: https://{{ .Values.jellyfin.host }}{{ .Values.jellyfin.baseUrl }}
+            url: http://{{ .Values.jellyfin.proxy.host }}:{{ .Values.jellyfin.proxy.port }}{{ .Values.jellyfin.baseUrl }}
             key: {{ .Values.jellyfin.apiKey }}
             enableBlocks: true # optional, defaults to false
             enableNowPlaying: true # optional, defaults to true
@@ -46,7 +46,7 @@ data:
           description: Media catalog to pick movies and series.
           widget:
             type: jellyseerr
-            url: https://{{ .Values.jellyseerr.host }}
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.services.suffix }}
             key: {{ .Values.jellyseerr.apiKey }}
       - Prowlarr:
           abbr: PR
@@ -54,7 +54,7 @@ data:
           description: Indexer manager, used as proxy between the collection managers and the torrent trackers or usenet indexers.
           widget:
             type: prowlarr
-            url: https://{{ .Values.prowlarr.host }}
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.prowlarr.label }}{{ .Values.k8s.names.services.suffix }}
             key: {{ .Values.prowlarr.apiKey }}
       - Radarr:
           abbr: RA
@@ -62,7 +62,7 @@ data:
           description: Movies collection manager, used to monitor RSS feeds and manage movies downloads.
           widget:
             type: radarr
-            url: https://{{ .Values.radarr.host }}
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.services.suffix }}
             key: {{ .Values.radarr.apiKey }}
       - Readarr:
           abbr: RE
@@ -70,7 +70,7 @@ data:
           description: Books collection manager, used to monitor RSS feeds and manage books downloads.
           widget:
             type: readarr
-            url: https://{{ .Values.readarr.host }}
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.readarr.label }}{{ .Values.k8s.names.services.suffix }}
             key: {{ .Values.readarr.apiKey }}
       - Sonarr:
           abbr: SR
@@ -78,8 +78,16 @@ data:
           description: Series collection manager, used to monitor RSS feeds and manage series downloads.
           widget:
             type: sonarr
-            url: https://{{ .Values.sonarr.host }}
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.services.suffix }}
             key: {{ .Values.sonarr.apiKey }}
+      - Bazarr:
+          abbr: BZ
+          href: https://{{ .Values.bazarr.host }}
+          description: Subtitles collection manager, used to download subtitles for Radarr and Sonarr.
+          widget:
+            type: bazarr
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.bazarr.label }}{{ .Values.k8s.names.services.suffix }}
+            key: {{ .Values.bazarr.apiKey }}
       - FlareSolverr:
           abbr: FS
           href: https://{{ .Values.flaresolverr.host }}
@@ -91,7 +99,7 @@ data:
           description: Torrenting service.
           widget:
             type: transmission
-            url: https://{{ .Values.transmission.host }}
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.services.suffix }}
             username: {{ .Values.transmission.credentials.username }}
             password: {{ .Values.transmission.credentials.password }}
             rpcUrl: /transmission/
@@ -101,7 +109,7 @@ data:
           description: Torrenting service.
           widget:
             type: deluge
-            url: https://{{ .Values.deluge.host }}
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.deluge.label }}{{ .Values.k8s.names.services.suffix }}
             password: {{ .Values.deluge.credentials.password }}
             enableLeechProgress: true
       - QBitTorrent:
@@ -110,7 +118,7 @@ data:
           description: Torrenting service.
           widget:
             type: qbittorrent
-            url: https://{{ .Values.qbittorrent.host }}
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.qbittorrent.label }}{{ .Values.k8s.names.services.suffix }}
             username: {{ .Values.qbittorrent.credentials.username }}
             password: {{ .Values.qbittorrent.credentials.password }}
             enableLeechProgress: true
@@ -125,9 +133,12 @@ data:
           description: Reverse-proxy exposing this stack to the users.
           widget:
             type: traefik
-            url: https://{{ .Values.traefik.host }}
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.traefik.dashboardLabel }}{{ .Values.k8s.names.services.suffix }}
       - Who am I?:
           href: https://{{ .Values.whoami.host }}
+          description: Tiny Go webserver that prints os information and HTTP request to output
+      - DBeaver?:
+          href: https://{{ .Values.dbeaver.host }}
           description: Tiny Go webserver that prints os information and HTTP request to output
     - Security:
       - Authelia:

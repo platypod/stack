@@ -1,0 +1,50 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.dbeaver.label .Values.k8s.names.pods.suffix }}
+{{- $appVolume := "app-volume" }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.dbeaver.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.dbeaver.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.dbeaver.image }}
+        ports:
+        - name: {{ .Values.dbeaver.ports.http.name }}
+          containerPort: {{ .Values.dbeaver.ports.http.targetPort }}
+        env:
+        - name: CLOUDBEAVER_DB_DRIVER
+          value: "{{ .Values.dbeaver.database.driver }}"
+        - name: CLOUDBEAVER_DB_URL
+          value: "{{ .Values.dbeaver.database.url }}"
+        - name: CLOUDBEAVER_DB_SCHEMA
+          value: "{{ .Values.dbeaver.database.schema }}"
+        - name: CLOUDBEAVER_DB_USER
+          value: "{{ .Values.dbeaver.database.credentials.username }}"
+        - name: CLOUDBEAVER_DB_PASSWORD
+          value: "{{ .Values.dbeaver.database.credentials.password }}"
+        - name: CB_ADMIN_NAME
+          value: "{{ .Values.dbeaver.credentials.username }}"
+        - name: CB_ADMIN_PASSWORD
+          value: "{{ .Values.dbeaver.credentials.password }}"
+        volumeMounts:
+        - mountPath: /opt/cloudbeaver/workspace
+          name: {{ $appVolume }}
+          subPath: dbeaver
+      volumes:
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.jellyseerr.pvc }}

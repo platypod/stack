@@ -1,0 +1,27 @@
+{{- if .Values.storage.nfs.isEnabled }}
+
+{{- if .Values.storage.localStorage.isEnabled }}
+{{- fail "Both storage.localStorage and storage.nfs are enabled. Please choose one."}}
+{{- end}}
+
+{{- range $volume := .Values.storage.nfs.volumes }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+
+metadata:
+  name: {{ $.Values.k8s.names.persistentVolumeClaims.prefix }}{{ $volume.name }}{{ $.Values.k8s.names.persistentVolumeClaims.suffix }}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      {{- if hasKey $volume "capacityStorage" }}
+      storage: {{ $volume.capacityStorage }}
+      {{- else }}
+      storage: {{ $.Values.storage.nfs.default.capacityStorage }}
+      {{- end }}
+  volumeName: {{ $volume.name }}
+  storageClassName: ""
+
+---
+{{- end }}
+{{- end }}

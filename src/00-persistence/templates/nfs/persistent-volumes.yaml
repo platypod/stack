@@ -1,0 +1,63 @@
+{{- if .Values.storage.nfs.isEnabled }}
+
+{{- if .Values.storage.localStorage.isEnabled }}
+{{- fail "Both storage.localStorage and storage.nfs are enabled. Please choose one."}}
+{{- end}}
+
+{{- range $volume := .Values.storage.nfs.volumes }}
+
+{{- $capacityStorage := "" }}
+{{- if hasKey $volume "capacityStorage" }}
+{{- $capacityStorage = $volume.capacityStorage }}
+{{- else }}
+{{- $capacityStorage = $.Values.storage.nfs.default.capacityStorage }}
+{{- end }}
+
+{{- $reclaimPolicy := "" }}
+{{- if hasKey $volume "reclaimPolicy" }}
+{{- $reclaimPolicy = $volume.reclaimPolicy }}
+{{- else }}
+{{- $reclaimPolicy = $.Values.storage.nfs.default.reclaimPolicy }}
+{{- end }}
+
+{{- $server := "" }}
+{{- if hasKey $volume "server" }}
+{{- $server = $volume.server }}
+{{- else }}
+{{- $server = $.Values.storage.nfs.default.server }}
+{{- end }}
+
+{{- $share := "" }}
+{{- if hasKey $volume "share" }}
+{{- $share = $volume.share }}
+{{- else }}
+{{- $share = $.Values.storage.nfs.default.share }}
+{{- end }}
+
+apiVersion: v1
+kind: PersistentVolume
+
+metadata:
+  annotations:
+    volume.kubernetes.io/provisioned-by: nfs.csi.k8s.io
+  name: {{ $.Values.k8s.names.persistentVolumes.prefix }}{{ $volume.name }}{{ $.Values.k8s.names.persistentVolumes.suffix }}
+
+spec:
+  capacity:
+    storage: {{ $capacityStorage }}
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: {{ $reclaimPolicy }}
+  mountOptions:
+  - hard
+  - nfsvers=4.1
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeAttributes:
+      server: {{ $server }}
+      share: {{ $share }}
+    volumeHandle: "{{ $server }}#{{ $share }}#{{ $volume.name }}"
+
+---
+{{- end }}
+{{- end }}

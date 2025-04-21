@@ -2,14 +2,14 @@ apiVersion: traefik.io/v1alpha1
 kind: Middleware
 
 metadata:
-  name: {{ .Values.authelia.names.middleware }}
+  name: {{ .Values.k8s.names.middlewares.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.middlewares.suffix }}
   labels:
     chartVersion: {{ .Chart.Version }}
     env: {{ .Values.project.env }}
 
 spec:
   forwardAuth:
-    address: 'http://{{ .Values.authelia.names.service }}:{{ .Values.authelia.ports.http.targetPort }}/api/authz/forward-auth'
+    address: 'http://{{ .Values.k8s.names.services.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.authelia.ports.http.targetPort }}/api/authz/forward-auth'
     authResponseHeaders:
       - 'Remote-User'
       - 'Remote-Groups'

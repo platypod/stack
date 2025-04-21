@@ -7,20 +7,10 @@ traefik:
     repository: traefik
     tag: v3.1
   label: traefik
+  dashboardLabel: traefik-dashboard
   logging:
     format: common
     level: ERROR
-  names:
-    configMap: ${k8s.names.volumes.configMaps.prefix}${traefik.label}${k8s.names.volumes.configMaps.suffix}
-    container: ${k8s.names.containers.prefix}${traefik.label}${k8s.names.containers.suffix}
-    ingress: ${k8s.names.ingresses.prefix}${traefik.label}${k8s.names.ingresses.suffix}
-    pod: ${k8s.names.pods.prefix}${traefik.label}${k8s.names.pods.suffix}
-    role: ${k8s.names.roles.prefix}${traefik.label}${k8s.names.roles.suffix}
-    roleBinding: ${k8s.names.roleBindings.prefix}${traefik.label}${k8s.names.roleBindings.suffix}
-    services:
-      web: ${k8s.names.services.prefix}${traefik.label}${k8s.names.services.suffix}
-      dashboard: ${k8s.names.services.prefix}${traefik.label}-dashboard${k8s.names.services.suffix}
-    serviceAccount: ${k8s.names.serviceAccounts.prefix}${traefik.label}${k8s.names.serviceAccounts.suffix}
   ports:
     dashboard:
       # name has to be traefik, see https://doc.traefik.io/traefik/operations/api/#insecure
@@ -33,3 +23,5 @@ traefik:
       targetPort: 443
   replicasNb: 1
   resolverName: letsencrypt
+  storage:
+    pvc: ${storage.defaultVolumes.apps}
