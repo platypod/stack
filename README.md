@@ -7,3 +7,4 @@
 - Ajouter la gestion des langues et des sous-titres à la stack multimédia - Voir https://github.com/PCJones/radarr-sonarr-german-dual-language?tab=readme-ov-file#i-dont-want-dual-language-i-want-to-prefer-german-but-use-english-as-fallback-or-vice-versa
 - Ajouter l'activation/désactivation des utilisateurs par défault sur Authelia
 - Créer plusieurs utilisateurs et compartimenter les droits sur la postgresql transverses (dev-tools)
+- Corriger la configuration initiale de DBeaver (et sa base de donnée utilisée ? Plutôt que son schéma)

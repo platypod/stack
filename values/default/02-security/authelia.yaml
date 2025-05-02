@@ -20,6 +20,11 @@ authelia:
   log:
     level: info
     format: text
+  oidc:
+    hmac_secret: yI4VysTXqctmqEzUGWuxCwh4WfDr90WBY5PTVj9Gsd9jHPZ9iRHtpyVGiMHr88GY
+    jwks:
+      caName: authelia-jwks
+      commonName: authelia-jwks
   ports:
     http:
       name: authelia
@@ -29,6 +34,17 @@ authelia:
       targetPort: 9959
   replicasNb: 1
   rules:
+    - policy: bypass
+      domain:
+      - ${bazarr.host}
+      - ${flaresolverr.host}
+      - ${radarr.host}
+      - ${prowlarr.host}
+      - ${readarr.host}
+      - ${sonarr.host}
+      networks:
+      - ${k8s.clusterCIDR}
+
     - subject:
       - group:media
       policy: one_factor

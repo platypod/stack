@@ -1,3 +1,5 @@
+{{- $jwks := genSelfSignedCert .Values.authelia.oidc.jwks.commonName nil (list .Values.authelia.oidc.jwks.commonName) 365 }}
+
 apiVersion: v1
 kind: ConfigMap
 
@@ -14,116 +16,135 @@ data:
       {{- toYaml .Values.authelia.users | nindent 6}}
   configuration.yml: |
     theme: dark
-    identity_validation:
-        reset_password:
-            jwt_secret: {{ .Values.authelia.secrets.jwt }}
 
-    #identity_providers:
-    #    oidc:
-    #        ## See: https://www.authelia.com/c/oidc
-    #        clients:
-    #              - client_id: '{{ .Values.bookstack.oidc.clientId }}'
-    #                client_name: 'BookStack'
-    #                client_secret: '{{ .Values.bookstack.oidc.clientSecret }}'
-    #                public: false
-    #                authorization_policy: 'one_factor'
-    #                redirect_uris:
-    #                      - 'https://{{ .Values.bookstack.host}}/oidc/callback'
-    #                scopes:
-    #                      - 'openid'
-    #                      - 'profile'
-    #                      - 'email'
-    #                userinfo_signed_response_alg: 'none'
+    identity_validation:
+      reset_password:
+        jwt_secret: {{ .Values.authelia.secrets.jwt }}
+
+    identity_providers:
+      oidc:
+        cors:
+          allowed_origins:
+          - 'https://*.platypod.ovh'
+          allowed_origins_from_client_redirect_uris: false
+          endpoints:
+          - 'authorization'
+          - 'token'
+          - 'revocation'
+          - 'introspection'
+        ## See: https://www.authelia.com/c/oidc
+        clients:
+        - audience:
+          - 'https://{{ .Values.bookstack.host }}'
+          authorization_policy: 'one_factor'
+          client_id: '{{ .Values.bookstack.oidc.clientId }}'
+          client_name: 'BookStack'
+          client_secret: '{{ .Values.bookstack.oidc.clientSecret.hashed }}'
+          public: false
+          redirect_uris:
+          - 'https://{{ .Values.bookstack.host}}/oidc/callback'
+          scopes:
+          - 'openid'
+          - 'profile'
+          - 'email'
+          token_endpoint_auth_method: 'client_secret_basic'
+          #token_endpoint_auth_method: 'client_secret_jwt'
+          #token_endpoint_auth_method: 'private_key_jwt'
+          # disable signing for userinfo
+          userinfo_signed_response_alg: 'none'
+        jwks:
+        - key: {{ $jwks.Key | quote }}
+          #certificate_chain: {{ $jwks.Cert | quote }}
 
     server:
-        address: tcp://0.0.0.0:{{ .Values.authelia.ports.http.targetPort }}/
-        endpoints:
-            authz:
-                forward-auth:
-                    implementation: 'ForwardAuth'
+      address: tcp://0.0.0.0:{{ .Values.authelia.ports.http.targetPort }}/
+      endpoints:
+        authz:
+          forward-auth:
+            implementation: 'ForwardAuth'
 
     log:
-        level: {{ .Values.authelia.log.level }}
-        format: {{ .Values.authelia.log.format }}
-        file_path: "/config/authelia.log"
-        keep_stdout: true
+      level: {{ .Values.authelia.log.level }}
+      format: {{ .Values.authelia.log.format }}
+      file_path: "/config/authelia.log"
+      keep_stdout: true
 
     totp:
-        disable: false
-        issuer: authelia.com
-        algorithm: sha1
-        digits: 6
-        period: 30
-        skew: 1
-        secret_size: 32
+      disable: false
+      issuer: authelia.com
+      algorithm: sha1
+      digits: 6
+      period: 30
+      skew: 1
+      secret_size: 32
 
     access_control:
-        default_policy: deny
-        rules:
-          {{- toYaml .Values.authelia.rules | nindent 8}}
+      default_policy: deny
+      rules:
+        {{- toYaml .Values.authelia.rules | nindent 8}}
 
     telemetry:
-        metrics:
-            enabled: true
-            address: "tcp://0.0.0.0:{{ .Values.authelia.ports.metrics.targetPort }}"
-            buffers:
-                read: 4096
-                write: 4096
-            timeouts:
-                read: 6s
-                write: 6s
-                idle: 30s
+      metrics:
+        enabled: true
+        address: "tcp://0.0.0.0:{{ .Values.authelia.ports.metrics.targetPort }}"
+        buffers:
+          read: 4096
+          write: 4096
+        timeouts:
+          read: 6s
+          write: 6s
+          idle: 30s
 
     authentication_backend:
-        file:
-            path: /config/users_database.yml
-            watch: false
-            # customize passwords based on https://docs.authelia.com/configuration/authentication/file.html
-            password:
-                algorithm: argon2id
-                iterations: 1
-                salt_length: 16
-                parallelism: 8
-                memory: 1024 # blocks this much of the RAM. Tune this.
+      file:
+        path: /config/users_database.yml
+        watch: false
+        # customize passwords based on https://docs.authelia.com/configuration/authentication/file.html
+        password:
+          algorithm: argon2id
+          iterations: 1
+          salt_length: 16
+          parallelism: 8
+          memory: 1024 # blocks this much of the RAM. Tune this.
 
     session:
-        name: authelia_session
-        secret: {{ .Values.authelia.secrets.session }}
-        expiration: 1h
-        inactivity: 15m
-        cookies:
-            - domain: {{ .Values.traefik.domain }}
-              authelia_url: https://{{ .Values.authelia.host }}
-              default_redirection_url: https://{{ .Values.homepage.host }}
+      name: authelia_session
+      secret: {{ .Values.authelia.secrets.session }}
+      expiration: 1h
+      inactivity: 15m
+      cookies:
+      - domain: {{ .Values.traefik.domain }}
+        authelia_url: https://{{ .Values.authelia.host }}
+        default_redirection_url: https://{{ .Values.homepage.host }}
 
     regulation:
-        max_retries: 5
-        find_time: 120
-        ban_time: 300
+      max_retries: 5
+      find_time: 120
+      ban_time: 300
 
     storage:
-        encryption_key: {{ .Values.authelia.secrets.encryptionKey }}
-        postgres:
-            address: 'tcp://{{ .Values.k8s.names.services.prefix }}{{ .Values.authelia.database.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.authelia.database.ports.http.targetPort }}'
-            database: '{{ .Values.authelia.database.name }}'
-            schema: 'public'
-            username: '{{ .Values.authelia.database.credentials.username }}'
-            password: '{{ .Values.authelia.database.credentials.password }}'
-            timeout: '5s'
+      encryption_key: {{ .Values.authelia.secrets.encryptionKey }}
+      postgres:
+        address: 'tcp://{{ .Values.k8s.names.services.prefix }}{{ .Values.authelia.database.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.authelia.database.ports.http.targetPort }}'
+        database: '{{ .Values.authelia.database.name }}'
+        schema: 'public'
+        username: '{{ .Values.authelia.database.credentials.username }}'
+        password: '{{ .Values.authelia.database.credentials.password }}'
+        timeout: '5s'
 
     notifier:
-        filesystem:
-            filename: /config/notification.txt
+      filesystem:
+        filename: /config/notification.txt
 
     password_policy:
-        standard:
-            enabled: false
-            min_length: 8
-            max_length: 0
-            require_uppercase: false
-            require_lowercase: false
-            require_number: false
-            require_special: false
-        zxcvbn:
-            enabled: true
-            min_score: 3
+      standard:
+        enabled: false
+        min_length: 8
+        max_length: 0
+        require_uppercase: false
+        require_lowercase: false
+        require_number: false
+        require_special: false
+      zxcvbn:
+        enabled: true
+        min_score: 3

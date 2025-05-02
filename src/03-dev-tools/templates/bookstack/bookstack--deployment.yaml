@@ -55,7 +55,7 @@ spec:
         - name: OIDC_CLIENT_ID
           value: "{{ .Values.bookstack.oidc.clientId }}"
         - name: OIDC_CLIENT_SECRET
-          value: "{{ .Values.bookstack.oidc.clientSecret }}"
+          value: "{{ .Values.bookstack.oidc.clientSecret.plain }}"
         - name: OIDC_ISSUER
           value: "https://{{ .Values.authelia.host }}"
         - name: OIDC_ISSUER_DISCOVER
