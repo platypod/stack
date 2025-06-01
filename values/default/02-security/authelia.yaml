@@ -73,6 +73,8 @@ authelia:
       - ${bookstack.host}
       - ${dbeaver.host}
       - ${database.host}
+      - ${observability.dashboard.host}
+      - ${observability.metrics.host}
       - ${whoami.host}
 
     - policy: bypass
@@ -82,6 +84,7 @@ authelia:
       - ${jellyfin.host}
       - ${jellyseerr.host}
       - ${traefik.host}
+      - ${observability.opentelemetryCollector.gateway.host}
   secrets:
     encryptionKey: verySecretMuchSecureNeverGonnaBeGuessedWoah
     jwt: verySecretMuchSecureNeverGonnaBeGuessedWoooow
@@ -91,14 +94,20 @@ authelia:
 
   users:
     admin:
-      displayname: platypodAdmin
+      displayname: admini
       password: $argon2id$v=19$m=65536,t=3,p=4$J68VFWtr+FIvEAAnNIQ5UQ$uOiTdWOk6Yqb3DEfxjmdE8touRoY9fYn+DJZwtG2z34  #platypod-password
       email: pl@ty.pod
       groups:
-        - admins
-        - media
+      - admins
+      - media
+    dave:
+      displayname: dave
+      password: $argon2id$v=19$m=65536,t=3,p=4$PutkefL8ZmABWC5enq1IGQ$LWPb09ucfQNKXVmltShGn43GRRNWCPDV1MlYM1VQM7A  # davethedev
+      email: dave.thedev@gmail.com
+      groups:
+      - dev
     guest:
-      displayname: platypodGuest
+      displayname: guesto
       password: $argon2id$v=19$m=65536,t=3,p=4$UvLUwVCQPhcDCMrT++Htpg$6eZG6L2rwpunVuFEdlLe8Mc+r6b9Q//Np5mGoTw61aQ  # guest-password
       email: gues@ty.pod
       groups: []

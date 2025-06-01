@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.opentelemetryCollector.gateway.label }}{{ .Values.k8s.names.configMaps.suffix }}
+data:
+  collector.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:{{ .Values.observability.opentelemetryCollector.gateway.ports.grpc.targetPort }}
+          http:
+            endpoint: 0.0.0.0:{{ .Values.observability.opentelemetryCollector.gateway.ports.http.targetPort }}
+      k8s_cluster:
+        auth_type: serviceAccount
+        node_conditions_to_report:
+        - Ready
+        - MemoryPressure
+        allocatable_types_to_report:
+        - cpu
+        - memory
+
+    processors:
+      batch:
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 4000
+        spike_limit_mib: 800
+
+    exporters:
+      debug/verbose:
+        verbosity: detailed
+        sampling_initial: 5
+        sampling_thereafter: 200
+      debug/noop:
+        verbosity: normal
+        sampling_initial: 0
+        sampling_thereafter: 0
+      otlphttp/victoriametrics:
+        compression: gzip
+        encoding: proto
+        metrics_endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.metrics.ports.http.targetPort }}/opentelemetry/v1/metrics
+        tls:
+          insecure: true
+      loki:
+        endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.logs.ports.http.targetPort }}/loki/api/v1/push
+        tls:
+          insecure: true
+      otlphttp/tempo:
+        compression: gzip
+        encoding: proto
+        traces_endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.traces.ports.http.targetPort }}/v1/traces
+        tls:
+          insecure: true
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch, memory_limiter]
+          exporters: [debug/noop]
+        metrics:
+          receivers: [otlp]
+          processors: [batch, memory_limiter]
+          exporters: [otlphttp/victoriametrics]
+        logs:
+          receivers: [otlp]
+          processors: [batch, memory_limiter]
+          exporters: [debug/noop]

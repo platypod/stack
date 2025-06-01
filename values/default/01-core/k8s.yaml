@@ -2,10 +2,19 @@ k8s:
   clusterCIDR: 192.168.194.128/25
   namespace: ${project.env}-${project.name}
   names:
+    clusterRoles:
+      prefix: ""
+      suffix: ""
+    clusterRoleBindings:
+      prefix: ""
+      suffix: ""
     configMaps:
       prefix: ""
       suffix: ""
     containers:
+      prefix: ""
+      suffix: ""
+    daemonSets:
       prefix: ""
       suffix: ""
     emptyDirs:

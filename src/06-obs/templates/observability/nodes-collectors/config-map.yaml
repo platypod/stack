@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.opentelemetryCollector.collectors.label }}{{ .Values.k8s.names.configMaps.suffix }}
+data:
+  collector.yaml: |
+    receivers:
+      filelog:
+        # collect container logs from node filesystem
+        include: [/var/log/pods/*/*/*.log, /var/lib/docker/containers/*/*.log]
+        start_at: beginning
+      hostmetrics:
+        # add host metrics from mounted filesystem
+        root_path: /hostfs
+        collection_interval: 10s
+        scrapers:
+          cpu:
+          load:
+          memory:
+          disk:
+          filesystem:
+          network:
+      kubeletstats:
+        # collect node/pod/container metrics from kubelet
+        collection_interval: 10s
+        auth_type: serviceAccount
+        endpoint: "${env:K8S_NODE_NAME}:10250"
+        insecure_skip_verify: true
+      otlp:
+        # offer endpoints to collect signals sent by applications
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+      k8sattributes:
+        # add k8s metadata to extracted telemetry
+        extract:
+          metadata:
+          - k8s.pod.name
+          - k8s.namespace.name
+          - k8s.node.name
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 4000
+        spike_limit_mib: 800
+
+    exporters:
+      otlp:
+        # send whatever nodes collectors collect to gateway
+        endpoint: "{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.opentelemetryCollector.gateway.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.opentelemetryCollector.gateway.ports.grpc.targetPort }}"
+        tls:
+          insecure: true
+
+    service:
+      pipelines:
+        metrics:
+          receivers: [kubeletstats, hostmetrics]
+          processors: [batch, memory_limiter, k8sattributes]
+          exporters: [otlp]
+        logs:
+          receivers: [filelog]
+          processors: [batch, memory_limiter, k8sattributes]
+          exporters: [otlp]
+        traces:
+          receivers: [otlp]
+          processors: [batch, memory_limiter, k8sattributes]
+          exporters: [otlp]

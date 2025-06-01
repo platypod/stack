@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.dashboard.label }}{{ .Values.k8s.names.configMaps.suffix }}
+data:
+  grafana.ini: |
+    ;https://grafana.com/docs/grafana/latest/setup-grafana/configure-grafana/
+
+    [analytics]
+    reporting_enabled = false
+
+    [auth]
+    disable_login_form = true
+    [auth.generic_oauth]
+    api_url = https://{{ .Values.authelia.host }}/api/oidc/userinfo
+    auth_url = https://{{ .Values.authelia.host }}/api/oidc/authorization
+    client_id = {{ .Values.observability.dashboard.oidc.clientId }}
+    client_secret = {{ .Values.observability.dashboard.oidc.clientSecret.plain }}
+    empty_scopes = false
+    enabled = true
+    groups_attribute_path = groups
+    login_attribute_path = preferred_username
+    name_attribute_path = name
+    role_attribute_path = contains(groups[*], 'admins') && 'Admin' || contains(groups[*], 'dev') && 'Editor' || 'Viewer'
+    scopes = openid profile email groups
+    token_url = https://{{ .Values.authelia.host }}/api/oidc/token
+    use_pkce = false
+
+    [log]
+    mode = console
+    [log.console]
+    level = {{ .Values.observability.dashboard.logging.level }}
+    format = {{ .Values.observability.dashboard.logging.format }}
+
+    [security]
+    disable_initial_admin_creation = true
+
+    [server]
+    http_port = {{ .Values.observability.dashboard.ports.http.targetPort }}
+    enable_gzip = true
+    root_url = https://{{ .Values.observability.dashboard.host }}
+
+    [smtp]
+    enabled = true
+
+    [users]
+    allow_sign_up = true
+    auto_assign_org_role = Admin
+    auto_login = true
+    default_language = detect
+    default_theme = system
+
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Loki
+      uid: logs
+      type: loki
+      access: proxy
+      url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.logs.ports.http.targetPort }}
+      editable: false
+
+    - name: Tempo
+      uid: traces
+      type: tempo
+      access: proxy
+      url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.traces.ports.http.targetPort }}
+      editable: false
+
+    - name: VictoriaMetrics
+      uid: metrics
+      type: prometheus
+      access: proxy
+      url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.metrics.ports.http.targetPort }}
+      isDefault: true
+      editable: false

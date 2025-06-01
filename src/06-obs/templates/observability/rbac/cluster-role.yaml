@@ -1,0 +1,67 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.k8s.names.clusterRoles.prefix }}{{ .Values.observability.opentelemetryCollector.label }}{{ .Values.k8s.names.clusterRoles.suffix }}
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - events
+  - namespaces
+  - namespaces/status
+  - nodes
+  - nodes/proxy
+  - nodes/spec
+  - nodes/stats
+  - pods
+  - pods/status
+  - replicationcontrollers
+  - replicationcontrollers/status
+  - resourcequotas
+  - services
+  verbs:
+  - get
+  - watch
+  - list
+
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  - deployments
+  - replicasets
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - watch
+
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - get
+  - list
+  - watch
+
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  - cronjobs
+  verbs:
+  - get
+  - list
+  - watch
+
+- apiGroups:
+  - extensions
+  resources:
+  - replicasets
+  - daemonsets
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch

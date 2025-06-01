@@ -8,3 +8,4 @@
 - Ajouter l'activation/désactivation des utilisateurs par défault sur Authelia
 - Créer plusieurs utilisateurs et compartimenter les droits sur la postgresql transverses (dev-tools)
 - Corriger la configuration initiale de DBeaver (et sa base de donnée utilisée ? Plutôt que son schéma)
+- S'assurer que les PVC sont configurables par les values et non en dur dans les templates

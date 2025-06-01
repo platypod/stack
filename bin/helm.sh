@@ -68,6 +68,7 @@ install_or_upgrade_one() {
   helm_env "${cmd}" "${env}" "${name}" "${src}" "$@"
 
   rm "${src}/Chart.yaml"
+  clean
 }
 
 

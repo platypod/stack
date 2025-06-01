@@ -1,0 +1,80 @@
+observability:
+  logs:
+    label: loki
+    image: grafana/loki:3.5
+    host: ${k8s.names.urls.prefix}${observability.logs.label}${k8s.names.urls.suffix}.${traefik.domain}
+    ports:
+      grpc:
+        name: grpc
+        targetPort: 9096
+      http:
+        name: http
+        targetPort: 3100
+    logging:
+      level: info
+  metrics:
+    label: victoria-metrics
+    image: victoriametrics/victoria-metrics:v1.118.0
+    host: ${k8s.names.urls.prefix}${observability.metrics.label}${k8s.names.urls.suffix}.${traefik.domain}
+    ports:
+      http:
+        name: http
+        targetPort: 8428
+    logging:
+      format: json
+      level: INFO
+  mounts:
+    containers: /var/lib/docker/containers
+  opentelemetryCollector:
+    image: otel/opentelemetry-collector-contrib:0.126.0
+    label: opentelemetry-collector
+    gateway:
+      host: ${k8s.names.urls.prefix}${observability.opentelemetryCollector.label}${k8s.names.urls.suffix}.${traefik.domain}
+      label: ${observability.opentelemetryCollector.label}-gateway
+      ports:
+        grpc:
+          name: otel-grpc
+          targetPort: 4317
+        http:
+          name: otel-http
+          targetPort: 4318
+    collectors:
+      label: ${observability.opentelemetryCollector.label}-collector
+      ports:
+        grpc:
+          name: otel-grpc
+          targetPort: 4317
+        http:
+          name: otel-http
+          targetPort: 4318
+  pvc: ${storage.defaultVolumes.apps}
+  retention: 8736h
+  traces:
+    label: tempo
+    image: grafana/tempo:2.7.2
+    host: ${k8s.names.urls.prefix}${observability.traces.label}${k8s.names.urls.suffix}.${traefik.domain}
+    ports:
+      grpc:
+        name: grpc
+        targetPort: 9095
+      http:
+        name: http
+        targetPort: 80
+    logging:
+      level: info
+  dashboard:
+    label: grafana
+    image: grafana/grafana-oss:12.0.1
+    host: ${k8s.names.urls.prefix}${observability.dashboard.label}${k8s.names.urls.suffix}.${traefik.domain}
+    oidc:
+      clientId: kyqP5Y1daxOz8lMlmYOyOWuq7rbmyUQO34NUp1k3FKZxh55v3tP05pVVZRIwSTnC
+      clientSecret:
+        plain: B9YxVjgrhwekgnE8sv1S3eW1l2f1NALIOOVeGEvre4cEzG-XwWY0soryKC1geV0DE2a_AT4Q
+        hashed: $pbkdf2-sha512$310000$EBnY.k1tDa4lDB0P5cCLXw$MauDGOsp5dNN6YFn1cnYUe8TSdNzf6aReO8Tvo3ABC0VxzjR75qcS0BtkN5dm8jnpPd0snA7nSTOlR.YQyq3Ig
+    ports:
+      http:
+        name: http
+        targetPort: 3000
+    logging:
+      level: info
+      format: json

@@ -1,0 +1,67 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.observability.opentelemetryCollector.collectors.label .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ $pod }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ .Values.observability.opentelemetryCollector.label }}{{ .Values.k8s.names.serviceAccounts.suffix }}
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.opentelemetryCollector.collectors.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.observability.opentelemetryCollector.image }}
+        securityContext:
+          runAsUser: {{ .Values.media.system.userId }}
+          runAsGroup: {{ .Values.media.system.groupId }}
+        resources:
+          limits:
+            cpu: 1
+            memory: 1Gi
+          requests:
+            cpu: 200m
+            memory: 400Mi
+        env:
+        - name: K8S_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        volumeMounts:
+        - name: conf
+          mountPath: /conf/collector.yaml
+          subPath: collector.yaml
+        # mount /var/lib/docker/containers for container logs
+        - name: docker-containers
+          mountPath: /var/lib/docker/containers
+          readOnly: true
+        # mount /hostfs for host metrics
+        - name: hostfs
+          mountPath: /hostfs
+          readOnly: true
+        # mount /var/log for filelog receiver to collect container logs
+        - name: varlog
+          mountPath: /var/log
+          readOnly: true
+        args: ["--config=/conf/collector.yaml"]
+        ports:
+        - containerPort: {{ .Values.observability.opentelemetryCollector.collectors.ports.grpc.targetPort }}
+        - containerPort: {{ .Values.observability.opentelemetryCollector.collectors.ports.http.targetPort }}
+      volumes:
+      - name: docker-containers
+        hostPath:
+          path: {{ .Values.observability.mounts.containers }}
+      - name: hostfs
+        hostPath:
+          path: /
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: conf
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.opentelemetryCollector.collectors.label }}{{ .Values.k8s.names.configMaps.suffix }}

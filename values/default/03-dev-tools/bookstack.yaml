@@ -1,6 +1,6 @@
 bookstack:
   appKey: base64:gJJbTsv2CTPeHrCOmu0crY65zypAC747jgMHvYEUlto=
-  appDebug: false
+  appDebug: true
   host: ${k8s.names.urls.prefix}${bookstack.label}${k8s.names.urls.suffix}.${traefik.domain}
   image: lscr.io/linuxserver/bookstack:latest
   label: bookstack
@@ -20,7 +20,9 @@ bookstack:
     replicasNb: 1
   oidc:
     clientId: dpxqruPll6Oo3BU9JTiWOzCQvzrFRwmAhY4ctWhffH2QwiYoeBRF39cn2hh6whvU
-    clientSecret: $pbkdf2-sha512$310000$c8p78n7pUMln0jzvd4aK4Q$JNRBzwAo0ek5qKn50cFzzvE9RXV88h1wJn5KGiHrD0YKtZaR/nCb2CJPOsKaPK0hjf.9yHxzQGZziziccp6Yng  # digest of 'insecure_secret'
+    clientSecret:
+      plain: B13X~Y2tnTtMFH.6-6yrlEO-cuDvalMfOTgFKoXVcHUna7vDovGS65-c5FNItw_0bA2aUS5M
+      hashed: $pbkdf2-sha512$310000$JmnaFFo.wEgnSJRuPLVFCA$AVbGYIlK1/fauOGd4QtgIa1gwzgf.y4HQuWZjUgqedL9DZ9ji60qazYYxBtzBe6YxYFY9KlFarV/qW9/B5PoYQ
   ports:
     http:
       name: http
