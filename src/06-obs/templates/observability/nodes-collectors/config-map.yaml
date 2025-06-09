@@ -6,11 +6,16 @@ data:
   collector.yaml: |
     receivers:
       filelog:
-        # collect container logs from node filesystem
-        include: [/var/log/pods/*/*/*.log, /var/lib/docker/containers/*/*.log]
+        include:
+        #- /hostfs/var/log/pods/*/*/*.log
+        - /hostfs/var/lib/docker/containers/*/*.log
         start_at: beginning
+        include_file_path: true
+        include_file_name: false
+        #operators:
+        #- type: container
+        #  id: container-parser
       hostmetrics:
-        # add host metrics from mounted filesystem
         root_path: /hostfs
         collection_interval: 10s
         scrapers:
@@ -21,13 +26,11 @@ data:
           filesystem:
           network:
       kubeletstats:
-        # collect node/pod/container metrics from kubelet
         collection_interval: 10s
         auth_type: serviceAccount
         endpoint: "${env:K8S_NODE_NAME}:10250"
         insecure_skip_verify: true
       otlp:
-        # offer endpoints to collect signals sent by applications
         protocols:
           grpc:
             endpoint: 0.0.0.0:4317
@@ -37,7 +40,6 @@ data:
     processors:
       batch:
       k8sattributes:
-        # add k8s metadata to extracted telemetry
         extract:
           metadata:
           - k8s.pod.name
@@ -49,8 +51,15 @@ data:
         spike_limit_mib: 800
 
     exporters:
+      debug/verbose:
+        verbosity: detailed
+        sampling_initial: 5
+        sampling_thereafter: 200
+      debug/noop:
+        verbosity: normal
+        sampling_initial: 0
+        sampling_thereafter: 0
       otlp:
-        # send whatever nodes collectors collect to gateway
         endpoint: "{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.opentelemetryCollector.gateway.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.opentelemetryCollector.gateway.ports.grpc.targetPort }}"
         tls:
           insecure: true

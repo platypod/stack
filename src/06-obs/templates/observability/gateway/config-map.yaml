@@ -58,7 +58,7 @@ data:
         traces:
           receivers: [otlp]
           processors: [batch, memory_limiter]
-          exporters: [debug/noop]
+          exporters: [otlphttp/tempo]
         metrics:
           receivers: [otlp]
           processors: [batch, memory_limiter]
@@ -66,4 +66,4 @@ data:
         logs:
           receivers: [otlp]
           processors: [batch, memory_limiter]
-          exporters: [debug/noop]
+          exporters: [loki]
