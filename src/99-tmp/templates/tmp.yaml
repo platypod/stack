@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tmp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tmp
+  template:
+    metadata:
+      labels:
+        app: tmp
+    spec:
+      containers:
+      - name: tmp
+        image: ubuntu
+        command:
+          - "sleep"
+          - "604800"
+        volumeMounts:
+        - name: hostfs
+          mountPath: /hostfs
+          readOnly: true
+      volumes:
+      - name: hostfs
+        hostPath:
+          path: /

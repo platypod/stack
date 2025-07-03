@@ -1,0 +1,43 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.rommapp.database.label .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.rommapp.database.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.rommapp.database.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.rommapp.database.image }}
+        ports:
+        - name: {{ .Values.rommapp.database.ports.http.name }}
+          containerPort: {{ .Values.rommapp.database.ports.http.targetPort }}
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "{{ .Values.rommapp.database.credentials.rootPassword }}"
+        - name: MYSQL_USER
+          value: "{{ .Values.rommapp.database.credentials.username }}"
+        - name: MYSQL_PASSWORD
+          value: "{{ .Values.rommapp.database.credentials.password }}"
+        - name: MYSQL_DATABASE
+          value: "{{ .Values.rommapp.database.name }}"
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: {{ .Values.rommapp.pvc }}
+          subPath: rommapp/database
+      volumes:
+      - name: {{ .Values.rommapp.pvc }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.rommapp.pvc }}

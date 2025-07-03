@@ -122,6 +122,11 @@ data:
             username: {{ .Values.qbittorrent.credentials.username }}
             password: {{ .Values.qbittorrent.credentials.password }}
             enableLeechProgress: true
+    - Games:
+      - RommApp:
+          abbr: RA
+          href: https://{{ .Values.rommapp.host }}
+          description: various consoles emulator.
     - Dev:
       - Bookstack:
           abbr: BS

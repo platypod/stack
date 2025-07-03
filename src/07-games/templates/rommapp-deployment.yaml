@@ -1,0 +1,81 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.rommapp.label .Values.k8s.names.pods.suffix }}
+{{- $appVolume := "app-volume" }}
+{{- $configMap := "config-map" }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.rommapp.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.rommapp.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.rommapp.image }}
+        ports:
+        - name: {{ .Values.rommapp.ports.http.name }}
+          containerPort: {{ .Values.rommapp.ports.http.targetPort }}
+        env:
+        - name: DB_HOST
+          value: "{{ .Values.k8s.names.services.prefix }}{{ .Values.rommapp.database.label }}{{ .Values.k8s.names.services.suffix }}"
+        - name: DB_NAME
+          value: "{{ .Values.rommapp.database.name }}"
+        - name: DB_USER
+          value: "{{ .Values.rommapp.credentials.username }}"
+        - name: DB_PASSWD
+          value: "{{ .Values.rommapp.credentials.password }}"
+        - name: ROMM_AUTH_SECRET_KEY
+          value: "{{ .Values.rommapp.secretKey }}"
+        - name: IGDB_CLIENT_ID
+          value: "{{ .Values.rommapp.igdb.clientId }}"
+        - name: IGDB_CLIENT_SECRET
+          value: "{{ .Values.rommapp.igdb.clientSecret }}"
+        - name: MOBYGAMES_API_KEY
+          value: "{{ .Values.rommapp.mobyGamesApiKey }}"
+        - name: STEAMGRIDDB_API_KEY
+          value: "{{ .Values.rommapp.steamGridDbApiKey }}"
+        - name: SCREENSCRAPER_USER
+          value: "{{ .Values.rommapp.screenscraper.username }}"
+        - name: SCREENSCRAPER_PASSWORD
+          value: "{{ .Values.rommapp.screenscraper.username }}"
+        - name: RETROACHIEVEMENTS_API_KEY
+          value: "{{ .Values.rommapp.retroachievementsApiKey }}"
+        volumeMounts:
+        # Resources fetched from IGDB (covers, screenshots, etc.)
+        - mountPath: /romm/resources
+          name: {{ $appVolume }}
+          subPath: rommapp/resources
+        # Cached data for background tasks
+        - mountPath: /redis-data
+          name: {{ $appVolume }}
+          subPath: rommapp/redis-cache
+        # Your game library. Check https://github.com/rommapp/romm?tab=readme-ov-file#folder-structure for more details.
+        - mountPath: /romm/library
+          name: {{ $appVolume }}
+          subPath: rommapp/library
+        # Uploaded saves, states, etc.
+        - mountPath: /romm/assets
+          name: {{ $appVolume }}
+          subPath: rommapp/assets
+        # Path where config.yml is stored
+        - mountPath: /romm/config/config.yml
+          name: {{ $configMap }}
+          subPath: config.yml
+      volumes:
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.rommapp.pvc }}
+      - name: {{ $configMap }}
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.rommapp.label }}{{ .Values.k8s.names.configMaps.suffix }}

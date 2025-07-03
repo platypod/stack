@@ -53,6 +53,7 @@ authelia:
       - ${flaresolverr.host}
       - ${radarr.host}
       - ${prowlarr.host}
+      - ${rommapp.host}
       - ${readarr.host}
       - ${sonarr.host}
 
