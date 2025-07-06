@@ -126,12 +126,15 @@ data:
       - RommApp:
           abbr: RA
           href: https://{{ .Values.rommapp.host }}
-          description: various consoles emulator.
+          description: Various consoles emulator.
     - Dev:
       - Bookstack:
           abbr: BS
           href: https://{{ .Values.bookstack.host }}
-          description: simple, open-source, self-hosted, easy-to-use platform for organising and storing information.
+          description: Simple, open-source, self-hosted, easy-to-use platform for organising and storing information.
+      - IT-Tools:
+          href: https://{{ .Values.itTools.host }}
+          description: Useful tools for developer and people working in IT.
       - Traefik:
           abbr: TR
           href: https://{{ .Values.traefik.host }}/dashboard/
@@ -141,10 +144,10 @@ data:
             url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.traefik.dashboardLabel }}{{ .Values.k8s.names.services.suffix }}
       - Who am I?:
           href: https://{{ .Values.whoami.host }}
-          description: Tiny Go webserver that prints os information and HTTP request to output
+          description: Tiny Go webserver that prints os information and HTTP request to output.
       - DBeaver?:
           href: https://{{ .Values.dbeaver.host }}
-          description: Tiny Go webserver that prints os information and HTTP request to output
+          description: Databases web interface.
     - Security:
       - Authelia:
           abbr: AU
