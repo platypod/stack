@@ -75,7 +75,9 @@ authelia:
       - ${dbeaver.host}
       - ${database.host}
       - ${observability.dashboard.host}
+      - ${observability.logs.host}
       - ${observability.metrics.host}
+      - ${observability.traces.host}
       - ${whoami.host}
 
     - policy: bypass

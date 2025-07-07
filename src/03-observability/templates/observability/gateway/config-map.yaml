@@ -19,6 +19,20 @@ data:
         allocatable_types_to_report:
         - cpu
         - memory
+      {{- if .Values.observability.snmp.enable }}
+      snmp:
+        collection_interval: 60s
+        timeout: 3s
+        endpoint: {{ .Values.observability.snmp.url }}
+        version: v3
+        security_level: auth_priv
+        user: {{ .Values.observability.snmp.credentials.username }}
+        auth_type: SHA
+        auth_password: {{ .Values.observability.snmp.credentials.password }}
+        privacy_type: AES
+        privacy_password: {{ .Values.observability.snmp.credentials.password }}
+        metrics: {{ .Values.observability.snmp.metrics | toYaml | nindent 10 }}
+      {{- end }}
 
     processors:
       batch:
@@ -60,7 +74,11 @@ data:
           processors: [batch, memory_limiter]
           exporters: [otlphttp/tempo]
         metrics:
-          receivers: [otlp]
+          receivers:
+          - otlp
+          {{- if .Values.observability.snmp.enable }}
+          - snmp
+          {{- end }}
           processors: [batch, memory_limiter]
           exporters: [otlphttp/victoriametrics]
         logs:

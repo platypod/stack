@@ -78,3 +78,142 @@ observability:
     logging:
       level: info
       format: json
+  snmp:
+    enable: false
+    url: udp://XXX.XXX.XXX.XXX:161
+    credentials:
+      username: <username>
+      password: <password>
+    metrics:
+      system_uptime:
+        unit: seconds
+        gauge:
+          value_type: int
+        scalar_oids:
+        - oid: "1.3.6.1.2.1.1.3.0"
+#      load_1min:
+#        unit: "1"
+#        gauge:
+#          value_type: double
+#        scalar_oids:
+#        - oid: "1.3.6.1.4.1.2021.10.1.3.1"
+#      load_5min:
+#        unit: "1"
+#        gauge:
+#          value_type: double
+#        scalar_oids:
+#        - oid: "1.3.6.1.4.1.2021.10.1.3.2"
+#      load_15min:
+#        unit: "1"
+#        gauge:
+#          value_type: double
+#        scalar_oids:
+#        - oid: "1.3.6.1.4.1.2021.10.1.3.3"
+      cpu_user:
+        unit: percent
+        gauge:
+          value_type: int
+        scalar_oids:
+        - oid: "1.3.6.1.4.1.2021.11.9.0"
+      cpu_system:
+        unit: percent
+        gauge:
+          value_type: int
+        scalar_oids:
+        - oid: "1.3.6.1.4.1.2021.11.10.0"
+      cpu_idle:
+        unit: percent
+        gauge:
+          value_type: int
+        scalar_oids:
+        - oid: "1.3.6.1.4.1.2021.11.11.0"
+      mem_total:
+        unit: kibibytes
+        gauge:
+          value_type: int
+        scalar_oids:
+        - oid: "1.3.6.1.4.1.2021.4.5.0"
+      mem_avail:
+        unit: kibibytes
+        gauge:
+          value_type: int
+        scalar_oids:
+        - oid: "1.3.6.1.4.1.2021.4.6.0"
+      mem_buffer:
+        unit: kibibytes
+        gauge:
+          value_type: int
+        scalar_oids:
+        - oid: "1.3.6.1.4.1.2021.4.14.0"
+      mem_cached:
+        unit: kibibytes
+        gauge:
+          value_type: int
+        scalar_oids:
+        - oid: "1.3.6.1.4.1.2021.4.15.0"
+      swap_total:
+        unit: kibibytes
+        gauge:
+          value_type: int
+        scalar_oids:
+        - oid: "1.3.6.1.4.1.2021.4.3.0"
+      swap_avail:
+        unit: kibibytes
+        gauge:
+          value_type: int
+        scalar_oids:
+        - oid: "1.3.6.1.4.1.2021.4.4.0"
+      disk_1_status:
+        unit: status
+        gauge:
+          value_type: int
+        scalar_oids:
+        - oid: "1.3.6.1.4.1.6574.2.1.1.5.1"
+      disk_1_temp:
+        unit: celsius
+        gauge:
+          value_type: int
+        scalar_oids:
+        - oid: "1.3.6.1.4.1.6574.2.1.1.6.1"
+      volume_1_status:
+        unit: status
+        gauge:
+          value_type: int
+        scalar_oids:
+        - oid: "1.3.6.1.4.1.6574.3.1.1.1.1"
+#      volume_1_free:
+#        unit: kibibytes
+#        gauge:
+#          value_type: int
+#        scalar_oids:
+#        - oid: "1.3.6.1.4.1.6574.3.1.1.2.1"
+#      volume_1_total:
+#        unit: kibibytes
+#        gauge:
+#          value_type: int
+#        scalar_oids:
+#        - oid: "1.3.6.1.4.1.6574.3.1.1.3.1"
+      net_1_in:
+        unit: octets
+        gauge:
+          value_type: int
+        scalar_oids:
+        - oid: "1.3.6.1.2.1.2.2.1.10.1"
+      net_1_out:
+        unit: octets
+        gauge:
+          value_type: int
+        scalar_oids:
+        - oid: "1.3.6.1.2.1.2.2.1.16.1"
+      fan_status:
+        unit: status
+        gauge:
+          value_type: int
+        scalar_oids:
+        - oid: "1.3.6.1.4.1.6574.1.4.1.0"
+      power_status:
+        unit: status
+        gauge:
+          value_type: int
+        scalar_oids:
+        - oid: "1.3.6.1.4.1.6574.1.3.0"
