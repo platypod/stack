@@ -45,6 +45,10 @@ authelia:
       networks:
       - ${k8s.clusterCIDR}
 
+    - policy: one_factor
+      domain:
+      - ${homepage.host}
+
     - subject:
       - group:media
       policy: one_factor
@@ -83,7 +87,6 @@ authelia:
     - policy: bypass
       domain:
       - ${authelia.host}
-      - ${homepage.host}
       - ${itTools.host}
       - ${jellyfin.host}
       - ${jellyseerr.host}

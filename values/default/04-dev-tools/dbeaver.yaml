@@ -17,4 +17,4 @@ dbeaver:
       name: dbeaver-http
       targetPort: 8978
   pvc: ${storage.defaultVolumes.apps}
-  replicasNb: 1
+  replicasNb: 0
