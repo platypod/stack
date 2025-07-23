@@ -73,6 +73,8 @@ authelia:
       - group:dev
       policy: one_factor
       domain:
+      - ${adguard.host}
+      - ${adguard.adminHost}
       - ${authelia.database.host}
       - ${bookstack.database.host}
       - ${bookstack.host}

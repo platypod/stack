@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.services.suffix }}
+
+spec:
+  externalTrafficPolicy: Local
+  ports:
+  - protocol: TCP
+    name: {{ .Values.adguard.ports.dnsTcp.name }}
+    nodePort: {{ .Values.adguard.ports.dnsTcp.nodePort }}
+    port: {{ .Values.adguard.ports.dnsTcp.targetPort }}
+    targetPort: {{ .Values.adguard.ports.dnsTcp.targetPort }}
+  - protocol: UDP
+    name: {{ .Values.adguard.ports.dnsUdp.name }}
+    nodePort: {{ .Values.adguard.ports.dnsUdp.nodePort }}
+    port: {{ .Values.adguard.ports.dnsUdp.targetPort }}
+    targetPort: {{ .Values.adguard.ports.dnsUdp.targetPort }}
+  - protocol: TCP
+    name: {{ .Values.adguard.ports.http.name }}
+    nodePort: {{ .Values.adguard.ports.http.nodePort }}
+    port: {{ .Values.adguard.ports.http.targetPort }}
+    targetPort: {{ .Values.adguard.ports.http.targetPort }}
+  - protocol: TCP
+    name: {{ .Values.adguard.ports.admin.name }}
+    nodePort: {{ .Values.adguard.ports.admin.nodePort }}
+    port: {{ .Values.adguard.ports.admin.targetPort }}
+    targetPort: {{ .Values.adguard.ports.admin.targetPort }}
+  selector:
+    app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.pods.suffix }}
+  type: NodePort
