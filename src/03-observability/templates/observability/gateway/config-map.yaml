@@ -21,11 +21,37 @@ data:
         - cpu
         - memory
       {{- end }}
-      {{- if .Values.observability.receivers.prometheus.enable }}
-      prometheus:
+      {{- if .Values.observability.receivers.jellyfinAPI.enable }}
+      prometheusjson/jellyfinAPI:
+        endpoint: "{{ .Values.jellyfin.host }}/Sessions"
+        headers:
+          Authorization: "MediaBrowser Token={{ .Values.jellyfin.apiKey }}"
+          Content-Type: "application/json"
+          Accept: "application/json"
+        metrics:
+          - name: jellyfin-api-metrics
+            type: object
+            help: User playback metrics from Jellyfin
+            path: '{ [?(@.NowPlayingItem)] }'
+            labels:
+              user_name: '{ .UserName }'
+              item_type: '{ .NowPlayingItem.Type }'
+              item_name: '{ .NowPlayingItem.Name }'
+              item_path: '{ .NowPlayingItem.Path }'
+              series_name: '{ .NowPlayingItem.SeriesName }'
+              episode_index: 'e{ .NowPlayingItem.IndexNumber }'
+              season_index: 's{ .NowPlayingItem.ParentIndexNumber }'
+              client_name: '{ .Client }'
+              device_name: '{ .DeviceName }'
+              session_id: '{ .Id }'
+            values:
+              is_paused: '{ .PlayState.IsPaused }'
+      {{- end }}
+      {{- if .Values.observability.receivers.jellyfinMetrics.enable }}
+      prometheus/jellyfinMetrics:
         config:
           scrape_configs:
-          {{ .Values.observability.receivers.prometheus.jellyfin.scrape_config | toYaml | nindent 10 }}
+          {{ .Values.observability.receivers.jellyfinMetrics.scrape_config | toYaml | nindent 10 }}
       {{- end }}
       {{- if .Values.observability.receivers.snmp.enable }}
       snmp:
@@ -60,6 +86,11 @@ data:
         actions:
         - key: gateway-receiver
           value: prometheus
+          action: insert
+      attributes/prometheusjson:
+        actions:
+        - key: gateway-receiver
+          value: prometheusjson
           action: insert
       attributes/k8s_cluster:
         actions:
@@ -109,9 +140,15 @@ data:
           receivers: [otlp]
           processors: [attributes/otlp, batch, memory_limiter]
           exporters: [otlphttp/victoriametrics]
-        {{- if .Values.observability.receivers.prometheus.enable }}
-        metrics/prometheus:
-          receivers: [prometheus]
+        {{- if .Values.observability.receivers.jellyfinAPI.enable }}
+        metrics/jellyfinAPI:
+          receivers: [prometheusjson/jellyfinAPI]
+          processors: [attributes/prometheusjson, batch, memory_limiter]
+          exporters: [otlphttp/victoriametrics]
+        {{- end }}
+        {{- if .Values.observability.receivers.jellyfinMetrics.enable }}
+        metrics/jellyfinMetrics:
+          receivers: [prometheus/jellyfinMetrics]
           processors: [attributes/prometheus, batch, memory_limiter]
           exporters: [otlphttp/victoriametrics]
         {{- end }}

@@ -1,11 +1,439 @@
-# TODO
-- Ajouter la configuration de la persistence
-    - Proposer une version script, avec un mode interactif et un mode non-interactif grâce à des variables d'environnements ou arguments.
-    - Proposer une version documentaire de la procédure.
-- Documenter le besoin d'installer les CRDs Traefik pour le middleware d'Authelia
-- Documenter les pics de traffic liés au crawling après la signature de certificats LE https://acme-staging-v02.api.letsencrypt.org/acme/chall/185205204/16091071464/G1RTuw
-- Ajouter la gestion des langues et des sous-titres à la stack multimédia - Voir https://github.com/PCJones/radarr-sonarr-german-dual-language?tab=readme-ov-file#i-dont-want-dual-language-i-want-to-prefer-german-but-use-english-as-fallback-or-vice-versa
-- Ajouter l'activation/désactivation des utilisateurs par défault sur Authelia
-- Créer plusieurs utilisateurs et compartimenter les droits sur la postgresql transverses (dev-tools)
-- Corriger la configuration initiale de DBeaver (et sa base de donnée utilisée ? Plutôt que son schéma)
-- S'assurer que les PVC sont configurables par les values et non en dur dans les templates
+<a id="readme-top"></a>
+
+
+<!-- PROJECT SHIELDS -->
+[![Contributors][contributors-shield]][contributors-url]
+[![Forks][forks-shield]][forks-url]
+[![Stargazers][stars-shield]][stars-url]
+[![Issues][issues-shield]][issues-url]
+[![MIT License][license-shield]][license-url]
+[![LinkedIn][linkedin-shield]][linkedin-url]
+
+
+
+<!-- PROJECT LOGO -->
+<br />
+<div align="center">
+  <a href="https://github.com/Pittinic/platypod">
+    <img src="doc/images/logo.png" alt="Logo" width="80" height="80">
+  </a>
+
+<h3 align="center">platypod</h3>
+
+  <p align="center">
+    Kubernetes-based project packaging numerous miscellaneous services ranging from media management to dev and cyber tools, fully instrumented for observability.
+    <br />
+    <a href="https://github.com/Pittinic/platypod"><strong>Explore the docs »</strong></a>
+    <br />
+    <br />
+    <a href="https://github.com/Pittinic/platypod">View Demo</a>
+    ·
+    <a href="https://github.com/Pittinic/platypod/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
+    ·
+    <a href="https://github.com/Pittinic/platypod/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
+  </p>
+</div>
+
+
+
+<!-- TABLE OF CONTENTS -->
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#about-the-project">About The Project</a>
+      <ul>
+        <li><a href="#built-with">Built With</a></li>
+      </ul>
+      <ul>
+        <li><a href="#modules">Modules</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#getting-started">Getting Started</a>
+      <ul>
+        <li><a href="#prerequisites">Prerequisites</a></li>
+        <li><a href="#installation">Installation</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#user-guide">User Guide</a>
+      <ul>
+        <li><a href="#configuration">Configuration</a></li>
+        <li><a href="#deployment">Deployment</a></li>
+        <li><a href="#usage">Usage</a></li>
+      </ul>
+    </li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#license">License</a></li>
+    <li><a href="#contact">Contact</a></li>
+    <li><a href="#acknowledgments">Acknowledgments</a></li>
+  </ol>
+</details>
+
+
+
+<!-- ABOUT THE PROJECT -->
+## About The Project
+
+[![Platypod][product-screenshot]](https://homepage.platypod.ovh)
+
+- For a list of the current features, see the <a href="#roadmap">Roadmap</a>.
+
+- This project serves two purposes:
+  - offering **free, convenient features on a home or cloud server** (as long as the electricity bills are paid).
+  - giving a pretense for **practising with some technologies** and tools, as well as **packaging a documented demonstration** for those.
+
+- The core technologies are Kubernetes and Traefik:
+  - **Kubernetes** manages every service's configuration and virtualisation.
+  - **Traefik** exposes every service behind a reverse proxy.
+  - Other than that, each feature is offered by a distinctive technology, explained and documented in a dedicated file in each module's own folder.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+### Built With
+
+[![Kubernetes][Kubernetes]][Kubernetes-url]
+[![Traefik][Traefik]][Traefik-url]
+[![LetsEncrypt][LetsEncrypt]][LetsEncrypt-url]
+[![Homepage][Homepage]][Homepage-url]
+
+[![Authelia][Authelia]][Authelia-url]
+[![AdGuardHome][AdGuardHome]][AdGuardHome-url]
+
+[![OpenTelemetryCollector][OpenTelemetryCollector]][OpenTelemetryCollector-url]
+[![Grafana][Grafana]][Grafana-url]
+[![Loki][Loki]][Loki-url]
+[![Tempo][Tempo]][Tempo-url]
+[![VictoriaMetrics][VictoriaMetrics]][VictoriaMetrics-url]
+
+[![Bookstack][Bookstack]][Bookstack-url]
+[![DBeaver][DBeaver]][DBeaver-url]
+[![ItTools][ItTools]][ItTools-url]
+[![MariaDB][MariaDB]][MariaDB-url]
+[![PostgreSQL][PostgreSQL]][PostgreSQL-url]
+[![WhoAmI][WhoAmI]][WhoAmI-url]
+
+[![Deluge][Deluge]][Deluge-url]
+[![QBitTorrent][QBitTorrent]][QBitTorrent-url]
+[![Transmission][Transmission]][Transmission-url]
+
+[![Bazarr][Bazarr]][Bazarr-url]
+[![FlareSolverr][FlareSolverr]][FlareSolverr-url]
+[![Jellyfin][Jellyfin]][Jellyfin-url]
+[![JellySeerr][JellySeerr]][JellySeerr-url]
+[![Prowlarr][Prowlarr]][Prowlarr-url]
+[![Radarr][Radarr]][Radarr-url]
+[![Readarr][Readarr]][Readarr-url]
+[![Sonarr][Sonarr]][Sonarr-url]
+[![Tdarr][Tdarr]][Tdarr-url]
+
+[![RommApp][RommApp]][RommApp-url]
+[![DockerMinecraftServer][DockerMinecraftServer]][DockerMinecraftServer-url]
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- MODULES -->
+### Modules
+
+The features are packaged in modules by thematics as follows:
+- [Persistence](src/00-persistence)
+- [Core](src/01-core)
+- [Security](src/02-security)
+- [Observability](src/03-observability)
+- [Dev Tools](src/04-dev-tools)
+- [Download](src/05-files)
+- [Media](src/06-media)
+- [Games](src/07-games)
+
+Each link redirects to the module's subfolder, which includes a detailed README.md file.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- GETTING STARTED -->
+## Getting Started
+
+To get a copy up and running, follow these steps.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+### Prerequisites
+
+1. Install [kubernetes](https://kubernetes.io/docs/setup/) on your server (be it a single-node instance for local dev, a massive cloud cluster or anything in-between). Personnaly, I use [orbstack](https://github.com/orbstack/orbstack) on MacOS.
+2. Install [traefik's CRDs](https://doc.traefik.io/traefik/providers/kubernetes-crd/) (Custom Resource Definitions) on your kubernetes cluster:
+    ```bash
+    kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/v3.5/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml
+    kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/v3.5/docs/content/reference/dynamic-configuration/kubernetes-crd-rbac.yml
+    ```
+3. If you wish to use remote storage, for instance through nfs, install the required drivers on your cluster. For instance:
+    ```bash
+    curl -skSL https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/v4.5.0/deploy/install-driver.sh | bash -s v4.5.0 --
+    ```
+4. Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) to be able to clone the repo in the next step.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+### Installation
+
+1. Clone the repo
+   ```sh
+   git clone https://github.com/Pittinic/platypod.git
+   ```
+2. Remove git remote url to avoid accidental pushes to base project,
+unless you know what you're doing and you plan on contributing
+and/or keeping up with updates, of course.
+   ```sh
+   git remote rm origin
+   ```
+3. Customize whatever you wish to your heart's content.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- USER GUIDE -->
+## User Guide
+
+The project is meant to be driven from code, namely by editing yaml files.
+
+Some convenience scripts are provided in the bin folder to handle deployment.
+They rely on Bash, Helm and a couple other commands I shall list to ensure they are installed before running.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+### Configuration
+1. Create a folder **values/\<env\>**.
+2. Inside this folder, create a **values.yaml** file.
+3. **Overwrite** whatever configuration you'll like.
+
+Examples are provided in fake "[dev](values/dev)" and "[prd](values/prd)" environments in this repository.
+
+Please mind the storage provisionning: default features are offered and detailed in the
+[persistence module](src/00-persistence), but may be deactivated and replaced with existing
+[Persistent Volume Claims](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+### Deployment
+0. Check your settings if you wish with
+```bash
+sh -c '. bin/helm.sh && install_or_upgrade --env <env> --dry-run'
+```
+1. Deploy the whole stack with
+```bash
+sh -c '. bin/helm.sh && install_or_upgrade --env <env>'
+```
+2. Or deploy a single module with
+```bash
+sh -c '. bin/helm.sh && install_or_upgrade_one --env <env> --src src/00-persistence'
+sh -c '. bin/helm.sh && install_or_upgrade_one --env <env> --src src/01-core'
+...
+```
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+### Usage
+- Either browse the home page (by default on [https://homepage.DOMAIN_NAME]()).
+- Or access each service by its own URL:
+  - See the host properties of each service in the yaml configuration files, or
+  - List the available URLs by studying the IngressRoutes with
+  (```kubectl get --namespace <namespace> ingressroutes```) and
+  (```kubectl describe --namespace <namespace> ingressroute/<route-name>```).
+
+#TODO Add a gif demonstration?
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- ROADMAP -->
+## Roadmap
+
+- Core services
+  - [x] **Traefik** (*reverse-proxy*)
+  - [x] **Let's Encrypt** (*tls/https*)
+  - [x] **Homepage** -> *home-page*
+- Security
+  - [x] **Adguard** -> *DNS-sinkhole*
+  - [x] **Authelia** -> *SSO*
+  - [ ] **OpenLDAP** -> *RBAC*
+  - [ ] **Kalinux** -> *pentest-env*
+- Observability
+  - [x] **OtelCollector** -> *collector*
+  - [x] **Loki** -> *logs*
+  - [x] **Tempo** -> *traces*
+  - [x] **VictoriaMetrics** -> *metrics*
+  - [ ] **Mimir** -> *metrics* (en remplacement de VictoriaMetrics)
+  - [x] **Grafana** -> *dashboards*
+- Dev
+  - [ ] **Airflow** -> *orchestrator*
+  - [x] **Bookstack** -> *documentation-space*
+  - [ ] **DBeaver** -> *database-interface*
+  - [x] **IT-Tools** -> *various-tools*
+  - [ ] **OpenMetadata** or **DataHub** -> *metadata*
+  - [ ] **Structurizr** -> *c4-model*
+  - [x] **WhoAmI** -> *testing-tool*
+- Download
+  - [x] **Transmission** -> *torrent*
+  - [ ] **Deluge** -> *torrent*
+  - [x] **QbitTorrent** -> *torrent*
+  - [ ] **Sabnzbd** -> *direct-download*
+- Media
+  - [x] **Jellyfin** -> *streaming*
+  - [x] **Prowlarr** -> *indexer*
+  - [x] **Radarr** -> *movies*
+  - [x] **Sonarr** -> *series*
+  - [x] **Readarr** -> *books*
+  - [x] **Bazarr** -> *subtitles*
+  - [x] **Jellyseerr** -> *requester*
+  - [ ] **Tdarr** -> *transcoding*
+  - [x] **Flaresolverr** -> *cloudflare*
+  - [ ] **Invidious** -> *youtube*
+  - [ ] **SftpGo** -> *files*
+- Games
+  - [ ] **Minecraft** -> *cubes*
+  - [ ] **DockerScorch** -> *dos*
+  - [x] **RommApp** -> *consoles-emulator*
+- Home
+  - [ ] **HomeAssistant** -> *automation*
+  - [ ] **HomeBridge** -> *homekit*
+- To think about
+  - [ ] Global 404 page?
+  - [ ] Write documentations for each service specificities
+
+See the [open issues](https://github.com/Pittinic/platypod/issues) for a full list of proposed features (and known issues).
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- CONTRIBUTING -->
+## Contributing
+
+Contributions are welcomed, either as issues tagged "enhancement" or pull requests. Ideally, please follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#summary) standards.
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feat/<feature>`)
+3. Commit your Changes (`git commit -m '<type>[optional scope]: <description>'`)
+4. Push to the Branch (`git push origin feat/<feature>`)
+5. Open a Pull Request
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+### Top contributors:
+
+![Alt](https://repobeats.axiom.co/api/embed/3d9d54b9dfdd2cf4d9ed9e36d9192e1ba4249493.svg "Repobeats analytics image")
+
+
+<!-- LICENSE -->
+## License
+
+Distributed under the MIT License. See `LICENSE.txt` for more information.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- CONTACT -->
+## Contact
+
+Project Link: [https://github.com/Pittinic/platypod](https://github.com/Pittinic/platypod)
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- ACKNOWLEDGMENTS -->
+## Acknowledgments
+
+* [Orbstack](https://docs.orbstack.dev/) for its ease of use, including on a headless macos setup.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- MARKDOWN LINKS & IMAGES -->
+<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
+[contributors-shield]: https://img.shields.io/github/contributors/Pittinic/platypod.svg?style=for-the-badge
+[contributors-url]: https://github.com/Pittinic/platypod/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/Pittinic/platypod.svg?style=for-the-badge
+[forks-url]: https://github.com/Pittinic/platypod/network/members
+[stars-shield]: https://img.shields.io/github/stars/Pittinic/platypod.svg?style=for-the-badge
+[stars-url]: https://github.com/Pittinic/platypod/stargazers
+[issues-shield]: https://img.shields.io/github/issues/Pittinic/platypod.svg?style=for-the-badge
+[issues-url]: https://github.com/Pittinic/platypod/issues
+[license-shield]: https://img.shields.io/github/license/Pittinic/platypod.svg?style=for-the-badge
+[license-url]: https://github.com/Pittinic/platypod/blob/master/LICENSE.txt
+[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
+[linkedin-url]: https://linkedin.com/in/nicolas-pittion-rossillon-947534166
+[product-screenshot]: images/screenshot.png
+[Kubernetes]: https://img.shields.io/badge/kubernetes-%23326CE5?style=for-the-badge&logo=kubernetes&logoColor=FFFFFF
+[Kubernetes-url]: https://kubernetes.io/
+[Traefik]: https://img.shields.io/badge/traefik-%2324A1C1?style=for-the-badge&logo=traefikproxy&logoColor=FFFFFF
+[Traefik-url]: https://doc.traefik.io/traefik/
+[LetsEncrypt]: https://img.shields.io/badge/letsencrypt-%23003A70?style=for-the-badge&logo=letsencrypt&logoColor=FFFFFF
+[LetsEncrypt-url]: https://letsencrypt.org/docs/
+[Homepage]: https://img.shields.io/badge/homepage-%23009BD5?style=for-the-badge&logo=homepage&logoColor=FFFFFF
+[Homepage-url]: https://github.com/gethomepage/homepage
+[Authelia]: https://img.shields.io/badge/authelia-%23113155?style=for-the-badge&logo=authelia&logoColor=FFFFFF
+[Authelia-url]: https://github.com/authelia/authelia
+[AdGuardHome]: https://img.shields.io/badge/adguard-%2368BC71?style=for-the-badge&logo=adguard&logoColor=FFFFFF
+[AdGuardHome-url]: https://github.com/authelia/authelia
+[OpenTelemetryCollector]: https://img.shields.io/badge/opentelemetry-%23FFFFFF?style=for-the-badge&logo=opentelemetry&logoColor=000000
+[OpenTelemetryCollector-url]: https://github.com/open-telemetry/opentelemetry-collector-contrib
+[Grafana]: https://img.shields.io/badge/grafana-%23F46800?style=for-the-badge&logo=grafana&logoColor=FFFFFF
+[Grafana-url]: https://github.com/grafana/grafana
+[Loki]: https://img.shields.io/badge/loki-%23F46800?style=for-the-badge&logo=grafana&logoColor=FFFFFF
+[Loki-url]: https://github.com/grafana/loki
+[Tempo]: https://img.shields.io/badge/tempo-%23F46800?style=for-the-badge&logo=grafana&logoColor=FFFFFF
+[Tempo-url]: https://github.com/grafana/tempo
+[VictoriaMetrics]: https://img.shields.io/badge/victoria_metrics-%23621773?style=for-the-badge&logo=victoriametrics&logoColor=FFFFFF
+[VictoriaMetrics-url]: https://github.com/VictoriaMetrics/VictoriaMetrics
+[Bookstack]: https://img.shields.io/badge/bookstack-%230288D1?style=for-the-badge&logo=bookstack&logoColor=FFFFFF
+[Bookstack-url]: https://github.com/BookStackApp/BookStack
+[DBeaver]: https://img.shields.io/badge/dbeaver-%23382923?style=for-the-badge&logo=dbeaver&logoColor=FFFFFF
+[DBeaver-url]: https://github.com/BookStackApp/BookStack
+[ItTools]: https://img.shields.io/badge/it_tools-%23336644?style=for-the-badge
+[ItTools-url]: https://github.com/CorentinTh/it-tools
+[MariaDB]: https://img.shields.io/badge/mariadb-%23003545?style=for-the-badge&logo=mariadb&logoColor=FFFFFF
+[MariaDB-url]: https://github.com/mariadb
+[PostgreSQL]: https://img.shields.io/badge/postgresql-%234169E1?style=for-the-badge&logo=postgresql&logoColor=FFFFFF
+[PostgreSQL-url]: https://github.com/postgres/postgres
+[WhoAmI]: https://img.shields.io/badge/whoami-%2324A1C1?style=for-the-badge&logo=traefikproxy&logoColor=FFFFFF
+[WhoAmI-url]: https://github.com/traefik/whoami
+[Deluge]: https://img.shields.io/badge/deluge-%23094491?style=for-the-badge&logo=deluge&logoColor=FFFFFF
+[Deluge-url]: https://github.com/deluge-torrent/deluge
+[QBitTorrent]: https://img.shields.io/badge/qbittorrent-%232F67BA?style=for-the-badge&logo=qbittorrent&logoColor=FFFFFF
+[QBitTorrent-url]: https://github.com/qbittorrent/qBittorrent
+[Transmission]: https://img.shields.io/badge/transmission-%23D70008?style=for-the-badge&logo=transmission&logoColor=FFFFFF
+[Transmission-url]: https://github.com/transmission/transmission
+[Bazarr]: https://img.shields.io/badge/bazarr-%23DA3B8A?style=for-the-badge&logo=linuxserver&logoColor=FFFFFF
+[Bazarr-url]: https://docs.linuxserver.io/images/docker-bazarr/
+[FlareSolverr]: https://img.shields.io/badge/flaresolverr-%23888888?style=for-the-badge
+[FlareSolverr-url]: https://github.com/FlareSolverr/FlareSolverr
+[Jellyfin]: https://img.shields.io/badge/jellyfin-%2300A4DC?style=for-the-badge&logo=jellyfin&logoColor=FFFFFF
+[Jellyfin-url]: https://github.com/jellyfin/jellyfin
+[JellySeerr]: https://img.shields.io/badge/jellyseerr-%239955BB?style=for-the-badge
+[JellySeerr-url]: https://github.com/fallenbagel/jellyseerr
+[Prowlarr]: https://img.shields.io/badge/prowlarr-%23DA3B8A?style=for-the-badge&logo=linuxserver&logoColor=FFFFFF
+[Prowlarr-url]: https://docs.linuxserver.io/images/docker-prowlarr/
+[Radarr]: https://img.shields.io/badge/radarr-%23FFCB3D?style=for-the-badge&logo=radarr&logoColor=FFFFFF
+[Radarr-url]: https://docs.linuxserver.io/images/docker-radarr/
+[Readarr]: https://img.shields.io/badge/readarr-%23DA3B8A?style=for-the-badge&logo=linuxserver&logoColor=FFFFFF
+[Readarr-url]: https://docs.linuxserver.io/images/docker-readarr/
+[Sonarr]: https://img.shields.io/badge/sonarr-%232596BE?style=for-the-badge&logo=sonarr&logoColor=FFFFFF
+[Sonarr-url]: https://docs.linuxserver.io/images/docker-sonarr/
+[Tdarr]: https://img.shields.io/badge/tdarr-%23888888?style=for-the-badge
+[Tdarr-url]: https://github.com/HaveAGitGat/Tdarr
+[RommApp]: https://img.shields.io/badge/rommapp-%23888888?style=for-the-badge
+[RommApp-url]: https://github.com/rommapp/romm
+[DockerMinecraftServer]: https://img.shields.io/badge/minecraft-%23888888?style=for-the-badge
+[DockerMinecraftServer-url]: https://github.com/rommapp/romm
