@@ -1,11 +1,13 @@
 jellyfin:
+  enable: true
   apiKey: 08275f613c8045298b0dea99253cc6fc
   baseUrl:
   host: ${k8s.names.urls.prefix}${jellyfin.label}${k8s.names.urls.suffix}.${traefik.domain}
   credentials:
     username: guest
     password: ""
-  label: jellyfin-local
+  label: jellyfin
   proxy:
+    enable: false
     host: host.docker.internal
     port: 8096

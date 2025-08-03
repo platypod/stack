@@ -6,6 +6,7 @@ metadata:
 
 data:
   jellyfin-file-provider.yaml: |
+    {{- if .Values.jellyfin.proxy.enable }}
     http:
       routers:
         jellyfin-local:
@@ -21,3 +22,4 @@ data:
             passHostHeader: false
             servers:
             - url: http://{{ .Values.jellyfin.proxy.host }}:{{ .Values.jellyfin.proxy.port }}
+    {{- end }}

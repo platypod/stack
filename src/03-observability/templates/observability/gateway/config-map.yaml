@@ -21,37 +21,45 @@ data:
         - cpu
         - memory
       {{- end }}
-      {{- if .Values.observability.receivers.jellyfinAPI.enable }}
-      prometheusjson/jellyfinAPI:
-        endpoint: "{{ .Values.jellyfin.host }}/Sessions"
-        headers:
-          Authorization: "MediaBrowser Token={{ .Values.jellyfin.apiKey }}"
-          Content-Type: "application/json"
-          Accept: "application/json"
-        metrics:
-          - name: jellyfin-api-metrics
-            type: object
-            help: User playback metrics from Jellyfin
-            path: '{ [?(@.NowPlayingItem)] }'
-            labels:
-              user_name: '{ .UserName }'
-              item_type: '{ .NowPlayingItem.Type }'
-              item_name: '{ .NowPlayingItem.Name }'
-              item_path: '{ .NowPlayingItem.Path }'
-              series_name: '{ .NowPlayingItem.SeriesName }'
-              episode_index: 'e{ .NowPlayingItem.IndexNumber }'
-              season_index: 's{ .NowPlayingItem.ParentIndexNumber }'
-              client_name: '{ .Client }'
-              device_name: '{ .DeviceName }'
-              session_id: '{ .Id }'
-            values:
-              is_paused: '{ .PlayState.IsPaused }'
-      {{- end }}
-      {{- if .Values.observability.receivers.jellyfinMetrics.enable }}
-      prometheus/jellyfinMetrics:
+      {{- if .Values.observability.receivers.jellyfinCustom.enable }}
+      prometheus/jellyfinCustom:
         config:
           scrape_configs:
-          {{ .Values.observability.receivers.jellyfinMetrics.scrape_config | toYaml | nindent 10 }}
+          - job_name: jellyfin-jellyfinCustomStats
+            scrape_interval: 30s
+            metrics_path: /probe
+            params:
+              module: [jellyfin]
+            static_configs:
+            - targets:
+              {{- if .Values.jellyfin.proxy.enable }}
+              - http://{{ .Values.jellyfin.proxy.host }}:{{ .Values.jellyfin.proxy.port }}/Sessions
+              {{- end }}
+              {{- if .Values.jellyfin.enable }}
+              - https://{{ .Values.jellyfin.host }}/Sessions
+              {{- end }}
+            relabel_configs:
+            - source_labels: [__address__]
+              target_label: __param_target
+            - source_labels: [__param_target]
+              target_label: instance
+            - target_label: __address__
+              replacement: {{ .Values.k8s.names.services.prefix }}{{ .Values.observability.jellyfinCustomStats.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.jellyfinCustomStats.ports.http.targetPort }}
+      {{- end }}
+      {{- if .Values.observability.receivers.jellyfinNative.enable }}
+      prometheus/jellyfinNative:
+        config:
+          scrape_configs:
+          - job_name: 'jellyfin-native'
+            scrape_interval: 30s
+            static_configs:
+            - targets:
+              {{- if .Values.jellyfin.enable }}
+              - https://{{ .Values.jellyfin.host }}/Sessions
+              {{- end }}
+              {{- if .Values.jellyfin.proxy.enable }}
+              - https://{{ .Values.jellyfin.proxy.host }}:{{ .Values.jellyfin.proxy.port }}/Sessions
+              {{- end }}
       {{- end }}
       {{- if .Values.observability.receivers.snmp.enable }}
       snmp:
@@ -86,11 +94,6 @@ data:
         actions:
         - key: gateway-receiver
           value: prometheus
-          action: insert
-      attributes/prometheusjson:
-        actions:
-        - key: gateway-receiver
-          value: prometheusjson
           action: insert
       attributes/k8s_cluster:
         actions:
@@ -140,15 +143,15 @@ data:
           receivers: [otlp]
           processors: [attributes/otlp, batch, memory_limiter]
           exporters: [otlphttp/victoriametrics]
-        {{- if .Values.observability.receivers.jellyfinAPI.enable }}
-        metrics/jellyfinAPI:
-          receivers: [prometheusjson/jellyfinAPI]
-          processors: [attributes/prometheusjson, batch, memory_limiter]
+        {{- if .Values.observability.receivers.jellyfinCustom.enable }}
+        metrics/jellyfinCustom:
+          receivers: [prometheus/jellyfinCustom]
+          processors: [attributes/prometheus, batch, memory_limiter]
           exporters: [otlphttp/victoriametrics]
         {{- end }}
-        {{- if .Values.observability.receivers.jellyfinMetrics.enable }}
-        metrics/jellyfinMetrics:
-          receivers: [prometheus/jellyfinMetrics]
+        {{- if .Values.observability.receivers.jellyfinNative.enable }}
+        metrics/jellyfinNative:
+          receivers: [prometheus/jellyfinNative]
           processors: [attributes/prometheus, batch, memory_limiter]
           exporters: [otlphttp/victoriametrics]
         {{- end }}

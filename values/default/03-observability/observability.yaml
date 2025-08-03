@@ -1,4 +1,11 @@
 observability:
+  jellyfinCustomStats:
+    label: jellyfin-custom-stats
+    image: quay.io/prometheuscommunity/json-exporter:v0.7.0
+    ports:
+      http:
+        name: http
+        targetPort: 9115
   logs:
     label: loki
     image: grafana/loki:3.5
@@ -81,18 +88,11 @@ observability:
   receivers:
     k8sCluster:
       enable: true
-    jellyfinAPI:
-      # TODO replace with blackbox exporter
-      enable: false
-      targets: "${jellyfin.proxy.host}:${jellyfin.proxy.port}"
-    jellyfinMetrics:
+    jellyfinCustom:
       enable: true
-      scrape_config:
-      - job_name: 'jellyfin'
-        scrape_interval: 30s
-        static_configs:
-        - targets: ["${jellyfin.proxy.host}:${jellyfin.proxy.port}"]
-    snmp:
+    jellyfinNative:
+      enable: false
+    snmp:  # For instance a Synology NAS
       enable: false
       url: udp://XXX.XXX.XXX.XXX:161
       credentials:

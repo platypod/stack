@@ -77,7 +77,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![Platypod][product-screenshot]](https://homepage.platypod.ovh)
+[![Platypod][product-screenshot]](https://platypodemo.com)
 
 - For a list of the current features, see the <a href="#roadmap">Roadmap</a>.
 
@@ -374,7 +374,7 @@ Project Link: [https://github.com/Pittinic/platypod](https://github.com/Pittinic
 [license-url]: https://github.com/Pittinic/platypod/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/nicolas-pittion-rossillon-947534166
-[product-screenshot]: images/screenshot.png
+[product-screenshot]: doc/images/demo.gif
 [Kubernetes]: https://img.shields.io/badge/kubernetes-%23326CE5?style=for-the-badge&logo=kubernetes&logoColor=FFFFFF
 [Kubernetes-url]: https://kubernetes.io/
 [Traefik]: https://img.shields.io/badge/traefik-%2324A1C1?style=for-the-badge&logo=traefikproxy&logoColor=FFFFFF

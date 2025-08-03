@@ -1,0 +1,33 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.observability.jellyfinCustomStats.label .Values.k8s.names.pods.suffix }}
+{{- $appVolume := "app-volume" }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $pod }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.jellyfinCustomStats.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.observability.jellyfinCustomStats.image }}
+        args:
+          - '--config.file=/etc/json_exporter/config.yml'
+          - '--web.listen-address=:{{ .Values.observability.jellyfinCustomStats.ports.http.targetPort }}'
+        ports:
+        - containerPort: {{ .Values.observability.jellyfinCustomStats.ports.http.targetPort }}
+        volumeMounts:
+        - name: conf
+          mountPath: /etc/json_exporter/config.yml
+          subPath: config.yml
+      volumes:
+      - name: conf
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.jellyfinCustomStats.label }}{{ .Values.k8s.names.configMaps.suffix }}
