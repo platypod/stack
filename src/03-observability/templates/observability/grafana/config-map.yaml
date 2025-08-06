@@ -74,3 +74,2749 @@ data:
       url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.metrics.ports.http.targetPort }}
       isDefault: true
       editable: false
+
+  jellyfin-dashboard.json: |
+    {
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": {
+              "type": "grafana",
+              "uid": "-- Grafana --"
+            },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": 10,
+      "links": [],
+      "liveNow": true,
+      "panels": [
+        {
+          "datasource": "$promDS",
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "continuous-GrYlRd"
+              },
+              "custom": {
+                "axisPlacement": "auto",
+                "fillOpacity": 70,
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineWidth": 0,
+                "spanNulls": false
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green" },
+                  { "color": "red", "value": 80 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "id": 348,
+          "options": {
+            "alignValue": "left",
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "mergeValues": true,
+            "rowHeight": 0.9,
+            "showValue": "auto",
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "12.0.1",
+          "targets": [
+            {
+              "datasource": "$promDS",
+              "editorMode": "code",
+              "expr": "sum by (user_name, item_index_clean, item_type) (label_replace(label_join(label_join(jellyfin_is_paused, \"item_index\", \"\", \"season_index\", \"episode_index\"), \"full_name\", \" - \", \"series_name\", \"item_index\", \"item_name\"), \"item_index_clean\", \"$1\", \"full_name\", \"^[- ]*(.*?)[- ]*$\"))",
+              "instant": false,
+              "legendFormat": "__auto",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Jellyfin",
+          "transformations": [
+            { "id": "seriesToRows", "options": {} },
+            {
+              "id": "extractFields",
+              "options": {
+                "keepTime": false,
+                "replace": false,
+                "source": "Metric"
+              }
+            },
+            {
+              "id": "filterByValue",
+              "options": {
+                "filters": [
+                  {
+                    "config": { "id": "isNotNull", "options": {} },
+                    "fieldName": "user_name"
+                  }
+                ],
+                "match": "any",
+                "type": "include"
+              }
+            },
+            {
+              "id": "calculateField",
+              "options": {
+                "alias": "Item",
+                "mode": "reduceRow",
+                "reduce": {
+                  "include": [ "item_index_clean" ],
+                  "reducer": "firstNotNull"
+                }
+              }
+            },
+            {
+              "id": "calculateField",
+              "options": {
+                "alias": "Name",
+                "mode": "reduceRow",
+                "reduce": {
+                  "include": [ "user_name" ],
+                  "reducer": "firstNotNull"
+                }
+              }
+            },
+            {
+              "id": "calculateField",
+              "options": {
+                "alias": "Temp",
+                "mode": "reduceRow",
+                "reduce": {
+                  "include": [ "Item" ],
+                  "reducer": "firstNotNull"
+                },
+                "replaceFields": false
+              }
+            },
+            {
+              "id": "filterByValue",
+              "options": {
+                "filters": [
+                  {
+                    "config": {
+                      "id": "regex",
+                      "options": { "value": "(Movie|Episode)" }
+                    },
+                    "fieldName": "item_type"
+                  }
+                ],
+                "match": "any",
+                "type": "include"
+              }
+            },
+            {
+              "id": "filterByValue",
+              "options": {
+                "filters": [
+                  {
+                    "config": { "id": "notEqual", "options": { "value": 1 } },
+                    "fieldName": "Value"
+                  }
+                ],
+                "match": "any",
+                "type": "include"
+              }
+            },
+            {
+              "id": "partitionByValues",
+              "options": { "fields": [ "Name" ] }
+            },
+            {
+              "id": "filterFieldsByName",
+              "options": { "include": { "pattern": "Temp|Time (.*)" } }
+            },
+            {
+              "id": "renameByRegex",
+              "options": { "regex": "Temp (.*)", "renamePattern": "$1" }
+            }
+          ],
+          "type": "state-timeline"
+        }
+      ],
+      "preload": false,
+      "refresh": "5s",
+      "schemaVersion": 41,
+      "tags": [],
+      "templating": {
+        "list": [
+          {
+            "allowCustomValue": false,
+            "current": {
+              "text": [ "VictoriaMetrics" ],
+              "value": [ "VictoriaMetrics" ]
+            },
+            "includeAll": true,
+            "label": "Datasource",
+            "multi": true,
+            "name": "promDS",
+            "options": [],
+            "query": "prometheus",
+            "refresh": 1,
+            "regex": "",
+            "type": "datasource"
+          }
+        ]
+      },
+      "time": { "from": "now-24h", "to": "now" },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Jellyfin Dashboard (Platypod)",
+      "uid": "6b42aad1-fdaa-4e0f-8595-eacbbefd8058",
+      "version": 7
+    }
+
+  media-dashboards-providers.yaml: |
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: 'Media'
+      type: file
+      options:
+        path: /var/lib/grafana/dashboards/media
+
+  nas-dashboard.json: |
+    {
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": {
+              "type": "datasource",
+              "uid": "grafana"
+            },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "description": "A Dashboard for Synology NAS based on SNMP and Prometheus",
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": 12,
+      "links": [],
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "filterable": false,
+                "inspect": false
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Uptime"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "s"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 2
+                  },
+                  {
+                    "id": "custom.align",
+                    "value": "left"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Upgrade Available"
+                },
+                "properties": [
+                  {
+                    "id": "custom.align",
+                    "value": "right"
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "options": {
+                          "1": {
+                            "text": "Available"
+                          },
+                          "2": {
+                            "text": "Unavailable"
+                          },
+                          "3": {
+                            "text": "Connecting"
+                          },
+                          "4": {
+                            "text": "Disconnected"
+                          },
+                          "5": {
+                            "text": "Others"
+                          }
+                        },
+                        "type": "value"
+                      }
+                    ]
+                  },
+                  {
+                    "id": "color"
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-text"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "red"
+                        },
+                        {
+                          "color": "green",
+                          "value": 2
+                        },
+                        {
+                          "color": "super-light-purple",
+                          "value": 3
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Internal Temperature"
+                },
+                "properties": [
+                  {
+                    "id": "custom.align",
+                    "value": "left"
+                  },
+                  {
+                    "id": "unit",
+                    "value": "celsius"
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "mode": "gradient",
+                      "type": "gauge"
+                    }
+                  },
+                  {
+                    "id": "max",
+                    "value": 80
+                  },
+                  {
+                    "id": "color"
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green"
+                        },
+                        {
+                          "color": "yellow",
+                          "value": 40
+                        },
+                        {
+                          "color": "dark-red",
+                          "value": 60
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": "^.*Status$"
+                },
+                "properties": [
+                  {
+                    "id": "custom.align",
+                    "value": "center"
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "mode": "gradient",
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "options": {
+                          "1": {
+                            "text": "NORMAL"
+                          },
+                          "2": {
+                            "text": "FAILED"
+                          }
+                        },
+                        "type": "value"
+                      }
+                    ]
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green"
+                        },
+                        {
+                          "color": "red",
+                          "value": 2
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 3,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "id": 184,
+          "options": {
+            "cellHeight": "sm",
+            "footer": {
+              "countRows": false,
+              "fields": "",
+              "reducer": [
+                "sum"
+              ],
+              "show": false
+            },
+            "showHeader": true
+          },
+          "pluginVersion": "12.0.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_system_uptime_seconds{instance='$Device',job=\"nas\"}",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "uptime",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_disk_1_temp_celsius{job=\"nas\", instance='$Device'}",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_fan_status{job=\"nas\",instance='$Device'}",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "C"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_volume_1_status{job=\"nas\",instance='$Device'}",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "D"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_disk_1_status{job=\"nas\",instance='$Device'}",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "E"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_power_status{job=\"nas\",instance='$Device'}",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "F"
+            }
+          ],
+          "title": "",
+          "transformations": [
+            {
+              "id": "seriesToColumns",
+              "options": {
+                "byField": "Time"
+              }
+            },
+            {
+              "id": "filterFieldsByName",
+              "options": {
+                "include": {
+                  "names": [
+                    "Value #A",
+                    "Value #B",
+                    "Value #C",
+                    "Value #D",
+                    "Value #E",
+                    "Value #F"
+                  ]
+                }
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {},
+                "indexByName": {
+                  "Value #A": 1,
+                  "Value #B": 2,
+                  "Value #C": 3,
+                  "Value #D": 4,
+                  "Value #E": 5,
+                  "Value #F": 6
+                },
+                "renameByName": {
+                  "Value": "Uptime",
+                  "Value #A": "Uptime",
+                  "Value #B": "Internal Temperature",
+                  "Value #C": "Fan Status",
+                  "Value #D": "Volume 1 Status",
+                  "Value #E": "Disk 1 Status",
+                  "Value #F": "Power Status"
+                }
+              }
+            }
+          ],
+          "transparent": true,
+          "type": "table"
+        },
+        {
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 3
+          },
+          "id": 14,
+          "panels": [],
+          "title": "System State",
+          "type": "row"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 2,
+              "mappings": [
+                {
+                  "options": {
+                    "match": "null",
+                    "result": {
+                      "text": "N/A"
+                    }
+                  },
+                  "type": "special"
+                }
+              ],
+              "max": 100,
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#299c46"
+                  },
+                  {
+                    "color": "rgba(237, 129, 40, 0.89)",
+                    "value": 70
+                  },
+                  {
+                    "color": "#d44a3a",
+                    "value": 90
+                  }
+                ]
+              },
+              "unit": "percent"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 4,
+            "x": 0,
+            "y": 4
+          },
+          "id": 33,
+          "maxDataPoints": 100,
+          "options": {
+            "minVizHeight": 75,
+            "minVizWidth": 75,
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "mean"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true,
+            "sizing": "auto"
+          },
+          "pluginVersion": "12.0.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_cpu_user_percent{job=\"nas\", instance='$Device'} + snmp_cpu_system_percent{job=\"nas\", instance='$Device'}",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "title": "CPU Utilization",
+          "type": "gauge"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 100,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "percent"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "percent"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Idle"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "blue",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "System"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "dark-red",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "User"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "dark-green",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 7,
+            "x": 11,
+            "y": 4
+          },
+          "id": 23,
+          "options": {
+            "alertThreshold": true,
+            "legend": {
+              "calcs": [],
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "12.0.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_cpu_system_percent{instance='$Device',job='nas'}",
+              "interval": "",
+              "legendFormat": "System",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_cpu_user_percent{instance='$Device',job='nas'}",
+              "interval": "",
+              "legendFormat": "User",
+              "refId": "C"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_cpu_idle_percent{instance='$Device',job='nas'}",
+              "interval": "",
+              "legendFormat": "Idle",
+              "refId": "B"
+            }
+          ],
+          "title": "CPU",
+          "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 10
+          },
+          "id": 99,
+          "panels": [],
+          "title": "System Memory",
+          "type": "row"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 2,
+              "mappings": [
+                {
+                  "options": {
+                    "match": "null",
+                    "result": {
+                      "text": "N/A"
+                    }
+                  },
+                  "type": "special"
+                }
+              ],
+              "max": 1,
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#299c46"
+                  },
+                  {
+                    "color": "rgba(237, 129, 40, 0.89)",
+                    "value": 0.7
+                  },
+                  {
+                    "color": "#d44a3a",
+                    "value": 0.8
+                  }
+                ]
+              },
+              "unit": "percentunit"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 4,
+            "x": 0,
+            "y": 11
+          },
+          "id": 117,
+          "maxDataPoints": 100,
+          "options": {
+            "minVizHeight": 75,
+            "minVizWidth": 75,
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true,
+            "sizing": "auto"
+          },
+          "pluginVersion": "12.0.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "(snmp_mem_total_kibibytes{job=\"nas\", instance='$Device'} - (snmp_mem_avail_kibibytes{job=\"nas\", instance='$Device'} + snmp_mem_cached_kibibytes{job=\"nas\", instance='$Device'} + snmp_mem_buffer_kibibytes{job=\"nas\", instance='$Device'})) / snmp_mem_total_kibibytes{job=\"nas\", instance='$Device'}",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "title": "Memory Usage",
+          "type": "gauge"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 100,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "deckbytes"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Free Virtual Memory"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "dark-green",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total Virtual Memory"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "dark-red",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Used Virtual Memory"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "dark-orange",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total Virtual Memory"
+                },
+                "properties": [
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 3
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 7,
+            "x": 4,
+            "y": 11
+          },
+          "id": 115,
+          "options": {
+            "alertThreshold": true,
+            "legend": {
+              "calcs": [],
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "12.0.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_mem_total_kibibytes{instance='$Device',job=\"nas\"} + snmp_swap_total_kibibytes{instance='$Device',job=\"nas\"} - snmp_mem_avail_kibibytes{instance='$Device',job=\"nas\"}",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "Used Virtual Memory",
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_mem_total_kibibytes{instance='$Device',job=\"nas\"} + snmp_swap_total_kibibytes{instance='$Device',job=\"nas\"}",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "Total Virtual Memory",
+              "refId": "F"
+            }
+          ],
+          "title": "Virtual Memory",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 100,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "deckbytes"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Available"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "dark-green",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Cached"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "super-light-yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Reserved"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "light-red",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Shared"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "dark-purple",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "dark-red",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 3
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 6,
+            "x": 11,
+            "y": 11
+          },
+          "id": 114,
+          "options": {
+            "alertThreshold": true,
+            "legend": {
+              "calcs": [],
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "12.0.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_mem_total_kibibytes{instance='$Device',job=\"nas\"} - (snmp_mem_cached_kibibytes{instance='$Device',job=\"nas\"} + snmp_mem_buffer_kibibytes{instance='$Device',job=\"nas\"} + snmp_mem_avail_kibibytes{instance='$Device',job=\"nas\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "Reserved",
+              "refId": "E"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_mem_avail_kibibytes{instance='$Device',job=\"nas\"}",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "Available",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_mem_buffer_kibibytes{instance='$Device',job=\"nas\"}",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "Buffer",
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_mem_cached_kibibytes{instance='$Device',job=\"nas\"}",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "Cached",
+              "refId": "C"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_mem_total_kibibytes{instance='$Device',job=\"nas\"} ",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "Total",
+              "refId": "F"
+            }
+          ],
+          "title": "Physical Memory",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 100,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "deckbytes"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Available"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "green",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Free Virtual Memory"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "dark-green",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "dark-red",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total Virtual Memory"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "dark-red",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Used"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Used Swap Memory"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "dark-red",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Used Virtual Memory"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "dark-orange",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 3
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 7,
+            "x": 17,
+            "y": 11
+          },
+          "id": 116,
+          "options": {
+            "alertThreshold": true,
+            "legend": {
+              "calcs": [],
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "12.0.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_swap_total_kibibytes{instance='$Device',job=\"nas\"} - snmp_swap_avail_kibibytes{instance='$Device',job=\"nas\"}",
+              "instant": false,
+              "interval": "",
+              "legendFormat": "Used",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_swap_avail_kibibytes{instance='$Device',job=\"nas\"}",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "Available",
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_swap_total_kibibytes{instance='$Device',job=\"nas\"}",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "Total",
+              "refId": "F"
+            }
+          ],
+          "title": "Swap Usage",
+          "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 17
+          },
+          "id": 76,
+          "panels": [],
+          "title": "Internals",
+          "type": "row"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "filterable": false
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Admin Status"
+                },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "options": {
+                          "1": {
+                            "text": "UP"
+                          },
+                          "2": {
+                            "text": "DOWN"
+                          },
+                          "3": {
+                            "text": "TESTING"
+                          }
+                        },
+                        "type": "value"
+                      }
+                    ]
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-text"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green"
+                        },
+                        {
+                          "color": "red",
+                          "value": 2
+                        },
+                        {
+                          "color": "#EAB839",
+                          "value": 3
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "custom.align",
+                    "value": "center"
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 100
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Connector"
+                },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "options": {
+                          "1": {
+                            "text": "Present"
+                          },
+                          "2": {
+                            "text": "Absent"
+                          }
+                        },
+                        "type": "value"
+                      }
+                    ]
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-text"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green"
+                        },
+                        {
+                          "color": "red",
+                          "value": 2
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "custom.align",
+                    "value": "center"
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 100
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Speed"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "bps"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 100
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Operational Status"
+                },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "options": {
+                          "1": {
+                            "text": "UP"
+                          },
+                          "2": {
+                            "text": "DOWN"
+                          },
+                          "3": {
+                            "text": "TESTING"
+                          },
+                          "4": {
+                            "text": "UNKNOWN"
+                          },
+                          "5": {
+                            "text": "DORMANT"
+                          },
+                          "6": {
+                            "text": "NOT PRESENT"
+                          },
+                          "7": {
+                            "text": "LOWER LAYER DOWN"
+                          }
+                        },
+                        "type": "value"
+                      }
+                    ]
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "mode": "gradient",
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green"
+                        },
+                        {
+                          "color": "red",
+                          "value": 2
+                        },
+                        {
+                          "color": "#EAB839",
+                          "value": 3
+                        },
+                        {
+                          "color": "dark-red",
+                          "value": 7
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 11,
+            "x": 0,
+            "y": 18
+          },
+          "id": 210,
+          "options": {
+            "showHeader": true
+          },
+          "pluginVersion": "7.3.4",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_network_mac_address{instance='$Device',job=\"nas\"}",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_if_speed_bps{instance='$Device',job=\"nas\"}",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "B"
+            }
+          ],
+          "title": "",
+          "transformations": [
+            {
+              "id": "seriesToColumns",
+              "options": {
+                "byField": "snmp_network_name"
+              }
+            },
+            {
+              "id": "filterFieldsByName",
+              "options": {
+                "include": {
+                  "names": [
+                    "Value #A",
+                    "Value #B"
+                  ]
+                }
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {},
+                "indexByName": {
+                  "Value #A": 0,
+                  "Value #B": 1
+                },
+                "renameByName": {
+                  "Value #A": "MAC Address",
+                  "Value #B": "Speed"
+                }
+              }
+            }
+          ],
+          "type": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "filterable": false
+              },
+              "mappings": [],
+              "max": 80,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "dark-yellow",
+                    "value": 35
+                  },
+                  {
+                    "color": "dark-red",
+                    "value": 50
+                  }
+                ]
+              },
+              "unit": "celsius"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Disk"
+                },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "auto"
+                    }
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 150
+                  },
+                  {
+                    "id": "custom.align",
+                    "value": "left"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Temperature"
+                },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "mode": "gradient",
+                      "type": "gauge"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Disk Type"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 100
+                  },
+                  {
+                    "id": "custom.align",
+                    "value": "left"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Disk Status"
+                },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "options": {
+                          "1": {
+                            "text": "Normal"
+                          },
+                          "2": {
+                            "text": "Initialized"
+                          },
+                          "3": {
+                            "text": "NotInitialized"
+                          },
+                          "4": {
+                            "text": "SystemPartitionFailed"
+                          },
+                          "5": {
+                            "text": "Crashed"
+                          }
+                        },
+                        "type": "value"
+                      }
+                    ]
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 150
+                  },
+                  {
+                    "id": "custom.align",
+                    "value": "left"
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-text"
+                    }
+                  },
+                  {
+                    "id": "color"
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green"
+                        },
+                        {
+                          "color": "dark-yellow",
+                          "value": 2
+                        },
+                        {
+                          "color": "dark-red",
+                          "value": 4
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Disk Model"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 200
+                  },
+                  {
+                    "id": "custom.align",
+                    "value": "left"
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 13,
+            "x": 11,
+            "y": 18
+          },
+          "id": 132,
+          "options": {
+            "showHeader": true
+          },
+          "pluginVersion": "7.3.4",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_disk_1_temp_celsius{job=\"nas\", instance='$Device'}",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_disk_1_type{job=\"nas\", instance='$Device'}",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_disk_1_status{job=\"nas\", instance='$Device'}",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "C"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_disk_1_model{job=\"nas\", instance='$Device'}",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "D"
+            }
+          ],
+          "title": "",
+          "transformations": [
+            {
+              "id": "filterFieldsByName",
+              "options": {
+                "include": {
+                  "names": [
+                    "diskID",
+                    "Value #A",
+                    "diskType",
+                    "Value #C",
+                    "diskModel"
+                  ]
+                }
+              }
+            },
+            {
+              "id": "seriesToColumns",
+              "options": {
+                "byField": "diskID"
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {},
+                "indexByName": {
+                  "Value #A": 4,
+                  "Value #C": 3,
+                  "diskID": 0,
+                  "diskModel": 2,
+                  "diskType": 1
+                },
+                "renameByName": {
+                  "Value #A": "Temperature",
+                  "Value #C": "Disk Status",
+                  "diskID": "Disk",
+                  "diskModel": "Disk Model",
+                  "diskType": "Disk Type"
+                }
+              }
+            }
+          ],
+          "type": "table"
+        },
+        {
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 26
+          },
+          "id": 19,
+          "panels": [],
+          "repeat": "raidName",
+          "title": "Volume $raidName",
+          "type": "row"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {},
+              "mappings": [
+                {
+                  "options": {
+                    "1": {
+                      "text": "Normal"
+                    },
+                    "2": {
+                      "text": "Repairing"
+                    },
+                    "3": {
+                      "text": "Migrating"
+                    },
+                    "4": {
+                      "text": "Expanding"
+                    },
+                    "5": {
+                      "text": "Deleting"
+                    },
+                    "6": {
+                      "text": "Creating"
+                    },
+                    "7": {
+                      "text": "RaidSyncing"
+                    },
+                    "8": {
+                      "text": "RaidParityChecking"
+                    },
+                    "9": {
+                      "text": "RaidAssembling"
+                    },
+                    "10": {
+                      "text": "Canceling"
+                    },
+                    "11": {
+                      "text": "Degrade"
+                    },
+                    "12": {
+                      "text": "Crashed"
+                    }
+                  },
+                  "type": "value"
+                }
+              ],
+              "nullValueMode": "connected",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#299c46"
+                  },
+                  {
+                    "color": "rgba(237, 129, 40, 0.89)",
+                    "value": 2
+                  },
+                  {
+                    "color": "#d44a3a",
+                    "value": 10
+                  }
+                ]
+              },
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 5,
+            "x": 0,
+            "y": 27
+          },
+          "id": 9,
+          "maxDataPoints": 100,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "value"
+          },
+          "pluginVersion": "7.3.4",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_raid_status{job=\"nas\",instance='$Device',raidName='$raidName'}",
+              "format": "time_series",
+              "instant": true,
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "title": "",
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 19,
+            "x": 5,
+            "y": 27
+          },
+          "id": 26,
+          "maxPerRow": 6,
+          "options": {
+            "alertThreshold": true
+          },
+          "pluginVersion": "7.3.4",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_raid_total_size_bytes{instance='$Device',job=\"nas\",raidName=~'$raidName'}",
+              "interval": "",
+              "legendFormat": "Total Size",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "snmp_raid_free_size_bytes{instance='$Device',job=\"nas\",raidName=~'$raidName'}",
+              "interval": "",
+              "legendFormat": "Free Size",
+              "refId": "B"
+            }
+          ],
+          "title": "",
+          "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 32
+          },
+          "id": 39,
+          "panels": [],
+          "repeat": "spaceIODevice",
+          "title": "Volume $spaceIODevice",
+          "type": "row"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 33
+          },
+          "id": 45,
+          "interval": "30s",
+          "options": {
+            "alertThreshold": true
+          },
+          "pluginVersion": "7.3.4",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "rate(snmp_spaceio_read_total_bytes{instance='$Device',job=\"nas\",spaceIODevice=~\"$spaceIODevice\"}[$__interval])",
+              "interval": "",
+              "legendFormat": "Read Bytes",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "rate(snmp_spaceio_written_total_bytes{instance='$Device',job=\"nas\",spaceIODevice=~\"$spaceIODevice\"}[$__interval])",
+              "interval": "",
+              "legendFormat": "Written Bytes",
+              "refId": "B"
+            }
+          ],
+          "title": "Volume Throughput",
+          "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 41
+          },
+          "id": 28,
+          "panels": [],
+          "repeat": "storageIODevice",
+          "title": "Device $storageIODevice",
+          "type": "row"
+        },
+        {
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 48
+          },
+          "id": 17,
+          "panels": [],
+          "repeat": "Interface",
+          "title": "Networking ($Interface)",
+          "type": "row"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 0,
+            "y": 49
+          },
+          "id": 1,
+          "interval": "30s",
+          "maxPerRow": 2,
+          "options": {
+            "alertThreshold": true
+          },
+          "pluginVersion": "7.3.4",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "rate(snmp_network_input_high_capacity_octets{job='nas',instance='$Device',snmp_network_name=~'$Interface'}[$__interval]) or rate(snmp_network_input_octets{job='snmp',instance='$Device',snmp_network_name=~'$Interface'}[$__interval]) ",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 2,
+              "legendFormat": "$Interface In",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "rate(snmp_network_output_high_capacity_octets{job='nas',instance='$Device',snmp_network_name=~'$Interface'}[$__interval]) or rate(snmp_network_output_octets{job='snmp',instance='$Device',snmp_network_name=~'$Interface'}[$__interval]) ",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 2,
+              "legendFormat": "$Interface Out",
+              "refId": "B",
+              "step": 60
+            }
+          ],
+          "title": "Traffic",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 12,
+            "y": 49
+          },
+          "id": 68,
+          "interval": "30s",
+          "maxPerRow": 2,
+          "options": {
+            "alertThreshold": true
+          },
+          "pluginVersion": "7.3.4",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "rate(snmp_network_input_discards_packets{job='nas',instance='$Device',snmp_network_name=~'$Interface'}[$__interval])",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 2,
+              "legendFormat": "Discards In",
+              "refId": "A",
+              "step": 60
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "rate(snmp_network_input_errors_packets{job='nas',instance='$Device',snmp_network_name=~'$Interface'}[$__interval])",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 2,
+              "legendFormat": "Errors In",
+              "refId": "B",
+              "step": 60
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "rate(snmp_network_output_discards_packets{job='nas',instance='$Device',snmp_network_name=~'$Interface'}[$__interval])",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 2,
+              "legendFormat": "Discards Out",
+              "refId": "C",
+              "step": 60
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "metrics"
+              },
+              "expr": "rate(snmp_network_output_errors_packets{job='nas',instance='$Device',snmp_network_name=~'$Interface'}[$__interval])",
+              "format": "time_series",
+              "interval": "",
+              "intervalFactor": 2,
+              "legendFormat": "Errors Out",
+              "refId": "D",
+              "step": 60
+            }
+          ],
+          "title": "Errors",
+          "type": "timeseries"
+        }
+      ],
+      "preload": false,
+      "refresh": "1m",
+      "schemaVersion": 41,
+      "tags": [],
+      "templating": {
+        "list": [
+          {
+            "current": {
+              "text": "",
+              "value": ""
+            },
+            "datasource": "metrics",
+            "definition": "query_result(snmp_cpu_user_percent{job=\"nas\"})",
+            "includeAll": false,
+            "name": "Device",
+            "options": [],
+            "query": "query_result(snmp_cpu_user_percent{job=\"nas\"})",
+            "refresh": 1,
+            "regex": ".*instance=\"(.*?)\".*",
+            "sort": 1,
+            "type": "query"
+          },
+          {
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            },
+            "datasource": "metrics",
+            "definition": "query_result(snmp_network_name{job=\"nas\",instance=\"$Device\"})",
+            "includeAll": true,
+            "multi": true,
+            "name": "Interface",
+            "options": [],
+            "query": "query_result(snmp_network_name{job=\"nas\",instance=\"$Device\"})",
+            "refresh": 1,
+            "regex": ".*snmp_network_name=\"(.*?)\",.*",
+            "sort": 1,
+            "type": "query"
+          },
+          {
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            },
+            "datasource": "metrics",
+            "definition": "query_result(raidName{job=\"nas\",instance=\"$Device\"})",
+            "includeAll": true,
+            "label": "Volume ID",
+            "multi": true,
+            "name": "raidName",
+            "options": [],
+            "query": "query_result(raidName{job=\"nas\",instance=\"$Device\"})",
+            "refresh": 2,
+            "regex": ".*raidName=\"(.*?)\".*",
+            "sort": 1,
+            "type": "query"
+          },
+          {
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            },
+            "datasource": "metrics",
+            "definition": "query_result(storageIODevice{job=\"nas\",instance=\"$Device\"})",
+            "includeAll": true,
+            "label": "Disk",
+            "multi": true,
+            "name": "storageIODevice",
+            "options": [],
+            "query": "query_result(storageIODevice{job=\"nas\",instance=\"$Device\"})",
+            "refresh": 2,
+            "regex": ".*storageIODevice=\"(.*?)\".*",
+            "sort": 1,
+            "type": "query"
+          },
+          {
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            },
+            "datasource": "metrics",
+            "definition": "query_result(spaceIODevice{job=\"nas\",instance=\"$Device\"})",
+            "includeAll": true,
+            "label": "Volume Name",
+            "multi": true,
+            "name": "spaceIODevice",
+            "options": [],
+            "query": "query_result(spaceIODevice{job=\"nas\",instance=\"$Device\"})",
+            "refresh": 2,
+            "regex": ".*spaceIODevice=\"(.*?)\".*",
+            "sort": 1,
+            "type": "query"
+          }
+        ]
+      },
+      "time": {
+        "from": "now-15m",
+        "to": "now"
+      },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Synology SNMP DashBoard (Platypod)",
+      "uid": "N4Cl097iz",
+      "version": 2
+    }

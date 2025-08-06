@@ -99,105 +99,219 @@ observability:
         username: <username>
         password: <password>
       metrics:
-        system_uptime:
+        snmp_system_uptime_seconds:
           unit: seconds
           gauge:
             value_type: int
           scalar_oids:
           - oid: "1.3.6.1.2.1.1.3.0"
-        cpu_user:
+        snmp_cpu_user_percent:
           unit: percent
           gauge:
             value_type: int
           scalar_oids:
           - oid: "1.3.6.1.4.1.2021.11.9.0"
-        cpu_system:
+        snmp_cpu_system_percent:
           unit: percent
           gauge:
             value_type: int
           scalar_oids:
           - oid: "1.3.6.1.4.1.2021.11.10.0"
-        cpu_idle:
+        snmp_cpu_idle_percent:
           unit: percent
           gauge:
             value_type: int
           scalar_oids:
           - oid: "1.3.6.1.4.1.2021.11.11.0"
-        mem_total:
+        snmp_mem_total_kibibytes:
           unit: kibibytes
           gauge:
             value_type: int
           scalar_oids:
           - oid: "1.3.6.1.4.1.2021.4.5.0"
-        mem_avail:
+        snmp_mem_avail_kibibytes:
           unit: kibibytes
           gauge:
             value_type: int
           scalar_oids:
           - oid: "1.3.6.1.4.1.2021.4.6.0"
-        mem_buffer:
+        snmp_mem_buffer_kibibytes:
           unit: kibibytes
           gauge:
             value_type: int
           scalar_oids:
           - oid: "1.3.6.1.4.1.2021.4.14.0"
-        mem_cached:
+        snmp_mem_cached_kibibytes:
           unit: kibibytes
           gauge:
             value_type: int
           scalar_oids:
           - oid: "1.3.6.1.4.1.2021.4.15.0"
-        swap_total:
+        snmp_swap_total_kibibytes:
           unit: kibibytes
           gauge:
             value_type: int
           scalar_oids:
           - oid: "1.3.6.1.4.1.2021.4.3.0"
-        swap_avail:
+        snmp_swap_avail_kibibytes:
           unit: kibibytes
           gauge:
             value_type: int
           scalar_oids:
           - oid: "1.3.6.1.4.1.2021.4.4.0"
-        disk_1_status:
+        snmp_disk_1_status:
           unit: status
           gauge:
             value_type: int
           scalar_oids:
           - oid: "1.3.6.1.4.1.6574.2.1.1.5.1"
-        disk_1_temp:
+        snmp_disk_1_temp_celsius:
           unit: celsius
           gauge:
             value_type: int
           scalar_oids:
           - oid: "1.3.6.1.4.1.6574.2.1.1.6.1"
-        volume_1_status:
+        snmp_volume_1_status:
           unit: status
           gauge:
             value_type: int
           scalar_oids:
           - oid: "1.3.6.1.4.1.6574.3.1.1.1.1"
-        net_1_in:
+        snmp_net_1_in_octets:
           unit: octets
           gauge:
             value_type: int
           scalar_oids:
           - oid: "1.3.6.1.2.1.2.2.1.10.1"
-        net_1_out:
+        snmp_net_1_out_octets:
           unit: octets
           gauge:
             value_type: int
           scalar_oids:
           - oid: "1.3.6.1.2.1.2.2.1.16.1"
-        fan_status:
+        snmp_fan_status:
           unit: status
           gauge:
             value_type: int
           scalar_oids:
           - oid: "1.3.6.1.4.1.6574.1.4.1.0"
-        power_status:
+        snmp_power_status:
           unit: status
           gauge:
             value_type: int
           scalar_oids:
           - oid: "1.3.6.1.4.1.6574.1.3.0"
+        snmp_network_name:
+          unit: string
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.2.1.31.1.1.1.1"
+        snmp_network_mac_address:
+          unit: mac_address
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.2.1.2.2.1.6"
+        snmp_if_speed_bps:
+          unit: bits_per_second
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.2.1.2.2.1.5"
+        snmp_disk_1_type:
+          unit: type
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.4.1.6574.2.1.1.2.1"
+        snmp_disk_1_model:
+          unit: model
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.4.1.6574.2.1.1.3.1"
+        snmp_raid_status:
+          unit: status
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.4.1.6574.3.1.1.3"
+        snmp_raid_name:
+          unit: string
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.4.1.6574.3.1.1.2"
+        snmp_raid_total_size_bytes:
+          unit: bytes
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.4.1.6574.3.1.1.5"
+        snmp_raid_free_size_bytes:
+          unit: bytes
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.4.1.6574.3.1.1.4"
+        snmp_spaceio_read_total_bytes:
+          unit: bytes
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.4.1.6574.102.1.1.12"
+        snmp_spaceio_written_total_bytes:
+          unit: bytes
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.4.1.6574.102.1.1.13"
+        snmp_network_input_high_capacity_octets:
+          unit: bytes
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.2.1.31.1.1.1.6"
+        snmp_network_input_octets:
+          unit: bytes
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.2.1.2.2.1.10"
+        snmp_network_output_high_capacity_octets:
+          unit: bytes
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.2.1.31.1.1.1.10"
+        snmp_network_output_octets:
+          unit: bytes
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.2.1.2.2.1.16"
+        snmp_network_input_discards_packets:
+          unit: packets
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.2.1.2.2.1.13"
+        snmp_network_input_errors_packets:
+          unit: packets
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.2.1.2.2.1.14"
+        snmp_network_output_discards_packets:
+          unit: packets
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.2.1.2.2.1.19"
+        snmp_network_output_errors_packets:
+          unit: packets
+          gauge:
+            value_type: int
+          scalar_oids:
+          - oid: "1.3.6.1.2.1.2.2.1.20"

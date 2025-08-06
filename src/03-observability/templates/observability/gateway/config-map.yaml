@@ -65,14 +65,14 @@ data:
       snmp:
         collection_interval: 60s
         timeout: 3s
-        endpoint: {{ .Values.observability.snmp.url }}
+        endpoint: {{ .Values.observability.receivers.snmp.url }}
         version: v3
         security_level: auth_priv
-        user: {{ .Values.observability.snmp.credentials.username }}
+        user: {{ .Values.observability.receivers.snmp.credentials.username }}
         auth_type: SHA
-        auth_password: {{ .Values.observability.snmp.credentials.password }}
+        auth_password: {{ .Values.observability.receivers.snmp.credentials.password }}
         privacy_type: AES
-        privacy_password: {{ .Values.observability.snmp.credentials.password }}
+        privacy_password: {{ .Values.observability.receivers.snmp.credentials.password }}
         metrics: {{ .Values.observability.receivers.snmp.metrics | toYaml | nindent 10 }}
       {{- end }}
 
@@ -105,6 +105,14 @@ data:
         - key: gateway-receiver
           value: snmp
           action: insert
+      attributes/add_labels_to_nas:
+        actions:
+          - key: instance
+            action: insert
+            value: nasypod
+          - key: job
+            action: insert
+            value: nas
 
     exporters:
       debug/verbose:
@@ -164,7 +172,7 @@ data:
         {{- if .Values.observability.receivers.snmp.enable }}
         metrics/snmp:
           receivers: [snmp]
-          processors: [attributes/snmp, batch, memory_limiter]
+          processors: [attributes/snmp, attributes/add_labels_to_nas, batch, memory_limiter]
           exporters: [otlphttp/victoriametrics]
         {{- end }}
 
