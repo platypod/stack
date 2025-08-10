@@ -68,7 +68,7 @@ data:
           - job_name: 'synology-disk-station'
             metrics_path: /snmp
             params:
-              module: [synology]
+              module: [if_mib, synology]
               auth: [synology_v3]
             scrape_interval: 30s
             scrape_timeout: 30s

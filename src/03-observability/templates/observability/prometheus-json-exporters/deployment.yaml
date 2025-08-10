@@ -21,6 +21,7 @@ spec:
         args:
           - '--config.file=/etc/json_exporter/config.yml'
           - '--web.listen-address=:{{ .Values.observability.prometheusJsonExporter.ports.http.targetPort }}'
+          - '--log.level={{ .Values.observability.otelCollector.receivers.jellyfinCustom.logLevel }}'
         ports:
         - containerPort: {{ .Values.observability.prometheusJsonExporter.ports.http.targetPort }}
         volumeMounts:

@@ -26,6 +26,7 @@ observability:
         enable: true
       jellyfinCustom:
         enable: true
+        logLevel: info
       jellyfinNative:
         enable: false
       synologySnmp:
