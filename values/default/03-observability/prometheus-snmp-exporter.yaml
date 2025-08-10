@@ -1,0 +1,8 @@
+observability:
+  prometheusSnmpExporter:
+    label: prometheus-snmp-exporter
+    image: prom/snmp-exporter:v0.29.0
+    ports:
+      http:
+        name: http
+        targetPort: 9116

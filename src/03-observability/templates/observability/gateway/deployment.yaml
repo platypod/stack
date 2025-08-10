@@ -1,4 +1,4 @@
-{{- $pod := print .Values.k8s.names.pods.prefix .Values.observability.opentelemetryCollector.gateway.label .Values.k8s.names.pods.suffix }}
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.observability.otelCollector.gateway.label .Values.k8s.names.pods.suffix }}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -14,14 +14,14 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
-      serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ .Values.observability.opentelemetryCollector.label }}{{ .Values.k8s.names.serviceAccounts.suffix }}
+      serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.serviceAccounts.suffix }}
       containers:
-      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.opentelemetryCollector.gateway.label }}{{ .Values.k8s.names.containers.suffix }}
-        image: {{ .Values.observability.opentelemetryCollector.image }}
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.otelCollector.gateway.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.observability.otelCollector.image }}
         args: ["--config=/conf/collector.yaml"]
         ports:
-        - containerPort: {{ .Values.observability.opentelemetryCollector.gateway.ports.grpc.targetPort }}
-        - containerPort: {{ .Values.observability.opentelemetryCollector.gateway.ports.http.targetPort }}
+        - containerPort: {{ .Values.observability.otelCollector.gateway.ports.grpc.targetPort }}
+        - containerPort: {{ .Values.observability.otelCollector.gateway.ports.http.targetPort }}
         env:
         - name: K8S_NODE_NAME
           valueFrom:
@@ -34,4 +34,4 @@ spec:
       volumes:
       - name: conf
         configMap:
-          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.opentelemetryCollector.gateway.label }}{{ .Values.k8s.names.configMaps.suffix }}
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.otelCollector.gateway.label }}{{ .Values.k8s.names.configMaps.suffix }}

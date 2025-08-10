@@ -93,7 +93,7 @@ authelia:
       - ${jellyfin.host}
       - ${jellyseerr.host}
       - ${traefik.host}
-      - ${observability.opentelemetryCollector.gateway.host}
+      - ${observability.otelCollector.gateway.host}
   secrets:
     encryptionKey: verySecretMuchSecureNeverGonnaBeGuessedWoah
     jwt: verySecretMuchSecureNeverGonnaBeGuessedWoooow

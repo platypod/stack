@@ -1,17 +1,17 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.opentelemetryCollector.gateway.label }}{{ .Values.k8s.names.configMaps.suffix }}
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.otelCollector.gateway.label }}{{ .Values.k8s.names.configMaps.suffix }}
 data:
   collector.yaml: |
     receivers:
       otlp:
         protocols:
           grpc:
-            endpoint: 0.0.0.0:{{ .Values.observability.opentelemetryCollector.gateway.ports.grpc.targetPort }}
+            endpoint: 0.0.0.0:{{ .Values.observability.otelCollector.gateway.ports.grpc.targetPort }}
           http:
-            endpoint: 0.0.0.0:{{ .Values.observability.opentelemetryCollector.gateway.ports.http.targetPort }}
-      {{- if .Values.observability.receivers.k8sCluster.enable }}
+            endpoint: 0.0.0.0:{{ .Values.observability.otelCollector.gateway.ports.http.targetPort }}
+      {{- if .Values.observability.otelCollector.receivers.k8sCluster.enable }}
       k8s_cluster:
         auth_type: serviceAccount
         node_conditions_to_report:
@@ -21,11 +21,11 @@ data:
         - cpu
         - memory
       {{- end }}
-      {{- if .Values.observability.receivers.jellyfinCustom.enable }}
+      {{- if .Values.observability.otelCollector.receivers.jellyfinCustom.enable }}
       prometheus/jellyfinCustom:
         config:
           scrape_configs:
-          - job_name: jellyfin-jellyfinCustomStats
+          - job_name: jellyfin-api
             scrape_interval: 30s
             metrics_path: /probe
             params:
@@ -44,36 +44,44 @@ data:
             - source_labels: [__param_target]
               target_label: instance
             - target_label: __address__
-              replacement: {{ .Values.k8s.names.services.prefix }}{{ .Values.observability.jellyfinCustomStats.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.jellyfinCustomStats.ports.http.targetPort }}
+              replacement: {{ .Values.k8s.names.services.prefix }}{{ .Values.observability.prometheusJsonExporter.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.prometheusJsonExporter.ports.http.targetPort }}
       {{- end }}
-      {{- if .Values.observability.receivers.jellyfinNative.enable }}
+      {{- if .Values.observability.otelCollector.receivers.jellyfinNative.enable }}
       prometheus/jellyfinNative:
         config:
           scrape_configs:
-          - job_name: 'jellyfin-native'
+          - job_name: 'jellyfin-metrics'
             scrape_interval: 30s
             static_configs:
             - targets:
               {{- if .Values.jellyfin.enable }}
-              - https://{{ .Values.jellyfin.host }}/Sessions
+              - {{ .Values.jellyfin.host }}
               {{- end }}
               {{- if .Values.jellyfin.proxy.enable }}
-              - https://{{ .Values.jellyfin.proxy.host }}:{{ .Values.jellyfin.proxy.port }}/Sessions
+              - {{ .Values.jellyfin.proxy.host }}:{{ .Values.jellyfin.proxy.port }}
               {{- end }}
       {{- end }}
-      {{- if .Values.observability.receivers.snmp.enable }}
-      snmp:
-        collection_interval: 60s
-        timeout: 3s
-        endpoint: {{ .Values.observability.receivers.snmp.url }}
-        version: v3
-        security_level: auth_priv
-        user: {{ .Values.observability.receivers.snmp.credentials.username }}
-        auth_type: SHA
-        auth_password: {{ .Values.observability.receivers.snmp.credentials.password }}
-        privacy_type: AES
-        privacy_password: {{ .Values.observability.receivers.snmp.credentials.password }}
-        metrics: {{ .Values.observability.receivers.snmp.metrics | toYaml | nindent 10 }}
+      {{- if .Values.observability.otelCollector.receivers.synologySnmp.enable }}
+      prometheus/synologySnmp:
+        config:
+          scrape_configs:
+          - job_name: 'synology-disk-station'
+            metrics_path: /snmp
+            params:
+              module: [synology]
+              auth: [synology_v3]
+            scrape_interval: 30s
+            scrape_timeout: 30s
+            static_configs:
+            - targets:
+              - {{ .Values.observability.otelCollector.receivers.synologySnmp.url }}
+            relabel_configs:
+              - source_labels: [__address__]
+                target_label: __param_target
+              - source_labels: [__param_target]
+                target_label: instance
+              - target_label: __address__
+                replacement: {{ .Values.k8s.names.services.prefix }}{{ .Values.observability.prometheusSnmpExporter.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.prometheusSnmpExporter.ports.http.targetPort }}
       {{- end }}
 
     processors:
@@ -151,27 +159,27 @@ data:
           receivers: [otlp]
           processors: [attributes/otlp, batch, memory_limiter]
           exporters: [otlphttp/victoriametrics]
-        {{- if .Values.observability.receivers.jellyfinCustom.enable }}
+        {{- if .Values.observability.otelCollector.receivers.jellyfinCustom.enable }}
         metrics/jellyfinCustom:
           receivers: [prometheus/jellyfinCustom]
           processors: [attributes/prometheus, batch, memory_limiter]
           exporters: [otlphttp/victoriametrics]
         {{- end }}
-        {{- if .Values.observability.receivers.jellyfinNative.enable }}
+        {{- if .Values.observability.otelCollector.receivers.jellyfinNative.enable }}
         metrics/jellyfinNative:
           receivers: [prometheus/jellyfinNative]
           processors: [attributes/prometheus, batch, memory_limiter]
           exporters: [otlphttp/victoriametrics]
         {{- end }}
-        {{- if .Values.observability.receivers.k8sCluster.enable }}
+        {{- if .Values.observability.otelCollector.receivers.k8sCluster.enable }}
         metrics/k8s_cluster:
           receivers: [k8s_cluster]
           processors: [attributes/k8s_cluster, batch, memory_limiter]
           exporters: [otlphttp/victoriametrics]
         {{- end }}
-        {{- if .Values.observability.receivers.snmp.enable }}
-        metrics/snmp:
-          receivers: [snmp]
+        {{- if .Values.observability.otelCollector.receivers.synologySnmp.enable }}
+        metrics/synologySnmp:
+          receivers: [prometheus/synologySnmp]
           processors: [attributes/snmp, attributes/add_labels_to_nas, batch, memory_limiter]
           exporters: [otlphttp/victoriametrics]
         {{- end }}

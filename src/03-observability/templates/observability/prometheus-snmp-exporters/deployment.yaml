@@ -1,0 +1,69 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.observability.prometheusSnmpExporter.label .Values.k8s.names.pods.suffix }}
+{{- $appVolume := "app-volume" }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $pod }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      initContainers:
+        - name: snmp-generator
+          image: golang:1.23-bullseye
+          volumeMounts:
+            - name: generated-config
+              mountPath: /output
+            - name: conf
+              mountPath: /input
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              apt-get update && apt-get install -y git build-essential libsnmp-dev unzip
+
+              # Create a folder for MIBs
+              mkdir -p /mibs
+              cd /mibs
+              # Download base MIB files (example from net-snmp source)
+              curl -L -o net-snmp-5.9.1.tar.gz https://sourceforge.net/projects/net-snmp/files/net-snmp/5.9.1/net-snmp-5.9.1.tar.gz/download
+              tar -xzf net-snmp-5.9.1.tar.gz
+              cp -r net-snmp-5.9.1/mibs/* /mibs/
+              rm -rf net-snmp-5.9.1 net-snmp-5.9.1.tar.gz
+              # Download Synology MIB files official zip
+              curl -LO https://global.download.synology.com/download/Document/Software/DeveloperGuide/Firmware/DSM/All/enu/Synology_MIB_File.zip
+              unzip Synology_MIB_File.zip -d synology-mibs
+              cp synology-mibs/*/*.txt /mibs/
+              rm -rf Synology_MIB_File.zip synology-mibs
+
+              # generate snmp.yml
+              mkdir -p /app
+              cd /app && git clone https://github.com/prometheus/snmp_exporter.git
+              cd snmp_exporter && git checkout v0.29.0 && cp /input/generator.yml generator/generator.yml
+              cd generator && make generator && MIBDIRS=/mibs ./generator generate && cp snmp.yml /output/snmp.yml
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.prometheusSnmpExporter.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.observability.prometheusSnmpExporter.image }}
+        args:
+        - '--log.level={{ .Values.observability.otelCollector.receivers.synologySnmp.logLevel }}'
+        - '--config.file=/etc/snmp_exporter/snmp.yml'
+        ports:
+        - containerPort: {{ .Values.observability.prometheusSnmpExporter.ports.http.targetPort }}
+        volumeMounts:
+        - name: generated-config
+          mountPath: /etc/snmp_exporter
+          readOnly: true
+      volumes:
+      - name: conf
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.prometheusSnmpExporter.label }}{{ .Values.k8s.names.configMaps.suffix }}
+      - name: generated-config
+        emptyDir: {}

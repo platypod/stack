@@ -1,4 +1,4 @@
-{{- $pod := print .Values.k8s.names.pods.prefix .Values.observability.opentelemetryCollector.collectors.label .Values.k8s.names.pods.suffix }}
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.observability.otelCollector.collectors.label .Values.k8s.names.pods.suffix }}
 
 apiVersion: apps/v1
 kind: DaemonSet
@@ -13,13 +13,13 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
-      serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ .Values.observability.opentelemetryCollector.label }}{{ .Values.k8s.names.serviceAccounts.suffix }}
+      serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.serviceAccounts.suffix }}
       securityContext:
         runAsUser: 0
         fsGroup: 0
       containers:
-      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.opentelemetryCollector.collectors.label }}{{ .Values.k8s.names.containers.suffix }}
-        image: {{ .Values.observability.opentelemetryCollector.image }}
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.otelCollector.collectors.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.observability.otelCollector.image }}
         resources:
           limits:
             cpu: 1
@@ -43,12 +43,12 @@ spec:
           readOnly: true
         args: ["--config=/conf/collector.yaml"]
         ports:
-        - containerPort: {{ .Values.observability.opentelemetryCollector.collectors.ports.grpc.targetPort }}
-        - containerPort: {{ .Values.observability.opentelemetryCollector.collectors.ports.http.targetPort }}
+        - containerPort: {{ .Values.observability.otelCollector.collectors.ports.grpc.targetPort }}
+        - containerPort: {{ .Values.observability.otelCollector.collectors.ports.http.targetPort }}
       volumes:
       - name: hostfs
         hostPath:
           path: /
       - name: conf
         configMap:
-          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.opentelemetryCollector.collectors.label }}{{ .Values.k8s.names.configMaps.suffix }}
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.otelCollector.collectors.label }}{{ .Values.k8s.names.configMaps.suffix }}

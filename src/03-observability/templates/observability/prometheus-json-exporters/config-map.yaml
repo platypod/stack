@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.jellyfinCustomStats.label }}{{ .Values.k8s.names.configMaps.suffix }}
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.prometheusJsonExporter.label }}{{ .Values.k8s.names.configMaps.suffix }}
 data:
   config.yml: |
     modules:

@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ .Values.k8s.names.clusterRoles.prefix }}{{ .Values.observability.opentelemetryCollector.label }}{{ .Values.k8s.names.clusterRoles.suffix }}
+  name: {{ .Values.k8s.names.clusterRoles.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.clusterRoles.suffix }}
 rules:
 - apiGroups:
   - ''

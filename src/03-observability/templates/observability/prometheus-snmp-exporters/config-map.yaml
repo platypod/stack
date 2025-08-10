@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.prometheusSnmpExporter.label }}{{ .Values.k8s.names.configMaps.suffix }}
+data:
+  generator.yml: |
+    auths:
+      synology_v3:
+        version: 3
+        username: {{ .Values.observability.otelCollector.receivers.synologySnmp.credentials.username }}
+        security_level: authPriv
+        auth_protocol: SHA
+        password: {{ .Values.observability.otelCollector.receivers.synologySnmp.credentials.password }}
+        priv_protocol: AES
+        priv_password: {{ .Values.observability.otelCollector.receivers.synologySnmp.credentials.password }}
+
+    modules:
+      synology:
+        walk:
+        # Load averages
+        - 1.3.6.1.4.1.2021.10.1.2     # laNames - Load average names (UCD-SNMP-MIB)
+        - 1.3.6.1.4.1.2021.10.1.5     # laLoadInt - Load averages as integers (1, 5, 15 min)
+        # CPU metrics
+        - 1.3.6.1.4.1.2021.11.9.0     # ssCpuUser - % CPU time in user space
+        - 1.3.6.1.4.1.2021.11.10.0    # ssCpuSystem - % CPU time in system/kernel space
+        - 1.3.6.1.4.1.2021.11.11.0    # ssCpuIdle - % CPU time idle
+        - 1.3.6.1.4.1.2021.11         # All CPU stats (ssCpu*)
+        # Memory stats
+        - 1.3.6.1.4.1.2021.4          # Memory statistics (total, free, buffers, cache, swap)
+        # Host storage
+        - 1.3.6.1.2.1.25.2            # hrStorageTable - Storage/memory devices (HOST-RESOURCES-MIB)
+        # Synology-specific branches
+        - 1.3.6.1.4.1.6574.1          # synoSystem - System info
+        - 1.3.6.1.4.1.6574.2          # synoDisk - Disk info
+        - 1.3.6.1.4.1.6574.3          # synoRaid - RAID info
+        - 1.3.6.1.4.1.6574.4          # synoUPS - UPS info
+        - 1.3.6.1.4.1.6574.5          # synologyDiskSMART - Disk SMART data
+        - 1.3.6.1.4.1.6574.6          # synologyService - Service status
+        - 1.3.6.1.4.1.6574.101        # storageIO - Extended storage I/O stats
+        - 1.3.6.1.4.1.6574.102        # spaceIO - Space usage I/O
+        - 1.3.6.1.4.1.6574.104        # synologyiSCSILUN - iSCSI LUN info
+        lookups:
+        - source_indexes: [spaceIOIndex]
+          lookup: spaceIODevice
+          drop_source_indexes: true
+        - source_indexes: [storageIOIndex]
+          lookup: storageIODevice
+          drop_source_indexes: true
+        - source_indexes: [serviceInfoIndex]
+          lookup: serviceName
+          drop_source_indexes: true
+        - source_indexes: [diskIndex]
+          lookup: diskID
+          drop_source_indexes: true
+        - source_indexes: [raidIndex]
+          lookup: raidName
+          drop_source_indexes: true
+        - source_indexes: [laIndex]
+          lookup: laNames
+          drop_source_indexes: true
+        - source_indexes: [hrStorageIndex]
+          lookup: hrStorageDescr
+          drop_source_indexes: true
+        overrides:
+          diskModel:
+            type: DisplayString
+          diskSMARTAttrName:
+            type: DisplayString
+          diskSMARTAttrStatus:
+            type: DisplayString
+          diskSMARTInfoDevName:
+            type: DisplayString
+          diskType:
+            type: DisplayString
+          modelName:
+            type: DisplayString
+          raidFreeSize:
+            type: gauge
+          raidName:
+            type: DisplayString
+          raidTotalSize:
+            type: gauge
+          serialNumber:
+            type: DisplayString
+          serviceName:
+            type: DisplayString
+          version:
+            type: DisplayString
+        timeout: 30s

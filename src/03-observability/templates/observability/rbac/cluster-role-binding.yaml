@@ -1,12 +1,12 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ .Values.k8s.names.clusterRoleBindings.prefix }}{{ .Values.observability.opentelemetryCollector.label }}{{ .Values.k8s.names.clusterRoleBindings.suffix }}
+  name: {{ .Values.k8s.names.clusterRoleBindings.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.clusterRoleBindings.suffix }}
 roleRef:
   kind: ClusterRole
-  name: {{ .Values.k8s.names.clusterRoles.prefix }}{{ .Values.observability.opentelemetryCollector.label }}{{ .Values.k8s.names.clusterRoles.suffix }}
+  name: {{ .Values.k8s.names.clusterRoles.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.clusterRoles.suffix }}
   apiGroup: rbac.authorization.k8s.io
 subjects:
   - kind: ServiceAccount
-    name: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ .Values.observability.opentelemetryCollector.label }}{{ .Values.k8s.names.serviceAccounts.suffix }}
+    name: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.serviceAccounts.suffix }}
     namespace: {{ .Values.k8s.namespace }}
