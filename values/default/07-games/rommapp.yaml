@@ -18,7 +18,7 @@ rommapp:
   igdb:
     clientId:  # https://docs.romm.app/latest/Getting-Started/Generate-API-Keys/#igdb
     clientSecret:  # https://docs.romm.app/latest/Getting-Started/Generate-API-Keys/#igdb
-  image: rommapp/romm:latest
+  image: rommapp/romm:4.0-slim
   label: rommapp
   mobyGamesApiKey: # https://docs.romm.app/latest/Getting-Started/Generate-API-Keys/#mobygames
   ports:
