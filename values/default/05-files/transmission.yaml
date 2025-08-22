@@ -9,20 +9,23 @@ transmission:
     torrents: ${media.system.downloads.torrents}
     ongoing: ${media.system.downloads.ongoing}
     finished: ${media.system.downloads.finished}
+  exporter:
+    label: ${transmission.label}-exporter
+    image: transmission-exporter:arm64
+    ports:
+      http:
+        name: http
+        nodePort: 31416
+        targetPort: 9092
   ports:
     http:
       name: webui
+      nodePort: 31415
       targetPort: 9091
-    tcp:
-      name: incoming-tcp
-      port: 51413
+    peer:
+      name: peer-listening
+      nodePort: 31413
       targetPort: 51413
-      protocol: TCP
-    udp:
-      name: incoming-udp
-      port: 51413
-      targetPort: 51413
-      protocol: UDP
   pvc:
     app: ${storage.defaultVolumes.apps}
     media: ${storage.defaultVolumes.media}

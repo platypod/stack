@@ -24,7 +24,7 @@ deluge:
       port: 6881
       targetPort: 6881
       protocol: UDP
-  replicasNb: 1
+  replicasNb: 0
   storage:
     pvc:
       app: ${storage.defaultVolumes.apps}

@@ -39,7 +39,7 @@ data:
       "peer-id-ttl-hours": 6,
       "peer-limit-global": 200,
       "peer-limit-per-torrent": 50,
-      "peer-port": {{ .Values.transmission.ports.tcp.targetPort }},
+      "peer-port": {{ .Values.transmission.ports.peer.targetPort }},
       "peer-port-random-high": 65535,
       "peer-port-random-low": 49152,
       "peer-port-random-on-start": false,

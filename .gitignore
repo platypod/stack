@@ -1,3 +1,4 @@
 out
+tmp
 values/*/values.yaml
 bin/kubectl-config.sh

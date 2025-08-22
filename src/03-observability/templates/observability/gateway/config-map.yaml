@@ -83,6 +83,13 @@ data:
               - target_label: __address__
                 replacement: {{ .Values.k8s.names.services.prefix }}{{ .Values.observability.prometheusSnmpExporter.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.prometheusSnmpExporter.ports.http.targetPort }}
       {{- end }}
+      prometheus/transmission:
+        config:
+          scrape_configs:
+          - job_name: 'transmission-exporter'
+            static_configs:
+            - targets:
+              - '{{ .Values.k8s.names.services.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.transmission.exporter.ports.http.targetPort }}'
 
     processors:
       batch:
@@ -183,6 +190,11 @@ data:
           processors: [attributes/snmp, attributes/add_labels_to_nas, batch, memory_limiter]
           exporters: [otlphttp/victoriametrics]
         {{- end }}
+        metrics/transmission:
+          receivers: [prometheus/transmission]
+          processors: [attributes/prometheus, batch, memory_limiter]
+          exporters: [otlphttp/victoriametrics]
+
 
         traces:
           receivers: [otlp]

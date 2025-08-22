@@ -8,3 +8,6 @@
 - Créer plusieurs utilisateurs et compartimenter les droits sur la postgresql transverses (dev-tools)
 - Corriger la configuration initiale de DBeaver (et sa base de donnée utilisée ? Plutôt que son schéma)
 - S'assurer que les PVC sont configurables par les values et non en dur dans les templates
+- Déporter les exporters de métriques dans des conteneurs dédiés dans les pods des applications supervisées (eg. prometheus-json-exporter pour jellyfin)
+- Revoir la gestion de l'authentification RPC de transmission (actuellement désactivée en dur dans la ConfigMap, mais les credentials restent)
+- Revoir le mapping de NodePort pour Transmission (actuellement le même NodePort pour TCP et UDP sur le peer-listening port, ce qui ne fonctionne pas avec toutes les versions de K8S)

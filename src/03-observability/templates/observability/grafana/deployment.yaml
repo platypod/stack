@@ -25,17 +25,20 @@ spec:
           mountPath: /etc/grafana/grafana.ini
           subPath: grafana.ini
         - name: conf
-          mountPath: /etc/grafana/provisioning/datasources/ds.yaml
+          mountPath: /etc/grafana/provisioning/datasources/datasources.yaml
           subPath: datasources.yaml
         - name: conf
           mountPath: /etc/grafana/provisioning/dashboards/media.yaml
-          subPath: media-dashboards-providers.yaml
+          subPath: dashboards-providers.yaml
         - name: conf
           mountPath: /var/lib/grafana/dashboards/media/jellyfin.json
-          subPath: jellyfin-dashboard.json
+          subPath: jellyfin.json
         - name: conf
-          mountPath: /var/lib/grafana/dashboards/media/nas.json
-          subPath: nas-dashboard.json
+          mountPath: /var/lib/grafana/dashboards/media/transmission.json
+          subPath: nas.json
+        - name: conf
+          mountPath: /var/lib/grafana/dashboards/infra/nas.json
+          subPath: transmission.json
         - mountPath: /var/lib/grafana
           name: {{ $appVolume }}
           subPath: grafana/data
