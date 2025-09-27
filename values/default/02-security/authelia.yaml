@@ -60,6 +60,7 @@ authelia:
       - ${rommapp.host}
       - ${readarr.host}
       - ${sonarr.host}
+      - ${youtubeDownloader.host}
 
     - subject:
       - group:download
