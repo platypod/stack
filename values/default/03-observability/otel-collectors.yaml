@@ -1,7 +1,10 @@
 observability:
   otelCollector:
-    image: otel/opentelemetry-collector-contrib:0.130.1
+    image: otel/opentelemetry-collector-contrib:0.133.0
     label: opentelemetry-collector
+    logging:
+      level: debug
+      format: json
     gateway:
       host: ${k8s.names.urls.prefix}${observability.otelCollector.label}${k8s.names.urls.suffix}.${traefik.domain}
       label: ${observability.otelCollector.label}-gateway
@@ -22,8 +25,6 @@ observability:
           name: otel-http
           targetPort: 4318
     receivers:
-      k8sCluster:
-        enable: true
       jellyfinCustom:
         enable: true
         logLevel: info

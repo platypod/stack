@@ -6,10 +6,12 @@ rules:
 - apiGroups:
   - ''
   resources:
+  - endpoints
   - events
   - namespaces
   - namespaces/status
   - nodes
+  - nodes/metrics
   - nodes/proxy
   - nodes/spec
   - nodes/stats
@@ -61,6 +63,16 @@ rules:
   - replicasets
   - daemonsets
   - deployments
+  verbs:
+  - get
+  - list
+  - watch
+
+- apiGroups:
+  - metrics.k8s.io
+  resources:
+  - pods
+  - nodes
   verbs:
   - get
   - list

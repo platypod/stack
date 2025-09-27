@@ -5,22 +5,90 @@ metadata:
 data:
   collector.yaml: |
     receivers:
+      prometheus/kubeletstats:
+        config:
+          scrape_configs:
+          - job_name: 'kubelet-node-stats'
+            kubernetes_sd_configs:
+            - role: node
+            scheme: https
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            relabel_configs:
+            - action: labelmap
+              regex: '__meta_kubernetes_node_label_(.+)'
+          - job_name: 'kube-state-metrics'
+            kubernetes_sd_configs:
+            - role: service
+            scheme: https
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            relabel_configs:
+            - source_labels: [__meta_kubernetes_service_label_app_kubernetes_io_name]
+              action: keep
+              regex: kube-state-metrics
+            - source_labels: [__meta_kubernetes_endpoint_port_name]
+              action: keep
+              regex: http-metrics
+          - job_name: 'coredns'
+            kubernetes_sd_configs:
+            - role: pod
+            scheme: https
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            relabel_configs:
+            - source_labels: [__meta_kubernetes_pod_label_k8s_app]
+              action: keep
+              regex: coredns
+            - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+              action: keep
+              regex: true
+            - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+              target_label: __metrics_path__
+          - job_name: 'node-exporter'
+            kubernetes_sd_configs:
+            - role: node
+            scheme: https
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            relabel_configs:
+            - action: labelmap
+              regex: __meta_kubernetes_node_label_(.+)
+          - job_name: 'kubernetes-apiservers'
+            kubernetes_sd_configs:
+            - role: endpoints
+            scheme: https
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            relabel_configs:
+            - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+              action: keep
+              regex: kubernetes;https
+          - job_name: 'kubernetes-service-endpoints'
+            kubernetes_sd_configs:
+            - role: endpoints
+            scheme: http
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            relabel_configs:
+            - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+              action: keep
+              regex: true
+            - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+              target_label: __metrics_path__
+            - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_port]
+              target_label: __port__
+              action: replace
       otlp:
         protocols:
           grpc:
             endpoint: 0.0.0.0:{{ .Values.observability.otelCollector.gateway.ports.grpc.targetPort }}
           http:
             endpoint: 0.0.0.0:{{ .Values.observability.otelCollector.gateway.ports.http.targetPort }}
-      {{- if .Values.observability.otelCollector.receivers.k8sCluster.enable }}
-      k8s_cluster:
-        auth_type: serviceAccount
-        node_conditions_to_report:
-        - Ready
-        - MemoryPressure
-        allocatable_types_to_report:
-        - cpu
-        - memory
-      {{- end }}
       {{- if .Values.observability.otelCollector.receivers.jellyfinCustom.enable }}
       prometheus/jellyfinCustom:
         config:
@@ -144,8 +212,8 @@ data:
         metrics_endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.metrics.ports.http.targetPort }}/opentelemetry/v1/metrics
         tls:
           insecure: true
-      loki:
-        endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.logs.ports.http.targetPort }}/loki/api/v1/push
+      otlphttp/loki:
+        endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.logs.ports.http.targetPort }}/otlp
         tls:
           insecure: true
       otlphttp/tempo:
@@ -160,7 +228,7 @@ data:
         logs:
           receivers: [otlp]
           processors: [batch, memory_limiter]
-          exporters: [loki]
+          exporters: [otlphttp/loki]
 
         metrics/otlp:
           receivers: [otlp]
@@ -178,12 +246,10 @@ data:
           processors: [attributes/prometheus, batch, memory_limiter]
           exporters: [otlphttp/victoriametrics]
         {{- end }}
-        {{- if .Values.observability.otelCollector.receivers.k8sCluster.enable }}
-        metrics/k8s_cluster:
-          receivers: [k8s_cluster]
-          processors: [attributes/k8s_cluster, batch, memory_limiter]
+        metrics/kubeletstats:
+          receivers: [prometheus/kubeletstats]
+          processors: [attributes/prometheus, batch, memory_limiter]
           exporters: [otlphttp/victoriametrics]
-        {{- end }}
         {{- if .Values.observability.otelCollector.receivers.synologySnmp.enable }}
         metrics/synologySnmp:
           receivers: [prometheus/synologySnmp]
@@ -195,8 +261,12 @@ data:
           processors: [attributes/prometheus, batch, memory_limiter]
           exporters: [otlphttp/victoriametrics]
 
-
         traces:
           receivers: [otlp]
           processors: [batch, memory_limiter]
           exporters: [otlphttp/tempo]
+
+      telemetry:
+        logs:
+          level: {{ .Values.observability.otelCollector.logging.level }}
+          encoding: {{ .Values.observability.otelCollector.logging.format }}
