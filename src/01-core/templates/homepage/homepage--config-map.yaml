@@ -116,6 +116,9 @@ data:
       - Authelia:
           abbr: AU
           href: https://{{ .Values.authelia.host }}
+      - CyberChef:
+          href: https://{{ .Values.cyberChef.host }}
+          description: Useful tools for "cyber" operations from a browser.
     - Media-Maintainer:
       - Prowlarr:
           abbr: PR

@@ -1,0 +1,26 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.cyberChef.label .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.cyberChef.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.cyberChef.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.cyberChef.image }}
+        ports:
+        - name: {{ .Values.cyberChef.ports.http.name }}
+          containerPort: {{ .Values.cyberChef.ports.http.targetPort }}

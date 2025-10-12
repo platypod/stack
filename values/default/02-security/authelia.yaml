@@ -91,6 +91,7 @@ authelia:
       domain:
       - ${authelia.host}
       - ${itTools.host}
+      - ${cyberChef.host}
       - ${jellyfin.host}
       - ${jellyseerr.host}
       - ${traefik.host}
