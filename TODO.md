@@ -11,3 +11,4 @@
 - Déporter les exporters de métriques dans des conteneurs dédiés dans les pods des applications supervisées (eg. prometheus-json-exporter pour jellyfin)
 - Revoir la gestion de l'authentification RPC de transmission (actuellement désactivée en dur dans la ConfigMap, mais les credentials restent)
 - Revoir le mapping de NodePort pour Transmission (actuellement le même NodePort pour TCP et UDP sur le peer-listening port, ce qui ne fonctionne pas avec toutes les versions de K8S)
+- Etudier la notion de VLan pour relier les workers du projet

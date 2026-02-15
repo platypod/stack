@@ -1,0 +1,26 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.pokeclicker.label .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.pokeclicker.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.pokeclicker.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.pokeclicker.image }}
+        ports:
+        - name: {{ .Values.pokeclicker.ports.http.name }}
+          containerPort: {{ .Values.pokeclicker.ports.http.targetPort }}

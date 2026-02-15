@@ -48,6 +48,7 @@ authelia:
     - policy: one_factor
       domain:
       - ${homepage.host}
+      - ${pokeclicker.host}
 
     - subject:
       - group:media
