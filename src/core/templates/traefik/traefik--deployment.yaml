@@ -50,12 +50,17 @@ spec:
           - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.caserver={{ .Values.acme.endpoint }}
           # entrypoints
           - --entryPoints.{{ .Values.traefik.ports.dashboard.name }}.address=:{{ .Values.traefik.ports.dashboard.targetPort }}
+          - --entryPoints.{{ .Values.traefik.ports.http.name }}.address=:{{ .Values.traefik.ports.http.targetPort }}
+          - --entryPoints.{{ .Values.traefik.ports.http.name }}.http.redirections.entryPoint.to={{ .Values.traefik.ports.https.name }}
+          - --entryPoints.{{ .Values.traefik.ports.http.name }}.http.redirections.entryPoint.scheme=https
           - --entryPoints.{{ .Values.traefik.ports.https.name }}.address=:{{ .Values.traefik.ports.https.targetPort }}
         env:
           {{ if .Values.acme.challenge.dns.enable }}
           {{- toYaml .Values.acme.challenge.dns.env | nindent 5}}
           {{ end }}
         ports:
+        - name: {{ .Values.traefik.ports.http.name }}
+          containerPort: {{ .Values.traefik.ports.http.targetPort }}
         - name: {{ .Values.traefik.ports.https.name }}
           containerPort: {{ .Values.traefik.ports.https.targetPort }}
         - name: {{ .Values.traefik.ports.dashboard.name }}

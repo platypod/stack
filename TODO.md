@@ -1,6 +1,3 @@
-- Add HTTP entrypoint (`:80`) to Traefik so plain-HTTP traffic and HTTP→HTTPS
-  redirects work. Currently only `https` (443) and `traefik` (dashboard/9999)
-  are configured; any request on port 80 is silently dropped.
 - Trust the mkcert CA and create the TLS secret: run `make setup-dev-tls`
   once per dev machine (prompts for sudo to install the CA in macOS Keychain).
   Renew the same way when the cert expires (~3 years).
