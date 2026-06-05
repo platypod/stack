@@ -1,0 +1,14 @@
+observability:
+  traces:
+    label: tempo
+    image: grafana/tempo:2.7.2
+    host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+    ports:
+      grpc:
+        name: grpc
+        targetPort: 9095
+      http:
+        name: http
+        targetPort: 80
+    logging:
+      level: info

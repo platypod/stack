@@ -1,0 +1,12 @@
+observability:
+  metrics:
+    label: victoria-metrics
+    image: victoriametrics/victoria-metrics:v1.118.0
+    host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+    ports:
+      http:
+        name: http
+        targetPort: 8428
+    logging:
+      format: json
+      level: INFO

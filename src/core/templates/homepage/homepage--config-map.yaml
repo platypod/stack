@@ -1,0 +1,183 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.homepage.label }}{{ .Values.k8s.names.configMaps.suffix }}
+
+data:
+  kubernetes.yaml: ""
+  settings.yaml: ""
+  custom.css: ""
+  custom.js: ""
+  bookmarks.yaml: |
+    - Dev:
+      - Github:
+        - abbr: GH
+          href: https://github.com/
+          description: Code versionning server.
+    - Social:
+      - Reddit:
+        - abbr: RE
+          href: https://reddit.com/
+          description: Social network.
+    - Entertainment:
+      - Invidious:
+        - abbr: In
+          href: https://api.invidious.io/
+          description: Youtube alternative without advertisement.
+  services.yaml: |
+    - Media-User:
+      - Jellyfin:
+          abbr: JE
+          href: https://{{ tpl .Values.jellyfin.host . }}
+          description: Media server with streaming capacities.
+          widget:
+            type: jellyfin
+            url: http://{{ .Values.jellyfin.proxy.host }}:{{ .Values.jellyfin.proxy.port }}{{ .Values.jellyfin.baseUrl }}
+            key: {{ .Values.jellyfin.apiKey }}
+            enableBlocks: true # optional, defaults to false
+            enableNowPlaying: true # optional, defaults to true
+            enableUser: true # optional, defaults to false
+            showEpisodeNumber: true # optional, defaults to false
+            expandOneStreamToTwoRows: false # optional, defaults to true
+      - JellySeerr:
+          abbr: JS
+          href: https://{{ tpl .Values.jellyseerr.host . }}
+          description: Media catalog to pick movies and series.
+          widget:
+            type: jellyseerr
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.services.suffix }}
+            key: {{ .Values.jellyseerr.apiKey }}
+      - Youtube-Downloader:
+          abbr: YD
+          href: https://{{ tpl .Values.youtubeDownloader.host . }}
+          description: Youtube videos or playlists downloader.
+    - Files:
+      - Transmission:
+          abbr: TR
+          href: https://{{ tpl .Values.transmission.host . }}
+          description: Torrenting service.
+          widget:
+            type: transmission
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.services.suffix }}
+            username: {{ .Values.transmission.credentials.username }}
+            password: {{ .Values.transmission.credentials.password }}
+            rpcUrl: /transmission/
+      - Deluge:
+          abbr: DL
+          href: https://{{ tpl .Values.deluge.host . }}
+          description: Torrenting service.
+          widget:
+            type: deluge
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.deluge.label }}{{ .Values.k8s.names.services.suffix }}
+            password: {{ .Values.deluge.credentials.password }}
+            enableLeechProgress: true
+      - QBitTorrent:
+          abbr: QB
+          href: https://{{ tpl .Values.qbittorrent.host . }}
+          description: Torrenting service.
+          widget:
+            type: qbittorrent
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.qbittorrent.label }}{{ .Values.k8s.names.services.suffix }}
+            username: {{ .Values.qbittorrent.credentials.username }}
+            password: {{ .Values.qbittorrent.credentials.password }}
+            enableLeechProgress: true
+    - Dev:
+      - Traefik:
+          abbr: TR
+          href: https://{{ tpl .Values.traefik.host . }}/dashboard/
+          description: Reverse-proxy exposing this stack to the users.
+          widget:
+            type: traefik
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.traefik.dashboardLabel }}{{ .Values.k8s.names.services.suffix }}
+      - Grafana:
+          abbr: GF
+          href: https://{{ tpl .Values.observability.dashboard.host . }}
+          description: Dashboards to monitor everything and know what's up.
+      - Bookstack:
+          abbr: BS
+          href: https://{{ tpl .Values.bookstack.host . }}
+          description: Simple, open-source, self-hosted, easy-to-use platform for organising and storing information.
+      - IT-Tools:
+          href: https://{{ tpl .Values.itTools.host . }}
+          description: Useful tools for developer and people working in IT.
+      - Who am I?:
+          href: https://{{ tpl .Values.whoami.host . }}
+          description: Tiny Go webserver that prints os information and HTTP request to output.
+      - DBeaver?:
+          href: https://{{ tpl .Values.dbeaver.host . }}
+          description: Databases web interface.
+    - Games:
+      - RommApp:
+          abbr: RA
+          href: https://{{ tpl .Values.rommapp.host . }}
+          description: Various consoles emulator.
+    - Security:
+      - Authelia:
+          abbr: AU
+          href: https://{{ tpl .Values.authelia.host . }}
+      - CyberChef:
+          href: https://{{ tpl .Values.cyberChef.host . }}
+          description: Useful tools for "cyber" operations from a browser.
+    - Media-Maintainer:
+      - Prowlarr:
+          abbr: PR
+          href: https://{{ tpl .Values.prowlarr.host . }}
+          description: Indexer manager, used as proxy between the collection managers and the torrent trackers or usenet indexers.
+          widget:
+            type: prowlarr
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.prowlarr.label }}{{ .Values.k8s.names.services.suffix }}
+            key: {{ .Values.prowlarr.apiKey }}
+      - Radarr:
+          abbr: RA
+          href: https://{{ tpl .Values.radarr.host . }}
+          description: Movies collection manager, used to monitor RSS feeds and manage movies downloads.
+          widget:
+            type: radarr
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.services.suffix }}
+            key: {{ .Values.radarr.apiKey }}
+      - Readarr:
+          abbr: RE
+          href: https://{{ tpl .Values.readarr.host . }}
+          description: Books collection manager, used to monitor RSS feeds and manage books downloads.
+          widget:
+            type: readarr
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.readarr.label }}{{ .Values.k8s.names.services.suffix }}
+            key: {{ .Values.readarr.apiKey }}
+      - Sonarr:
+          abbr: SR
+          href: https://{{ tpl .Values.sonarr.host . }}
+          description: Series collection manager, used to monitor RSS feeds and manage series downloads.
+          widget:
+            type: sonarr
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.services.suffix }}
+            key: {{ .Values.sonarr.apiKey }}
+      - Bazarr:
+          abbr: BZ
+          href: https://{{ tpl .Values.bazarr.host . }}
+          description: Subtitles collection manager, used to download subtitles for Radarr and Sonarr.
+          widget:
+            type: bazarr
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.bazarr.label }}{{ .Values.k8s.names.services.suffix }}
+            key: {{ .Values.bazarr.apiKey }}
+      - FlareSolverr:
+          abbr: FS
+          href: https://{{ tpl .Values.flaresolverr.host . }}
+          description: Proxy server used to bypass CloudFlare's anti-bot protection.
+  widgets.yaml: |
+    # https://gethomepage.dev/widgets/info/resources/
+    - resources:
+        backend: resources
+        expanded: true
+        units: metric
+        cpu: true
+        memory: true
+        uptime: true
+        network: default
+    # https://gethomepage.dev/widgets/info/search/
+    - search:
+        provider: [google, duckduckgo, brave]
+        focus: true
+        showSearchSuggestions: true
+        target: _blank
+  docker.yaml: ""

@@ -1,0 +1,9 @@
+pokeclicker:
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.pokeclicker.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: ghcr.io/pittinic/pokeclicker:v0.10.25
+  label: pokeclicker
+  ports:
+    http:
+      name: http
+      targetPort: 3000
+  replicasNb: 1

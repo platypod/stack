@@ -1,0 +1,55 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.sonarr.label .Values.k8s.names.pods.suffix }}
+{{- $configMap := "config-map" }}
+{{- $appVolume := "app-volume" }}
+{{- $mediaVolume := "media-volume" }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.sonarr.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.sonarr.image }}
+        ports:
+        - name: {{ .Values.sonarr.ports.http.name }}
+          containerPort: {{ .Values.sonarr.ports.http.targetPort }}
+        env:
+        - name: PUID
+          value: "{{ .Values.media.system.userId }}"
+        - name: PGID
+          value: "{{ .Values.media.system.groupId }}"
+        - name: UMASK
+          value: "{{ .Values.media.system.umask }}"
+        volumeMounts:
+        - mountPath: /config
+          name: {{ $appVolume }}
+          subPath: sonarr/config
+        - mountPath: /config/config.xml
+          name: {{ $configMap }}
+          subPath: config.xml
+        - mountPath: {{ .Values.media.system.data.path }}
+          name: {{ $mediaVolume }}
+      volumes:
+      - name: {{ $mediaVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.sonarr.pvc.media . }}
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.sonarr.pvc.app . }}
+      - name: {{ $configMap }}
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.configMaps.suffix }}

@@ -1,0 +1,37 @@
+{{- $pod := print .Values.k8s.names.pods.prefix (tpl .Values.observability.otelCollector.gateway.label $) .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $pod }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.serviceAccounts.suffix }}
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ tpl .Values.observability.otelCollector.gateway.label . }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.observability.otelCollector.image }}
+        args: ["--config=/conf/collector.yaml"]
+        ports:
+        - containerPort: {{ .Values.observability.otelCollector.gateway.ports.grpc.targetPort }}
+        - containerPort: {{ .Values.observability.otelCollector.gateway.ports.http.targetPort }}
+        env:
+        - name: K8S_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        volumeMounts:
+        - name: conf
+          mountPath: /conf/collector.yaml
+          subPath: collector.yaml
+      volumes:
+      - name: conf
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ tpl .Values.observability.otelCollector.gateway.label . }}{{ .Values.k8s.names.configMaps.suffix }}

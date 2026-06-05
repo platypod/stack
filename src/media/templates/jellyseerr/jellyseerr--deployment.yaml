@@ -1,0 +1,63 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.jellyseerr.label .Values.k8s.names.pods.suffix }}
+{{- $appVolume := "app-volume" }}
+{{- $configMap := "config-map" }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.jellyseerr.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.jellyseerr.image }}
+        ports:
+        - name: {{ .Values.jellyseerr.ports.http.name }}
+          containerPort: {{ .Values.jellyseerr.ports.http.targetPort }}
+        env:
+        - name: API_KEY
+          value: "{{ .Values.jellyseerr.apiKey }}"
+        - name: LOG_LEVEL
+          value: "{{ .Values.jellyseerr.logLevel }}"
+        - name: DB_TYPE
+          value: "{{ .Values.jellyseerr.database.type }}"
+        - name: DB_HOST
+          value: "{{ tpl .Values.jellyseerr.database.host . }}"
+        - name: DB_PORT
+          value: "{{ .Values.jellyseerr.database.port }}"
+        - name: DB_USER
+          value: "{{ .Values.jellyseerr.database.username }}"
+        - name: DB_PASS
+          value: "{{ .Values.jellyseerr.database.password }}"
+        - name: DB_NAME
+          value: "{{ .Values.jellyseerr.database.name }}"
+        - name: DB_LOG_QUERIES
+          value: "{{ .Values.jellyseerr.database.logQueries }}"
+        - name: PORT
+          value: "{{ .Values.jellyseerr.ports.http.targetPort }}"
+        volumeMounts:
+        - mountPath: /app/config
+          name: {{ $appVolume }}
+          subPath: jellyseerr/config
+        - mountPath: /settings.json
+          name: {{ $configMap }}
+          subPath: settings.json
+      volumes:
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.jellyseerr.pvc . }}
+      - name: {{ $configMap }}
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.configMaps.suffix }}

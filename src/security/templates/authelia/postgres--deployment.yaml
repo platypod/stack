@@ -1,0 +1,42 @@
+{{- $pod := print .Values.k8s.names.pods.prefix (tpl .Values.authelia.database.label $) .Values.k8s.names.pods.suffix }}
+{{- $appVolume := "app-volume" }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.authelia.database.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.authelia.database.image }}
+        ports:
+        - name: {{ .Values.authelia.database.ports.http.name }}
+          containerPort: {{ .Values.authelia.database.ports.http.targetPort }}
+        env:
+        - name: POSTGRES_USER
+          value: "{{  tpl .Values.authelia.database.credentials.username .  }}"
+        - name: POSTGRES_PASSWORD
+          value: "{{  tpl .Values.authelia.database.credentials.password .  }}"
+        - name: POSTGRES_DB
+          value: "{{  tpl .Values.authelia.database.name .  }}"
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: {{ $appVolume }}
+          subPath: authelia/db
+      volumes:
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.authelia.storage.pvc . }}

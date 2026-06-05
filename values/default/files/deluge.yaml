@@ -1,0 +1,31 @@
+deluge:
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.deluge.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: lscr.io/linuxserver/deluge:latest
+  label: deluge
+  logLevel: info
+  credentials:
+    username: admin
+    password: deluge
+  download:
+    torrents: "{{ .Values.media.system.data.path }}/torrents/{{ .Values.deluge.label }}"
+    ongoing: "{{ .Values.media.system.data.path }}/ongoing/{{ .Values.deluge.label }}"
+    finished: "{{ .Values.media.system.data.path }}/finished"
+  ports:
+    http:
+      name: deluge-webui
+      targetPort: 8112
+    tcp:
+      name: incoming-tcp
+      port: 6881
+      targetPort: 6881
+      protocol: TCP
+    udp:
+      name: incoming-udp
+      port: 6881
+      targetPort: 6881
+      protocol: UDP
+  replicasNb: 0
+  storage:
+    pvc:
+      app: "{{ .Values.storage.defaultVolumes.apps }}"
+      media: "{{ .Values.storage.defaultVolumes.media }}"

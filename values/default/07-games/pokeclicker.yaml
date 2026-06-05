@@ -1,9 +1,0 @@
-pokeclicker:
-  host: ${k8s.names.urls.prefix}${pokeclicker.label}${k8s.names.urls.suffix}.${traefik.domain}
-  image: local/pokeclicker:v0.10.25
-  label: pokeclicker
-  ports:
-    http:
-      name: http
-      targetPort: 3000
-  replicasNb: 1

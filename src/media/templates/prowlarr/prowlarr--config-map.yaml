@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.prowlarr.label }}{{ .Values.k8s.names.configMaps.suffix }}
+
+data:
+  config.xml: |
+    <Config>
+      <BindAddress>*</BindAddress>
+      <Port>{{ .Values.prowlarr.ports.http.targetPort }}</Port>
+      <SslPort>6969</SslPort>
+      <EnableSsl>False</EnableSsl>
+      <LaunchBrowser>True</LaunchBrowser>
+      <ApiKey>{{ .Values.prowlarr.apiKey }}</ApiKey>
+      <AuthenticationMethod>External</AuthenticationMethod>
+      <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+      <Branch>master</Branch>
+      <LogLevel>info</LogLevel>
+      <SslCertPath></SslCertPath>
+      <SslCertPassword></SslCertPassword>
+      <UrlBase></UrlBase>
+      <InstanceName>Prowlarr</InstanceName>
+      <UpdateMechanism>Docker</UpdateMechanism>
+      <PostgresHost>{{ .Values.k8s.names.services.prefix }}{{ .Values.database.label }}{{ .Values.k8s.names.services.suffix }}</PostgresHost>
+      <PostgresPort>{{ .Values.database.ports.http.targetPort }}</PostgresPort>
+      <PostgresUser>{{ .Values.database.credentials.username }}</PostgresUser>
+      <PostgresPassword>{{ .Values.database.credentials.password }}</PostgresPassword>
+      <PostgresMainDb>{{ .Values.database.schemas.prowlarr.main }}</PostgresMainDb>
+      <PostgresLogDb>{{ .Values.database.schemas.prowlarr.logs }}</PostgresLogDb>
+    </Config>

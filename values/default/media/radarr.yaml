@@ -1,0 +1,13 @@
+radarr:
+  apiKey: 1b229188fe9e4488a2333c2135b1a053
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: linuxserver/radarr:latest
+  label: radarr
+  ports:
+    http:
+      name: radarr-http
+      targetPort: 7878
+  pvc:
+    app: "{{ .Values.storage.defaultVolumes.apps }}"
+    media: "{{ .Values.storage.defaultVolumes.media }}"
+  replicasNb: 1

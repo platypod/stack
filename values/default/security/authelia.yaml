@@ -1,0 +1,125 @@
+authelia:
+  label: authelia
+  database:
+    type: postgres
+    host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.authelia.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+    name: "{{ .Values.authelia.label }}"
+    logQueries: false
+    credentials:
+      username: "{{ .Values.authelia.label }}User"
+      password: "{{ .Values.authelia.label }}Password"
+    image: postgres:17
+    label: "{{ .Values.authelia.label }}-db"
+    ports:
+      http:
+        name: pgsql
+        targetPort: 5432
+    replicasNb: 1
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: authelia/authelia:4
+  log:
+    level: info
+    format: text
+  oidc:
+    hmac_secret: yI4VysTXqctmqEzUGWuxCwh4WfDr90WBY5PTVj9Gsd9jHPZ9iRHtpyVGiMHr88GY
+    jwks:
+      caName: authelia-jwks
+      commonName: authelia-jwks
+  ports:
+    http:
+      name: authelia
+      targetPort: 9091
+    metrics:
+      name: auth-metrics
+      targetPort: 9959
+  replicasNb: 1
+  rules:
+    - policy: bypass
+      domain:
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bazarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.flaresolverr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.prowlarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.readarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      networks:
+      - "{{ .Values.k8s.clusterCIDR }}"
+
+    - policy: one_factor
+      domain:
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.homepage.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.pokeclicker.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+
+    - subject:
+      - group:media
+      policy: one_factor
+      domain:
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bazarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.flaresolverr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.prowlarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.rommapp.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.readarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.youtubeDownloader.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+
+    - subject:
+      - group:download
+      policy: one_factor
+      domain:
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.deluge.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.qbittorrent.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+
+    - subject:
+      - group:dev
+      policy: one_factor
+      domain:
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.adguard.label }}-admin{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.authelia.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bookstack.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bookstack.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.dbeaver.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.database.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.dashboard.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.whoami.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+
+    - policy: bypass
+      domain:
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.itTools.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.cyberChef.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  secrets:
+    encryptionKey: verySecretMuchSecureNeverGonnaBeGuessedWoah
+    jwt: verySecretMuchSecureNeverGonnaBeGuessedWoooow
+    session: verySecretMuchSecureNeverGonnaBeGuessedWoowee
+  storage:
+    pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+
+  users:
+    admin:
+      displayname: admini
+      password: $argon2id$v=19$m=65536,t=3,p=4$J68VFWtr+FIvEAAnNIQ5UQ$uOiTdWOk6Yqb3DEfxjmdE8touRoY9fYn+DJZwtG2z34  #platypod-password
+      email: pl@ty.pod
+      groups:
+      - admins
+      - media
+    dave:
+      displayname: dave
+      password: $argon2id$v=19$m=65536,t=3,p=4$PutkefL8ZmABWC5enq1IGQ$LWPb09ucfQNKXVmltShGn43GRRNWCPDV1MlYM1VQM7A  # davethedev
+      email: dave.thedev@gmail.com
+      groups:
+      - dev
+    guest:
+      displayname: guesto
+      password: $argon2id$v=19$m=65536,t=3,p=4$UvLUwVCQPhcDCMrT++Htpg$6eZG6L2rwpunVuFEdlLe8Mc+r6b9Q//Np5mGoTw61aQ  # guest-password
+      email: gues@ty.pod
+      groups: []

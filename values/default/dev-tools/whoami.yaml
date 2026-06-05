@@ -1,0 +1,9 @@
+whoami:
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.whoami.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: traefik/whoami
+  label: whoami
+  ports:
+    http:
+      name: whoami-http
+      targetPort: 80
+  replicasNb: 2

@@ -1,0 +1,39 @@
+observability:
+  otelCollector:
+    image: otel/opentelemetry-collector-contrib:0.133.0
+    label: opentelemetry-collector
+    logging:
+      level: debug
+      format: json
+    gateway:
+      host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      label: "{{ .Values.observability.otelCollector.label }}-gateway"
+      ports:
+        grpc:
+          name: otel-grpc
+          targetPort: 4317
+        http:
+          name: otel-http
+          targetPort: 4318
+    collectors:
+      label: "{{ .Values.observability.otelCollector.label }}-collector"
+      ports:
+        grpc:
+          name: otel-grpc
+          targetPort: 4317
+        http:
+          name: otel-http
+          targetPort: 4318
+    receivers:
+      jellyfinCustom:
+        enable: true
+        logLevel: info
+      jellyfinNative:
+        enable: false
+      synologySnmp:
+        enable: false
+        url: udp://XXX.XXX.XXX.XXX:161
+        credentials:
+          username: <username>
+          password: <password>
+        logLevel: info

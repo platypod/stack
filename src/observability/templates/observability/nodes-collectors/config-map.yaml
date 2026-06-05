@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ tpl .Values.observability.otelCollector.collectors.label . }}{{ .Values.k8s.names.configMaps.suffix }}
+data:
+  collector.yaml: |
+    receivers:
+      filelog:
+        include:
+        #- /hostfs/var/log/pods/*/*/*.log
+        - /hostfs/var/lib/docker/containers/*/*.log
+        start_at: beginning
+        include_file_path: true
+        include_file_name: false
+        #operators:
+        #- type: container
+        #  id: container-parser
+      hostmetrics:
+        root_path: /hostfs
+        collection_interval: 10s
+        scrapers:
+          cpu:
+          load:
+          memory:
+          disk:
+          filesystem:
+          network:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+        timeout: 5s
+        send_batch_size: 512
+        send_batch_max_size: 2048
+      k8sattributes:
+        extract:
+          metadata:
+          - k8s.pod.name
+          - k8s.namespace.name
+          - k8s.node.name
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 4000
+        spike_limit_mib: 800
+      attributes/filelog:
+        actions:
+        - key: node-collector-receiver
+          value: filelog
+          action: insert
+      attributes/hostmetrics:
+        actions:
+        - key: node-collector-receiver
+          value: hostmetrics
+          action: insert
+      attributes/otlp:
+        actions:
+        - key: node-collector-receiver
+          value: otlp
+          action: insert
+
+    exporters:
+      debug/verbose:
+        verbosity: detailed
+        sampling_initial: 5
+        sampling_thereafter: 200
+      debug/noop:
+        verbosity: normal
+        sampling_initial: 0
+        sampling_thereafter: 0
+      otlp:
+        endpoint: "{{ .Values.k8s.names.services.prefix }}{{ tpl .Values.observability.otelCollector.gateway.label . }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.otelCollector.gateway.ports.grpc.targetPort }}"
+        tls:
+          insecure: true
+
+    service:
+      pipelines:
+        logs:
+          receivers: [filelog]
+          processors: [attributes/filelog, batch, memory_limiter, k8sattributes]
+          exporters: [otlp]
+        metrics/hostmetrics:
+          receivers: [hostmetrics]
+          processors: [attributes/hostmetrics, batch, memory_limiter, k8sattributes]
+          exporters: [otlp]
+        metrics/otlp:
+          receivers: [otlp]
+          processors: [attributes/otlp, batch, memory_limiter, k8sattributes]
+          exporters: [otlp]
+        traces:
+          receivers: [otlp]
+          processors: [attributes/otlp, batch, memory_limiter, k8sattributes]
+          exporters: [otlp]
+
+      telemetry:
+        logs:
+          level: {{ .Values.observability.otelCollector.logging.level }}
+          encoding: {{ .Values.observability.otelCollector.logging.format }}

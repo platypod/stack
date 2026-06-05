@@ -1,0 +1,88 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.transmission.label .Values.k8s.names.pods.suffix }}
+{{- $configMap := "config-map" }}
+{{- $appVolume := "app-volume" }}
+{{- $mediaVolume := "media-volume" }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.transmission.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      # transmission
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.transmission.image }}
+        ports:
+        - name: {{ .Values.transmission.ports.http.name }}
+          containerPort: {{ .Values.transmission.ports.http.targetPort }}
+        - name: {{ .Values.transmission.ports.peer.name }}
+          containerPort: {{ .Values.transmission.ports.peer.targetPort }}
+        - name: {{ .Values.transmission.ports.peer.name }}
+          containerPort: {{ .Values.transmission.ports.peer.targetPort }}
+          protocol: UDP
+        env:
+        - name: PUID
+          value: "{{ .Values.media.system.userId }}"
+        - name: PGID
+          value: "{{ .Values.media.system.groupId }}"
+        - name: UMASK
+          value: "{{ .Values.media.system.umask }}"
+        - name: PEERPORT
+          value: "{{ .Values.transmission.ports.peer.targetPort }}"
+        - name: USER
+          value: "{{ .Values.transmission.credentials.username }}"
+        - name: PASS
+          value: "{{ .Values.transmission.credentials.password }}"
+        volumeMounts:
+        - mountPath: /config/settings.json
+          name: {{ $configMap }}
+          subPath: settings.json
+        - mountPath: /config
+          name: {{ $appVolume }}
+          subPath: transmission/config
+        - mountPath: {{ .Values.media.system.data.path }}
+          name: {{ $mediaVolume }}
+          subPath: downloads/transmission
+      # transmission-exporter
+      - name: {{ .Values.k8s.names.containers.prefix }}{{  tpl .Values.transmission.exporter.label .  }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.transmission.exporter.image }}
+        ports:
+        - containerPort: {{ .Values.transmission.exporter.ports.http.targetPort }}
+        env:
+        - name: TRANSMISSION_ADDR
+          value: "http://localhost:{{ .Values.transmission.ports.http.targetPort }}"
+        - name: WEB_PATH
+          value: "/metrics"
+        - name: WEB_ADDR
+          value: ":{{ .Values.transmission.exporter.ports.http.targetPort }}"
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 50m
+            memory: 50Mi
+      volumes:
+      - name: {{ $mediaVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.transmission.pvc.media . }}
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.transmission.pvc.app . }}
+      - name: {{ $configMap }}
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.configMaps.suffix }}
+          defaultMode: 0555

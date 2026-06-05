@@ -1,0 +1,29 @@
+jellyfin:
+  enable: true
+  apiKey: 08275f613c8045298b0dea99253cc6fc
+  baseUrl:
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: jellyfin/jellyfin:latest
+  label: jellyfin
+  logLevel: INFO
+  replicasNb: 1
+  credentials:
+    username: guest
+    password: ""
+  database:
+    type: sqlite
+    host: ""
+    port: ""
+    username: ""
+    password: ""
+    name: ""
+    logQueries: false
+  ports:
+    http:
+      name: jellyfin
+      targetPort: 8096
+  proxy:
+    enable: false
+    host: host.docker.internal
+    port: 8096
+  pvc: "{{ .Values.storage.defaultVolumes.apps }}"

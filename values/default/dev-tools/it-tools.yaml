@@ -1,0 +1,9 @@
+itTools:
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.itTools.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: corentinth/it-tools:latest
+  label: it-tools
+  ports:
+    http:
+      name: http
+      targetPort: 80
+  replicasNb: 1

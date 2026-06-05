@@ -1,0 +1,61 @@
+k8s:
+  clusterCIDR: 192.168.194.128/25
+  namespace: default-platypod
+  names:
+    clusterRoles:
+      prefix: ""
+      suffix: ""
+    clusterRoleBindings:
+      prefix: ""
+      suffix: ""
+    configMaps:
+      prefix: ""
+      suffix: ""
+    containers:
+      prefix: ""
+      suffix: ""
+    daemonSets:
+      prefix: ""
+      suffix: ""
+    emptyDirs:
+      prefix: ""
+      suffix: ""
+    ingresses:
+      prefix: ""
+      suffix: ""
+    initContainers:
+      prefix: ""
+      suffix: ""
+    middlewares:
+      prefix: ""
+      suffix: ""
+    namespaces:
+      prefix: ""
+      suffix: ""
+    persistentVolumeClaims:
+      prefix: ""
+      suffix: ""
+    persistentVolumes:
+      prefix: ""
+      suffix: ""
+    pods:
+      prefix: ""
+      suffix: ""
+    roles:
+      prefix: ""
+      suffix: ""
+    roleBindings:
+      prefix: ""
+      suffix: ""
+    secrets:
+      prefix: ""
+      suffix: ""
+    services:
+      prefix: ""
+      suffix: ""
+    serviceAccounts:
+      prefix: ""
+      suffix: ""
+    urls:
+      prefix: ""
+      suffix: ""

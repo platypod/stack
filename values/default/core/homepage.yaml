@@ -1,0 +1,12 @@
+homepage:
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.homepage.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: homepage
+  image:
+    registry: ghcr.io/
+    namespace: gethomepage/
+    repository: homepage
+    tag: v0.10.4
+  ports:
+    http:
+      name: homepage-http
+      targetPort: 3000

@@ -1,0 +1,30 @@
+qbittorrent:
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.qbittorrent.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: linuxserver/qbittorrent:latest
+  label: qbittorrent
+  credentials:
+    username: qbittorrentUser
+    password: qbittorrentPassword
+  download:
+    torrents: "{{ .Values.media.system.data.path }}/torrents/{{ .Values.qbittorrent.label }}"
+    ongoing: "{{ .Values.media.system.data.path }}/ongoing/{{ .Values.qbittorrent.label }}"
+    finished: "{{ .Values.media.system.data.path }}/finished"
+  ports:
+    http:
+      name: webui
+      targetPort: 8080
+    tcp:
+      name: incoming-tcp
+      port: 6882
+      targetPort: 6882
+      protocol: TCP
+    udp:
+      name: incoming-udp
+      port: 6882
+      targetPort: 6882
+      protocol: UDP
+  replicasNb: 1
+  storage:
+    pvc:
+      app: "{{ .Values.storage.defaultVolumes.apps }}"
+      media: "{{ .Values.storage.defaultVolumes.media }}"

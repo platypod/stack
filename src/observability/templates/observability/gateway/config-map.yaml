@@ -1,0 +1,211 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ .Values.k8s.names.configMaps.prefix }}{{ tpl .Values.observability.otelCollector.gateway.label . }}{{ .Values.k8s.names.configMaps.suffix }}"
+data:
+  collector.yaml: |
+    receivers:
+
+      kubeletstats:
+        collection_interval: 10s
+        auth_type: 'serviceAccount'
+        endpoint: '${env:K8S_NODE_NAME}:10250'
+        insecure_skip_verify: true
+        metric_groups:
+          - node
+          - pod
+          - container
+
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:{{ .Values.observability.otelCollector.gateway.ports.grpc.targetPort }}
+          http:
+            endpoint: 0.0.0.0:{{ .Values.observability.otelCollector.gateway.ports.http.targetPort }}
+      {{- if .Values.observability.otelCollector.receivers.jellyfinCustom.enable }}
+      prometheus/jellyfinCustom:
+        config:
+          scrape_configs:
+          - job_name: jellyfin-api
+            scrape_interval: 30s
+            metrics_path: /probe
+            params:
+              module: [jellyfin]
+            static_configs:
+            - targets:
+              {{- if .Values.jellyfin.proxy.enable }}
+              - http://{{ .Values.jellyfin.proxy.host }}:{{ .Values.jellyfin.proxy.port }}/Sessions
+              {{- end }}
+              {{- if .Values.jellyfin.enable }}
+              - https://{{ tpl .Values.jellyfin.host . }}/Sessions
+              {{- end }}
+            relabel_configs:
+            - source_labels: [__address__]
+              target_label: __param_target
+            - source_labels: [__param_target]
+              target_label: instance
+            - target_label: __address__
+              replacement: {{ .Values.k8s.names.services.prefix }}{{ .Values.observability.prometheusJsonExporter.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.prometheusJsonExporter.ports.http.targetPort }}
+      {{- end }}
+      {{- if .Values.observability.otelCollector.receivers.jellyfinNative.enable }}
+      prometheus/jellyfinNative:
+        config:
+          scrape_configs:
+          - job_name: 'jellyfin-metrics'
+            scrape_interval: 30s
+            static_configs:
+            - targets:
+              {{- if .Values.jellyfin.enable }}
+              - {{ tpl .Values.jellyfin.host . }}
+              {{- end }}
+              {{- if .Values.jellyfin.proxy.enable }}
+              - {{ .Values.jellyfin.proxy.host }}:{{ .Values.jellyfin.proxy.port }}
+              {{- end }}
+      {{- end }}
+      {{- if .Values.observability.otelCollector.receivers.synologySnmp.enable }}
+      prometheus/synologySnmp:
+        config:
+          scrape_configs:
+          - job_name: 'synology-disk-station'
+            metrics_path: /snmp
+            params:
+              module: [if_mib, synology]
+              auth: [synology_v3]
+            scrape_interval: 30s
+            scrape_timeout: 30s
+            static_configs:
+            - targets:
+              - {{ .Values.observability.otelCollector.receivers.synologySnmp.url }}
+            relabel_configs:
+              - source_labels: [__address__]
+                target_label: __param_target
+              - source_labels: [__param_target]
+                target_label: instance
+              - target_label: __address__
+                replacement: {{ .Values.k8s.names.services.prefix }}{{ .Values.observability.prometheusSnmpExporter.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.prometheusSnmpExporter.ports.http.targetPort }}
+      {{- end }}
+      prometheus/transmission:
+        config:
+          scrape_configs:
+          - job_name: 'transmission-exporter'
+            static_configs:
+            - targets:
+              - '{{ .Values.k8s.names.services.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.transmission.exporter.ports.http.targetPort }}'
+
+    processors:
+      batch:
+        timeout: 5s
+        send_batch_size: 512
+        send_batch_max_size: 2048
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 4000
+        spike_limit_mib: 800
+      attributes/otlp:
+        actions:
+        - key: gateway-receiver
+          value: otlp
+          action: insert
+      attributes/prometheus:
+        actions:
+        - key: gateway-receiver
+          value: prometheus
+          action: insert
+      attributes/k8s_cluster:
+        actions:
+        - key: gateway-receiver
+          value: k8s_cluster
+          action: insert
+      attributes/snmp:
+        actions:
+        - key: gateway-receiver
+          value: snmp
+          action: insert
+      attributes/add_labels_to_nas:
+        actions:
+          - key: instance
+            action: insert
+            value: nasypod
+          - key: job
+            action: insert
+            value: nas
+      attributes/reivi:
+        actions:
+          - key: reivi_label
+            action: insert
+            value: reivi_value
+
+    exporters:
+      debug/verbose:
+        verbosity: detailed
+        sampling_initial: 5
+        sampling_thereafter: 200
+      debug/noop:
+        verbosity: normal
+        sampling_initial: 0
+        sampling_thereafter: 0
+      otlphttp/victoriametrics:
+        compression: gzip
+        encoding: proto
+        metrics_endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.metrics.ports.http.targetPort }}/opentelemetry/v1/metrics
+        tls:
+          insecure: true
+      otlphttp/loki:
+        endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.logs.ports.http.targetPort }}/otlp
+        tls:
+          insecure: true
+      otlphttp/tempo:
+        compression: gzip
+        encoding: proto
+        traces_endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.traces.ports.http.targetPort }}/v1/traces
+        tls:
+          insecure: true
+
+    service:
+      pipelines:
+        logs:
+          receivers: [otlp]
+          processors: [batch, memory_limiter]
+          exporters: [otlphttp/loki]
+
+        metrics/otlp:
+          receivers: [otlp]
+          processors: [attributes/otlp, batch, memory_limiter]
+          exporters: [otlphttp/victoriametrics]
+        {{- if .Values.observability.otelCollector.receivers.jellyfinCustom.enable }}
+        metrics/jellyfinCustom:
+          receivers: [prometheus/jellyfinCustom]
+          processors: [attributes/prometheus, batch, memory_limiter]
+          exporters: [otlphttp/victoriametrics]
+        {{- end }}
+        {{- if .Values.observability.otelCollector.receivers.jellyfinNative.enable }}
+        metrics/jellyfinNative:
+          receivers: [prometheus/jellyfinNative]
+          processors: [attributes/prometheus, batch, memory_limiter]
+          exporters: [otlphttp/victoriametrics]
+        {{- end }}
+        {{- if .Values.observability.otelCollector.receivers.synologySnmp.enable }}
+        metrics/synologySnmp:
+          receivers: [prometheus/synologySnmp]
+          processors: [attributes/snmp, attributes/add_labels_to_nas, batch, memory_limiter]
+          exporters: [otlphttp/victoriametrics]
+        {{- end }}
+        metrics/transmission:
+          receivers: [prometheus/transmission]
+          processors: [attributes/prometheus, batch, memory_limiter]
+          exporters: [otlphttp/victoriametrics]
+
+        metrics/kubernetes:
+          receivers: [prometheus/kubernetes]
+          processors: [attributes/reivi, batch, memory_limiter]
+          exporters: [otlphttp/victoriametrics]
+
+        traces:
+          receivers: [otlp]
+          processors: [batch, memory_limiter]
+          exporters: [otlphttp/tempo]
+
+      telemetry:
+        logs:
+          level: {{ .Values.observability.otelCollector.logging.level }}
+          encoding: {{ .Values.observability.otelCollector.logging.format }}

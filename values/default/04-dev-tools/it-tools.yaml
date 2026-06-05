@@ -1,9 +1,0 @@
-itTools:
-  host: ${k8s.names.urls.prefix}${itTools.label}${k8s.names.urls.suffix}.${traefik.domain}
-  image: corentinth/it-tools:latest
-  label: it-tools
-  ports:
-    http:
-      name: http
-      targetPort: 80
-  replicasNb: 1

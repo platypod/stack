@@ -1,0 +1,38 @@
+storage:
+  defaultVolumes:
+    apps: apps
+    media: media
+
+  localStorage:
+    isEnabled: true
+    default:
+      rootPath: ./volumes/
+      capacityStorage: 1Gi
+      nodeAffinity:
+        required:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: platypod.io/local-storage
+              operator: In
+              values: ["true"]
+    volumes:
+    - name: media
+      labels:
+        volumeSelector: media
+    - name: apps
+      labels:
+        volumeSelector: apps
+
+  nfs:
+    isEnabled: false
+    default:
+      server: server
+      share: share
+      reclaimPolicy: Retain
+      capacityStorage: 1Gi
+    volumes:
+    - name: media
+      share: media
+      capacityStorage: 10Gi
+    - name: apps
+      share: apps

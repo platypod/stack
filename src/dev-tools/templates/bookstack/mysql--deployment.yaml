@@ -1,0 +1,43 @@
+{{- $pod := print .Values.k8s.names.pods.prefix (tpl .Values.bookstack.database.label $) .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.bookstack.database.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ tpl .Values.bookstack.database.label . }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.bookstack.database.image }}
+        ports:
+        - name: {{ .Values.bookstack.database.ports.http.name }}
+          containerPort: {{ .Values.bookstack.database.ports.http.targetPort }}
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "{{ tpl .Values.bookstack.database.credentials.rootPassword . }}"
+        - name: MYSQL_USER
+          value: "{{ tpl .Values.bookstack.database.credentials.username . }}"
+        - name: MYSQL_PASSWORD
+          value: "{{ tpl .Values.bookstack.database.credentials.password . }}"
+        - name: MYSQL_DATABASE
+          value: "{{ tpl .Values.bookstack.database.name . }}"
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: {{ tpl .Values.bookstack.storage.pvc . }}
+          subPath: bookstack/db
+      volumes:
+      - name: {{ tpl .Values.bookstack.storage.pvc . }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.bookstack.storage.pvc . }}

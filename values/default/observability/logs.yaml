@@ -1,0 +1,14 @@
+observability:
+  logs:
+    label: loki
+    image: grafana/loki:3.5
+    host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+    ports:
+      grpc:
+        name: grpc
+        targetPort: 9096
+      http:
+        name: http
+        targetPort: 3100
+    logging:
+      level: info

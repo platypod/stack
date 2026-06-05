@@ -1,3 +1,20 @@
+- Add HTTP entrypoint (`:80`) to Traefik so plain-HTTP traffic and HTTP→HTTPS
+  redirects work. Currently only `https` (443) and `traefik` (dashboard/9999)
+  are configured; any request on port 80 is silently dropped.
+- Trust the mkcert CA and create the TLS secret: run `make setup-dev-tls`
+  once per dev machine (prompts for sudo to install the CA in macOS Keychain).
+  Renew the same way when the cert expires (~3 years).
+- Refresh PV nodeAffinity on dev: the `dev-apps` and `dev-media` PVs were
+  deployed before the label-based nodeAffinity was introduced and still use
+  `kubernetes.io/hostname: talos-juq-rvt`. Run `make deploy MODULE=persistence`
+  to update them to `platypod.io/local-storage=true`.
+- Fix hardcoded `allowed_origins: https://*.platypod.ovh` in
+  `src/security/templates/authelia/authelia--config-map.yaml` — should use the
+  env-specific domain (`{{ .Values.traefik.domain }}`) so dev OIDC clients can
+  use `platypod.local` without being rejected by the CORS policy.
+- Deploy remaining modules: observability, dev-tools, files, media, games.
+  Each needs `make deploy MODULE=<name>`; they will also pick up the URL suffix
+  removal (no more `-dev`) on first deploy.
 - Ajouter la configuration de la persistence
     - Proposer une version script, avec un mode interactif et un mode non-interactif grâce à des variables d'environnements ou arguments.
     - Proposer une version documentaire de la procédure.

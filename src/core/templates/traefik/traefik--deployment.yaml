@@ -1,0 +1,77 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.traefik.label .Values.k8s.names.pods.suffix }}
+{{- $configMap := "config-map" }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.traefik.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.serviceAccounts.suffix }}
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.traefik.image.registry }}{{ .Values.traefik.image.namespace }}{{ .Values.traefik.image.repository }}:{{ .Values.traefik.image.tag }}
+        args:
+          # provider: file
+          - --providers.file.directory=/file-providers
+          # provider: kubernetesCRD (required for authelia middleware)
+          - --providers.kubernetescrd=true
+          # provider: kubernetes
+          - --providers.kubernetesingress.allowEmptyServices=true
+          - --providers.kubernetesingress.labelselector=chartVersion={{ .Chart.Version }},env={{ .Values.project.env }}
+          - --providers.kubernetesingress.namespaces={{ .Values.k8s.namespace }}
+          # dashboard
+          - --api.insecure=true
+          # logging
+          - --log.level={{ .Values.traefik.logging.level }}
+          - --log.format={{ .Values.traefik.logging.format }}
+          - --accesslog
+          # letsencrypt resolver
+          {{ if .Values.acme.challenge.dns.enable }}
+          - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.dnschallenge=true
+          {{ end }}
+          {{ if .Values.acme.challenge.tls.enable }}
+          - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.tlschallenge=true
+          {{ end }}
+          - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.email={{ .Values.acme.email }}
+          - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.storage=/etc/traefik/acme/acme.json
+          - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.caserver={{ .Values.acme.endpoint }}
+          # entrypoints
+          - --entryPoints.{{ .Values.traefik.ports.dashboard.name }}.address=:{{ .Values.traefik.ports.dashboard.targetPort }}
+          - --entryPoints.{{ .Values.traefik.ports.https.name }}.address=:{{ .Values.traefik.ports.https.targetPort }}
+        env:
+          {{ if .Values.acme.challenge.dns.enable }}
+          {{- toYaml .Values.acme.challenge.dns.env | nindent 5}}
+          {{ end }}
+        ports:
+        - name: {{ .Values.traefik.ports.https.name }}
+          containerPort: {{ .Values.traefik.ports.https.targetPort }}
+        - name: {{ .Values.traefik.ports.dashboard.name }}
+          containerPort: {{ .Values.traefik.ports.dashboard.targetPort }}
+        volumeMounts:
+        - mountPath: /file-providers/jellyfin-local-proxy.yaml
+          name: {{ $configMap }}
+          subPath: jellyfin-file-provider.yaml
+        - mountPath: /etc/traefik/acme
+          name: {{ tpl .Values.traefik.storage.pvc . }}
+          subPath: traefik/acme
+      volumes:
+      - name: {{ $configMap }}
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.configMaps.suffix }}
+      - name: {{ tpl .Values.traefik.storage.pvc . }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.traefik.storage.pvc . }}
+

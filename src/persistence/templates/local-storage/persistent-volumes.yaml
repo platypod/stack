@@ -1,0 +1,58 @@
+{{- if .Values.storage.localStorage.isEnabled }}
+
+{{- if .Values.storage.nfs.isEnabled }}
+{{- fail "Both storage.localStorage and storage.nfs are enabled. Please choose one."}}
+{{- end}}
+
+{{- range $volume := .Values.storage.localStorage.volumes }}
+
+{{- $capacityStorage := "" }}
+{{- if hasKey $volume "capacityStorage" }}
+{{- $capacityStorage = $volume.capacityStorage }}
+{{- else }}
+{{- $capacityStorage = $.Values.storage.localStorage.default.capacityStorage }}
+{{- end }}
+
+{{- $reclaimPolicy := "Retain" }}
+{{- if hasKey $volume "reclaimPolicy" }}
+{{- $reclaimPolicy = $volume.reclaimPolicy }}
+{{- end }}
+
+{{- $rootPath := "" }}
+{{- if hasKey $volume "rootPath" }}
+{{- $rootPath = $volume.rootPath }}
+{{- else }}
+{{- $rootPath = $.Values.storage.localStorage.default.rootPath }}
+{{- end }}
+
+{{- $nodeAffinity := dict }}
+{{- if hasKey $volume "nodeAffinity" }}
+{{- $nodeAffinity = $volume.nodeAffinity }}
+{{- else }}
+{{- $nodeAffinity = $.Values.storage.localStorage.default.nodeAffinity }}
+{{- end }}
+
+apiVersion: v1
+kind: PersistentVolume
+
+metadata:
+  name: {{ $.Values.k8s.names.persistentVolumes.prefix }}{{ $volume.name }}{{ $.Values.k8s.names.persistentVolumes.suffix }}
+  labels:
+    {{- toYaml $volume.labels | nindent 4}}
+spec:
+  capacity:
+    storage: {{ $capacityStorage }}
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: {{ $reclaimPolicy }}
+  storageClassName: local-storage
+  local:
+    path: {{ $rootPath }}{{ $volume.name }}/
+  nodeAffinity:
+    {{- tpl (toYaml $nodeAffinity) $ | nindent 4}}
+
+---
+
+{{ end }}
+{{ end }}

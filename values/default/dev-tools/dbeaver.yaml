@@ -1,0 +1,20 @@
+dbeaver:
+  credentials:
+    username: dbeaverAdmin
+    password: dbeaverPassword
+  database:
+    driver: PostgreSQL
+    url: "jdbc:postgresql://{{ .Values.k8s.names.services.prefix }}{{ .Values.database.label }}{{ .Values.k8s.names.services.suffix }}/{{ .Values.database.schemas.cloudBeaver.main }}"
+    schema: "{{ .Values.database.schemas.cloudBeaver.main }}"
+    credentials:
+      username: "{{ .Values.database.credentials.username }}"
+      password: "{{ .Values.database.credentials.password }}"
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.dbeaver.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: dbeaver/cloudbeaver:latest
+  label: dbeaver
+  ports:
+    http:
+      name: dbeaver-http
+      targetPort: 8978
+  pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  replicasNb: 0

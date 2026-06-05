@@ -1,0 +1,5 @@
+observability:
+  mounts:
+    containers: /var/lib/docker/containers
+  pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  retention: 8736h

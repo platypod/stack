@@ -1,0 +1,173 @@
+{{- /*
+  Shared default values loaded for every environment, in dependency order:
+    1. Foundational — no cross-refs or self-refs only
+    2. Services     — reference foundational values
+    3. Aggregators  — reference all service hosts (authelia); must come last
+  Each environment appends its own override file at the end.
+*/ -}}
+{{- $defaultValues := list
+  "values/default/core/project.yaml"
+  "values/default/core/k8s.yaml"
+  "values/default/core/traefik.yaml"
+  "values/default/core/acme.yaml"
+  "values/default/persistence/storage.yaml"
+  "values/default/observability/common.yaml"
+  "values/default/media/media.yaml"
+  "values/default/core/homepage.yaml"
+  "values/default/security/adguard.yaml"
+  "values/default/security/cyber-chef.yaml"
+  "values/default/observability/dashboards.yaml"
+  "values/default/observability/logs.yaml"
+  "values/default/observability/metrics.yaml"
+  "values/default/observability/otel-collectors.yaml"
+  "values/default/observability/prometheus-json-exporter.yaml"
+  "values/default/observability/prometheus-snmp-exporter.yaml"
+  "values/default/observability/traces.yaml"
+  "values/default/media/database.yaml"
+  "values/default/dev-tools/bookstack.yaml"
+  "values/default/dev-tools/dbeaver.yaml"
+  "values/default/dev-tools/it-tools.yaml"
+  "values/default/dev-tools/whoami.yaml"
+  "values/default/files/deluge.yaml"
+  "values/default/files/qbittorrent.yaml"
+  "values/default/files/transmission.yaml"
+  "values/default/media/bazarr.yaml"
+  "values/default/media/flaresolverr.yaml"
+  "values/default/media/jellyfin.yaml"
+  "values/default/media/jellyseerr.yaml"
+  "values/default/media/prowlarr.yaml"
+  "values/default/media/radarr.yaml"
+  "values/default/media/readarr.yaml"
+  "values/default/media/sonarr.yaml"
+  "values/default/media/youtube-downloader.yaml"
+  "values/default/games/pokeclicker.yaml"
+  "values/default/games/rommapp.yaml"
+  "values/default/security/authelia.yaml"
+-}}
+{{- $releaseValues := append $defaultValues (printf "values/%s/values.yaml" .Environment.Name) -}}
+
+environments:
+  dev:
+    values:
+{{ append $defaultValues "values/dev/values.yaml" | toYaml | indent 6 }}
+  prd:
+    values:
+{{ append $defaultValues "values/prd/values.yaml" | toYaml | indent 6 }}
+
+---
+
+{{- /*
+  $defaultValues is redefined here (Go template variables don't cross --- boundaries).
+  Keep this list in sync with the one above in the environments section.
+*/ -}}
+{{- $defaultValues := list
+  "values/default/core/project.yaml"
+  "values/default/core/k8s.yaml"
+  "values/default/core/traefik.yaml"
+  "values/default/core/acme.yaml"
+  "values/default/persistence/storage.yaml"
+  "values/default/observability/common.yaml"
+  "values/default/media/media.yaml"
+  "values/default/core/homepage.yaml"
+  "values/default/security/adguard.yaml"
+  "values/default/security/cyber-chef.yaml"
+  "values/default/observability/dashboards.yaml"
+  "values/default/observability/logs.yaml"
+  "values/default/observability/metrics.yaml"
+  "values/default/observability/otel-collectors.yaml"
+  "values/default/observability/prometheus-json-exporter.yaml"
+  "values/default/observability/prometheus-snmp-exporter.yaml"
+  "values/default/observability/traces.yaml"
+  "values/default/media/database.yaml"
+  "values/default/dev-tools/bookstack.yaml"
+  "values/default/dev-tools/dbeaver.yaml"
+  "values/default/dev-tools/it-tools.yaml"
+  "values/default/dev-tools/whoami.yaml"
+  "values/default/files/deluge.yaml"
+  "values/default/files/qbittorrent.yaml"
+  "values/default/files/transmission.yaml"
+  "values/default/media/bazarr.yaml"
+  "values/default/media/flaresolverr.yaml"
+  "values/default/media/jellyfin.yaml"
+  "values/default/media/jellyseerr.yaml"
+  "values/default/media/prowlarr.yaml"
+  "values/default/media/radarr.yaml"
+  "values/default/media/readarr.yaml"
+  "values/default/media/sonarr.yaml"
+  "values/default/media/youtube-downloader.yaml"
+  "values/default/games/pokeclicker.yaml"
+  "values/default/games/rommapp.yaml"
+  "values/default/security/authelia.yaml"
+-}}
+{{- $releaseValues := append $defaultValues (printf "values/%s/values.yaml" .Environment.Name) -}}
+
+releases:
+  - name: "{{ .Environment.Name }}--platypod--persistence"
+    chart: ./src/persistence
+    namespace: "{{ .Values.k8s.namespace }}"
+    values:
+{{ $releaseValues | toYaml | indent 6 }}
+
+  - name: "{{ .Environment.Name }}--platypod--core"
+    chart: ./src/core
+    namespace: "{{ .Values.k8s.namespace }}"
+    needs:
+      - "{{ .Environment.Name }}--platypod--persistence"
+    values:
+{{ $releaseValues | toYaml | indent 6 }}
+
+  - name: "{{ .Environment.Name }}--platypod--security"
+    chart: ./src/security
+    namespace: "{{ .Values.k8s.namespace }}"
+    needs:
+      - "{{ .Environment.Name }}--platypod--core"
+    values:
+{{ $releaseValues | toYaml | indent 6 }}
+
+  - name: "{{ .Environment.Name }}--platypod--observability"
+    chart: ./src/observability
+    namespace: "{{ .Values.k8s.namespace }}"
+    needs:
+      - "{{ .Environment.Name }}--platypod--core"
+      - "{{ .Environment.Name }}--platypod--security"
+    values:
+{{ $releaseValues | toYaml | indent 6 }}
+
+  - name: "{{ .Environment.Name }}--platypod--dev-tools"
+    chart: ./src/dev-tools
+    namespace: "{{ .Values.k8s.namespace }}"
+    needs:
+      - "{{ .Environment.Name }}--platypod--core"
+      - "{{ .Environment.Name }}--platypod--security"
+    values:
+{{ $releaseValues | toYaml | indent 6 }}
+
+  - name: "{{ .Environment.Name }}--platypod--files"
+    chart: ./src/files
+    namespace: "{{ .Values.k8s.namespace }}"
+    needs:
+      - "{{ .Environment.Name }}--platypod--core"
+      - "{{ .Environment.Name }}--platypod--security"
+      - "{{ .Environment.Name }}--platypod--persistence"
+    values:
+{{ $releaseValues | toYaml | indent 6 }}
+
+  - name: "{{ .Environment.Name }}--platypod--media"
+    chart: ./src/media
+    namespace: "{{ .Values.k8s.namespace }}"
+    needs:
+      - "{{ .Environment.Name }}--platypod--core"
+      - "{{ .Environment.Name }}--platypod--security"
+      - "{{ .Environment.Name }}--platypod--persistence"
+    values:
+{{ $releaseValues | toYaml | indent 6 }}
+
+  - name: "{{ .Environment.Name }}--platypod--games"
+    chart: ./src/games
+    namespace: "{{ .Values.k8s.namespace }}"
+    needs:
+      - "{{ .Environment.Name }}--platypod--core"
+      - "{{ .Environment.Name }}--platypod--security"
+      - "{{ .Environment.Name }}--platypod--persistence"
+    values:
+{{ $releaseValues | toYaml | indent 6 }}

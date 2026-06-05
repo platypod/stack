@@ -1,0 +1,36 @@
+{{- if .Values.storage.localStorage.isEnabled }}
+
+{{- if .Values.storage.nfs.isEnabled }}
+{{- fail "Both storage.localStorage and storage.nfs are enabled. Please choose one."}}
+{{- end}}
+
+{{- range $volume := .Values.storage.localStorage.volumes }}
+
+{{- $capacityStorage := "" }}
+{{- if hasKey $volume "capacityStorage" }}
+{{- $capacityStorage = $volume.capacityStorage }}
+{{- else }}
+{{- $capacityStorage = $.Values.storage.localStorage.default.capacityStorage }}
+{{- end }}
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+
+metadata:
+  name: {{ $.Values.k8s.names.persistentVolumeClaims.prefix }}{{ $volume.name }}{{ $.Values.k8s.names.persistentVolumeClaims.suffix }}
+spec:
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: local-storage
+  resources:
+    requests:
+      storage: {{ $capacityStorage }}
+  selector:
+    matchLabels:
+      {{- toYaml $volume.labels | nindent 6}}
+
+---
+
+{{ end }}
+{{ end }}

@@ -1,0 +1,43 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.youtubeDownloader.label .Values.k8s.names.pods.suffix }}
+{{- $mediaVolume := "media-volume" }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.youtubeDownloader.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.youtubeDownloader.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.youtubeDownloader.image }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: {{ .Values.youtubeDownloader.ports.http.name }}
+          containerPort: {{ .Values.youtubeDownloader.ports.http.targetPort }}
+        env:
+        - name: YT_DLP_COOKIES_PATH
+          value: {{ .Values.youtubeDownloader.cookiesPath }}
+        - name: YT_DLP_USERNAME
+          value: {{ .Values.youtubeDownloader.credentials.username }}
+        - name: YT_DLP_PASSWORD
+          value: {{ .Values.youtubeDownloader.credentials.password }}
+        volumeMounts:
+        - mountPath: /app/downloads
+          subPath: replays
+          name: {{ $mediaVolume }}
+      volumes:
+      - name: {{ $mediaVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.youtubeDownloader.pvc . }}

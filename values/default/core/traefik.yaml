@@ -1,0 +1,31 @@
+traefik:
+  domain: example.com
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image:
+    registry: docker.io/
+    namespace: ""
+    repository: traefik
+    tag: v3.1
+  label: traefik
+  dashboardLabel: traefik-dashboard
+  logging:
+    format: common
+    level: ERROR
+  ports:
+    dashboard:
+      # name has to be traefik, see https://doc.traefik.io/traefik/operations/api/#insecure
+      name: traefik
+      port: 9999
+      targetPort: 9999
+    https:
+      name: https
+      port: 443
+      targetPort: 443
+      nodePort: 30679
+  replicasNb: 1
+  resolverName: letsencrypt
+  tls:
+    selfSigned: false
+    secretName: ""
+  storage:
+    pvc: "{{ .Values.storage.defaultVolumes.apps }}"

@@ -1,9 +1,0 @@
-cyberChef:
-  host: ${k8s.names.urls.prefix}${cyberChef.label}${k8s.names.urls.suffix}.${traefik.domain}
-  image: ghcr.io/gchq/cyberchef:10.19.4
-  label: cyber-chef
-  ports:
-    http:
-      name: http
-      targetPort: 80
-  replicasNb: 1

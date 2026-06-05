@@ -1,0 +1,26 @@
+adguard:
+  adminHost: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.adguard.label }}-admin{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  credentials:
+    username: adguard-admin
+    password: adguard-password
+  image: adguard/adguardhome:latest
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: adguard
+  ports:
+    dnsUdp:
+      name: dns-udp
+      nodePort: 32049
+      targetPort: 53
+    dnsTcp:
+      name: dns-tcp
+      nodePort: 30154
+      targetPort: 53
+    http:
+      name: http
+      nodePort: 30155
+      targetPort: 80
+    admin:
+      name: admin
+      nodePort: 30156
+      targetPort: 3000
+  pvc: "{{ .Values.storage.defaultVolumes.apps }}"

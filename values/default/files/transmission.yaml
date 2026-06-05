@@ -1,0 +1,32 @@
+transmission:
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: lscr.io/linuxserver/transmission:latest
+  label: transmission
+  credentials:
+    username: transmission
+    password: transmission
+  download:
+    torrents: "{{ .Values.media.system.data.path }}/torrents"
+    ongoing: "{{ .Values.media.system.data.path }}/ongoing"
+    finished: "{{ .Values.media.system.data.path }}/finished"
+  exporter:
+    label: "{{ .Values.transmission.label }}-exporter"
+    image: ghcr.io/pittinic/transmission-exporter:arm64
+    ports:
+      http:
+        name: http
+        nodePort: 31416
+        targetPort: 9092
+  ports:
+    http:
+      name: webui
+      nodePort: 31415
+      targetPort: 9091
+    peer:
+      name: peer-listening
+      nodePort: 31413
+      targetPort: 51413
+  pvc:
+    app: "{{ .Values.storage.defaultVolumes.apps }}"
+    media: "{{ .Values.storage.defaultVolumes.media }}"
+  replicasNb: 1
