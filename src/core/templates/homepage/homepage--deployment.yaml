@@ -18,6 +18,8 @@ spec:
     metadata:
       labels:
         app: {{ $pod }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/homepage/homepage--config-map.yaml") . | sha256sum }}
     spec:
       automountServiceAccountToken: true
       containers:
