@@ -20,6 +20,17 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
+      securityContext:
+        fsGroup: 1000
+      initContainers:
+      # seerr runs as uid 1000 (node) but the hostPath subPath dir is created
+      # root-owned, and subPath mounts do not honour fsGroup — so chown it here.
+      - name: init-permissions
+        image: busybox
+        command: ['sh', '-c', 'mkdir -p /data/jellyseerr/config && chown -R 1000:1000 /data/jellyseerr/config']
+        volumeMounts:
+        - name: {{ $appVolume }}
+          mountPath: /data
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.jellyseerr.image }}
@@ -36,13 +47,13 @@ spec:
         - name: DB_HOST
           value: "{{ tpl .Values.jellyseerr.database.host . }}"
         - name: DB_PORT
-          value: "{{ .Values.jellyseerr.database.port }}"
+          value: "{{ tpl .Values.jellyseerr.database.port . }}"
         - name: DB_USER
-          value: "{{ .Values.jellyseerr.database.username }}"
+          value: "{{ tpl .Values.jellyseerr.database.username . }}"
         - name: DB_PASS
-          value: "{{ .Values.jellyseerr.database.password }}"
+          value: "{{ tpl .Values.jellyseerr.database.password . }}"
         - name: DB_NAME
-          value: "{{ .Values.jellyseerr.database.name }}"
+          value: "{{ tpl .Values.jellyseerr.database.name . }}"
         - name: DB_LOG_QUERIES
           value: "{{ .Values.jellyseerr.database.logQueries }}"
         - name: PORT

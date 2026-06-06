@@ -1,6 +1,6 @@
 mediarvester:
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.mediarvester.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: ghcr.io/platypod/mediarvester:latest
+  image: ghcr.io/platypod/mediarvester:v0.2.0
   label: mediarvester
   ports:
     http:

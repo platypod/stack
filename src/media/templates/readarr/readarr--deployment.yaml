@@ -21,6 +21,31 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
+      initContainers:
+      # Seed config.xml into the writable /config volume on first run only.
+      # Bookshelf/Readarr rewrites config.xml on startup (DeleteOldValues), which
+      # fails if config.xml is a read-only ConfigMap subPath mount. Copying it
+      # into the persistent volume (and only when absent) makes it writable while
+      # still letting the ConfigMap provide the initial values.
+      - name: init-config
+        image: busybox
+        command:
+        - sh
+        - -c
+        - |
+          # Seed when missing OR empty (-s: exists and size > 0), so a stale
+          # zero-byte config.xml from a prior run gets repaired. A populated
+          # config.xml that Bookshelf has since rewritten is left untouched.
+          if [ ! -s /config/config.xml ]; then
+            cp /seed/config.xml /config/config.xml
+            chown {{ .Values.media.system.userId }}:{{ .Values.media.system.groupId }} /config/config.xml
+          fi
+        volumeMounts:
+        - mountPath: /config
+          name: {{ $appVolume }}
+          subPath: readarr/config
+        - mountPath: /seed
+          name: {{ $configMap }}
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.readarr.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.readarr.image }}
@@ -38,9 +63,6 @@ spec:
         - mountPath: /config
           name: {{ $appVolume }}
           subPath: readarr/config
-        - mountPath: /config/config.xml
-          name: {{ $configMap }}
-          subPath: config.xml
         - mountPath: {{ .Values.media.system.data.path }}
           name: {{ $mediaVolume }}
       volumes:

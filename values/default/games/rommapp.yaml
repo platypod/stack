@@ -10,6 +10,7 @@ rommapp:
     image: mariadb:11
     label: rommapp-db
     name: rommapp
+    replicasNb: 1
     ports:
       http:
         name: rommapp-db

@@ -26,11 +26,11 @@ spec:
           containerPort: {{ .Values.rommapp.database.ports.http.targetPort }}
         env:
         - name: MYSQL_ROOT_PASSWORD
-          value: "{{ .Values.rommapp.database.credentials.rootPassword }}"
+          value: "{{ tpl .Values.rommapp.database.credentials.rootPassword . }}"
         - name: MYSQL_USER
-          value: "{{ .Values.rommapp.database.credentials.username }}"
+          value: "{{ tpl .Values.rommapp.database.credentials.username . }}"
         - name: MYSQL_PASSWORD
-          value: "{{ .Values.rommapp.database.credentials.password }}"
+          value: "{{ tpl .Values.rommapp.database.credentials.password . }}"
         - name: MYSQL_DATABASE
           value: "{{ .Values.rommapp.database.name }}"
         volumeMounts:
