@@ -34,6 +34,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.jellyseerr.image }}
+        resources:
+          {{- toYaml .Values.jellyseerr.resources | nindent 10 }}
         ports:
         - name: {{ .Values.jellyseerr.ports.http.name }}
           containerPort: {{ .Values.jellyseerr.ports.http.targetPort }}

@@ -28,3 +28,9 @@ qbittorrent:
     pvc:
       app: "{{ .Values.storage.defaultVolumes.apps }}"
       media: "{{ .Values.storage.defaultVolumes.media }}"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi

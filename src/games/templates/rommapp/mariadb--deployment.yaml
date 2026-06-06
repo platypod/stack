@@ -21,6 +21,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.rommapp.database.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.rommapp.database.image }}
+        resources:
+          {{- toYaml .Values.rommapp.database.resources | nindent 10 }}
         ports:
         - name: {{ .Values.rommapp.database.ports.http.name }}
           containerPort: {{ .Values.rommapp.database.ports.http.targetPort }}

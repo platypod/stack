@@ -1,0 +1,15 @@
+{{- if .Values.traefik.tls.selfSigned }}
+# Dev-only: a LinuxServer custom-cont-init script that merges the mounted
+# mkcert root CA into the system trust store at container start (as root,
+# before BookStack boots), so BookStack's OIDC back-channel can verify the
+# self-signed wildcard cert Traefik serves for authelia.{{ .Values.traefik.domain }}.
+# Prod uses real ACME certs, so this whole path is compiled out.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.bookstack.label }}-ca-init{{ .Values.k8s.names.configMaps.suffix }}
+data:
+  10-mkcert-ca.sh: |
+    #!/bin/sh
+    update-ca-certificates
+{{- end }}

@@ -18,3 +18,9 @@ dbeaver:
       targetPort: 8978
   pvc: "{{ .Values.storage.defaultVolumes.apps }}"
   replicasNb: 0
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi

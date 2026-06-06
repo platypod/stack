@@ -35,3 +35,10 @@ traefik:
     secretName: ""
   storage:
     pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  # CPU: request only (no limit) — avoids throttling. Memory: request≈limit.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 256Mi

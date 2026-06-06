@@ -24,6 +24,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.sonarr.image }}
+        resources:
+          {{- toYaml .Values.sonarr.resources | nindent 10 }}
         ports:
         - name: {{ .Values.sonarr.ports.http.name }}
           containerPort: {{ .Values.sonarr.ports.http.targetPort }}

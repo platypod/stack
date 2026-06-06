@@ -24,6 +24,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.qbittorrent.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.qbittorrent.image }}
+        resources:
+          {{- toYaml .Values.qbittorrent.resources | nindent 10 }}
         ports:
         - name: {{ .Values.qbittorrent.ports.http.name }}
           containerPort: {{ .Values.qbittorrent.ports.http.targetPort }}

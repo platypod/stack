@@ -48,6 +48,7 @@ data:
         - audience:
           - 'https://{{ tpl .Values.bookstack.host . }}'
           authorization_policy: 'one_factor'
+          claims_policy: 'platypod'
           client_id: '{{ .Values.bookstack.oidc.clientId }}'
           client_name: 'BookStack'
           client_secret: '{{ .Values.bookstack.oidc.clientSecret.hashed }}'
@@ -57,6 +58,7 @@ data:
           scopes:
           - 'openid'
           - 'profile'
+          - 'groups'
           - 'email'
           token_endpoint_auth_method: 'client_secret_basic'
           #token_endpoint_auth_method: 'client_secret_jwt'

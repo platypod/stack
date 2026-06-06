@@ -18,6 +18,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.prometheusJsonExporter.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.observability.prometheusJsonExporter.image }}
+        resources:
+          {{- toYaml .Values.observability.prometheusJsonExporter.resources | nindent 10 }}
         args:
           - '--config.file=/etc/json_exporter/config.yml'
           - '--web.listen-address=:{{ .Values.observability.prometheusJsonExporter.ports.http.targetPort }}'

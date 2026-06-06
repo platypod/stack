@@ -2,6 +2,12 @@ observability:
   logs:
     label: loki
     image: grafana/loki:3.5
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 512Mi
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
     ports:
       grpc:

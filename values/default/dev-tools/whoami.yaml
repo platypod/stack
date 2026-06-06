@@ -7,3 +7,9 @@ whoami:
       name: whoami-http
       targetPort: 80
   replicasNb: 2
+  resources:
+    requests:
+      cpu: 10m
+      memory: 16Mi
+    limits:
+      memory: 32Mi

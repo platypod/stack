@@ -52,6 +52,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.prometheusSnmpExporter.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.observability.prometheusSnmpExporter.image }}
+        resources:
+          {{- toYaml .Values.observability.prometheusSnmpExporter.resources | nindent 10 }}
         args:
         - '--log.level={{ .Values.observability.otelCollector.receivers.synologySnmp.logLevel }}'
         - '--config.file=/etc/snmp_exporter/snmp.yml'

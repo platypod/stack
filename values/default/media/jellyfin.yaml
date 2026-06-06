@@ -27,3 +27,9 @@ jellyfin:
     host: host.docker.internal
     port: 8096
   pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      memory: 1Gi

@@ -25,6 +25,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.observability.logs.image }}
+        resources:
+          {{- toYaml .Values.observability.logs.resources | nindent 10 }}
         ports:
         - containerPort: {{ .Values.observability.logs.ports.http.targetPort }}
         - containerPort: {{ .Values.observability.logs.ports.grpc.targetPort }}

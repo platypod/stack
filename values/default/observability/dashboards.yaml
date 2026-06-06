@@ -2,6 +2,12 @@ observability:
   dashboard:
     label: grafana
     image: grafana/grafana-oss:12.0.1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 192Mi
+      limits:
+        memory: 384Mi
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.dashboard.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
     oidc:
       clientId: kyqP5Y1daxOz8lMlmYOyOWuq7rbmyUQO34NUp1k3FKZxh55v3tP05pVVZRIwSTnC

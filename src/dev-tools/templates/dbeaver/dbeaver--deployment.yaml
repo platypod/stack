@@ -22,6 +22,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.dbeaver.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.dbeaver.image }}
+        resources:
+          {{- toYaml .Values.dbeaver.resources | nindent 10 }}
         ports:
         - name: {{ .Values.dbeaver.ports.http.name }}
           containerPort: {{ .Values.dbeaver.ports.http.targetPort }}

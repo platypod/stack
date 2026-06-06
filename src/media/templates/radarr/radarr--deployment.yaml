@@ -24,6 +24,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.radarr.image }}
+        resources:
+          {{- toYaml .Values.radarr.resources | nindent 10 }}
         ports:
         - name: {{ .Values.radarr.ports.http.name }}
           containerPort: {{ .Values.radarr.ports.http.targetPort }}

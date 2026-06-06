@@ -17,6 +17,12 @@ transmission:
         name: http
         nodePort: 31416
         targetPort: 9092
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 64Mi
   ports:
     http:
       name: webui
@@ -31,3 +37,9 @@ transmission:
     app: "{{ .Values.storage.defaultVolumes.apps }}"
     media: "{{ .Values.storage.defaultVolumes.media }}"
   replicasNb: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 256Mi

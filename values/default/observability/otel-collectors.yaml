@@ -8,6 +8,12 @@ observability:
     gateway:
       host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       label: "{{ .Values.observability.otelCollector.label }}-gateway"
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          memory: 512Mi
       ports:
         grpc:
           name: otel-grpc
@@ -24,6 +30,13 @@ observability:
       # own dedicated namespace labelled enforce=privileged. See the Namespace
       # manifest in templates/observability/nodes-collectors/namespace.yaml.
       namespace: "{{ .Values.k8s.namespace }}--privileged"
+      resources:
+        requests:
+          cpu: 200m
+          memory: 400Mi
+        limits:
+          cpu: 1
+          memory: 1Gi
       ports:
         grpc:
           name: otel-grpc

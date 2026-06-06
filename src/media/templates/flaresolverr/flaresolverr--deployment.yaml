@@ -21,6 +21,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.flaresolverr.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.flaresolverr.image }}
+        resources:
+          {{- toYaml .Values.flaresolverr.resources | nindent 10 }}
         ports:
         - name: {{ .Values.flaresolverr.ports.http.name }}
           containerPort: {{ .Values.flaresolverr.ports.http.targetPort }}

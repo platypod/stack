@@ -11,3 +11,9 @@ bazarr:
     app: "{{ .Values.storage.defaultVolumes.apps }}"
     media: "{{ .Values.storage.defaultVolumes.media }}"
   replicasNb: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 512Mi

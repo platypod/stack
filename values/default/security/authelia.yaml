@@ -9,6 +9,12 @@ authelia:
       username: "{{ .Values.authelia.label }}User"
       password: "{{ .Values.authelia.label }}Password"
     image: postgres:17
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
     label: "{{ .Values.authelia.label }}-db"
     ports:
       http:
@@ -125,3 +131,9 @@ authelia:
       password: $argon2id$v=19$m=65536,t=3,p=4$UvLUwVCQPhcDCMrT++Htpg$6eZG6L2rwpunVuFEdlLe8Mc+r6b9Q//Np5mGoTw61aQ  # guest-password
       email: gues@ty.pod
       groups: []
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi

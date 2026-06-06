@@ -23,6 +23,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.database.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.database.image }}
+        resources:
+          {{- toYaml .Values.database.resources | nindent 10 }}
         ports:
         - name: {{ .Values.database.ports.http.name }}
           containerPort: {{ .Values.database.ports.http.targetPort }}

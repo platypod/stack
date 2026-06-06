@@ -18,9 +18,21 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
+      {{- if .Values.traefik.loadBalancerIP }}
+      # Resolve the Authelia hostname to the Traefik LoadBalancer internally so
+      # BookStack's OIDC discovery/back-channel routes through Traefik (which
+      # injects the X-Forwarded-* headers Authelia needs to build the correct
+      # issuer). Without this the external domain is NXDOMAIN in-cluster.
+      hostAliases:
+      - ip: {{ .Values.traefik.loadBalancerIP }}
+        hostnames:
+        - {{ tpl .Values.authelia.host . }}
+      {{- end }}
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.bookstack.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.bookstack.image }}
+        resources:
+          {{- toYaml .Values.bookstack.resources | nindent 10 }}
         ports:
         - name: {{ .Values.bookstack.ports.http.name }}
           containerPort: {{ .Values.bookstack.ports.http.targetPort }}
@@ -60,11 +72,41 @@ spec:
           value: "https://{{ tpl .Values.authelia.host . }}"
         - name: OIDC_ISSUER_DISCOVER
           value: "true"
+        # OIDC group -> BookStack role sync. Authelia injects `groups` into the
+        # id_token (claims_policy 'platypod'); BookStack matches group names
+        # against role names (case-insensitive). The built-in Admin role is
+        # renamed to "admins" (seed-roles.sql) so the `admins` group grants admin.
+        - name: OIDC_ADDITIONAL_SCOPES
+          value: "groups"
+        - name: OIDC_USER_TO_GROUPS
+          value: "true"
+        - name: OIDC_GROUPS_CLAIM
+          value: "groups"
+        - name: OIDC_REMOVE_FROM_GROUPS
+          value: "true"
         volumeMounts:
         - mountPath: /app/config
           name: {{ tpl .Values.bookstack.storage.pvc . }}
           subPath: bookstack/config
+        {{- if .Values.traefik.tls.selfSigned }}
+        # Dev-only: trust the mkcert CA so OIDC TLS verification succeeds.
+        - mountPath: /usr/local/share/ca-certificates/mkcert-root.crt
+          name: mkcert-ca
+          subPath: rootCA.pem
+        - mountPath: /custom-cont-init.d/10-mkcert-ca.sh
+          name: ca-init
+          subPath: 10-mkcert-ca.sh
+        {{- end }}
       volumes:
       - name: {{ tpl .Values.bookstack.storage.pvc . }}
         persistentVolumeClaim:
           claimName: {{ tpl .Values.bookstack.storage.pvc . }}
+      {{- if .Values.traefik.tls.selfSigned }}
+      - name: mkcert-ca
+        configMap:
+          name: mkcert-ca
+      - name: ca-init
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.bookstack.label }}-ca-init{{ .Values.k8s.names.configMaps.suffix }}
+          defaultMode: 0755
+      {{- end }}

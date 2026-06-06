@@ -86,8 +86,7 @@ spec:
 #            port: 3000
 #          timeoutSeconds: 1
         resources:
-          requests:
-            cpu: 250m
+          {{- toYaml .Values.observability.dashboard.resources | nindent 10 }}
       volumes:
       - name: {{ $appVolume }}
         persistentVolumeClaim:

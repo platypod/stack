@@ -21,3 +21,9 @@ mediarvester:
     appsPvc: "{{ .Values.storage.defaultVolumes.apps }}"
     cookiesSubPath: mediarvester/cookies
   replicasNb: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi

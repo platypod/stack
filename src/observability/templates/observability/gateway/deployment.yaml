@@ -20,6 +20,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ tpl .Values.observability.otelCollector.gateway.label . }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.observability.otelCollector.image }}
+        resources:
+          {{- toYaml .Values.observability.otelCollector.gateway.resources | nindent 10 }}
         args: ["--config=/conf/collector.yaml"]
         ports:
         - containerPort: {{ .Values.observability.otelCollector.gateway.ports.grpc.targetPort }}

@@ -2,6 +2,12 @@ observability:
   metrics:
     label: victoria-metrics
     image: victoriametrics/victoria-metrics:v1.118.0
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 512Mi
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
     ports:
       http:

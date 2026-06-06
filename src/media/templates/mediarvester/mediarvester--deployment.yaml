@@ -23,6 +23,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.mediarvester.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.mediarvester.image }}
+        resources:
+          {{- toYaml .Values.mediarvester.resources | nindent 10 }}
         imagePullPolicy: IfNotPresent
         ports:
         - name: {{ .Values.mediarvester.ports.http.name }}

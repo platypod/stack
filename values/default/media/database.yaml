@@ -34,3 +34,9 @@ database:
       logs: sonarrLogs
   replicasNb: 1
   pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi

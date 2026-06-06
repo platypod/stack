@@ -25,6 +25,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.observability.traces.image }}
+        resources:
+          {{- toYaml .Values.observability.traces.resources | nindent 10 }}
         args: [ "-config.file=/etc/tempo.yaml" ]
         ports:
         - containerPort: {{ .Values.observability.traces.ports.http.targetPort }}

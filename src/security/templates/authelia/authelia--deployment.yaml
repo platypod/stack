@@ -26,6 +26,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.authelia.image }}
+        resources:
+          {{- toYaml .Values.authelia.resources | nindent 10 }}
         ports:
         - name: {{ .Values.authelia.ports.http.name }}
           containerPort: {{ .Values.authelia.ports.http.targetPort }}

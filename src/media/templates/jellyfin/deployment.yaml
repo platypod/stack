@@ -25,6 +25,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.jellyfin.image }}
+        resources:
+          {{- toYaml .Values.jellyfin.resources | nindent 10 }}
         ports:
         - name: {{ .Values.jellyfin.ports.http.name }}
           containerPort: {{ .Values.jellyfin.ports.http.targetPort }}

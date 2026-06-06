@@ -21,6 +21,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ tpl .Values.bookstack.database.label . }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.bookstack.database.image }}
+        resources:
+          {{- toYaml .Values.bookstack.database.resources | nindent 10 }}
         ports:
         - name: {{ .Values.bookstack.database.ports.http.name }}
           containerPort: {{ .Values.bookstack.database.ports.http.targetPort }}

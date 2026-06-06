@@ -15,3 +15,9 @@ flaresolverr:
     path: /metrics
     port: 8192
   replicasNb: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi

@@ -85,4 +85,28 @@ kubectl create secret tls "$SECRET_NAME" \
   | kubectl apply -f -
 
 ok "Secret '$SECRET_NAME' ready in namespace '$NAMESPACE'"
+
+# ---------------------------------------------------------------------------
+# Publish the mkcert root CA as a ConfigMap so in-cluster clients that do TLS
+# verification (e.g. BookStack's OIDC back-channel, which has no skip-verify
+# option) can trust the self-signed wildcard cert Traefik serves. Containers
+# don't trust the mkcert CA by default; charts mount this CM and run
+# update-ca-certificates at startup. Dev-only — prod uses real ACME certs.
+# ---------------------------------------------------------------------------
+
+CA_CM_NAME="mkcert-ca"
+CA_ROOT="$(mkcert -CAROOT)"
+CA_FILE="$CA_ROOT/rootCA.pem"
+if [ -f "$CA_FILE" ]; then
+  info "Publishing mkcert root CA as ConfigMap '$CA_CM_NAME'..."
+  kubectl create configmap "$CA_CM_NAME" \
+    --from-file=rootCA.pem="$CA_FILE" \
+    --namespace="$NAMESPACE" \
+    --dry-run=client -o yaml \
+    | kubectl apply -f -
+  ok "ConfigMap '$CA_CM_NAME' ready in namespace '$NAMESPACE'"
+else
+  info "mkcert root CA not found at $CA_FILE — skipping CA ConfigMap"
+fi
+
 ok "TLS cert valid for *.${DOMAIN} — expires in ~3 years (re-run this script to renew)"

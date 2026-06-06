@@ -24,6 +24,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.deluge.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.deluge.image }}
+        resources:
+          {{- toYaml .Values.deluge.resources | nindent 10 }}
         ports:
         - name: {{ .Values.deluge.ports.http.name }}
           containerPort: {{ .Values.deluge.ports.http.targetPort }}

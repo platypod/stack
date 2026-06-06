@@ -25,6 +25,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.homepage.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.homepage.image.registry }}{{ .Values.homepage.image.namespace }}{{ .Values.homepage.image.repository }}:{{ .Values.homepage.image.tag }}
+        resources:
+          {{- toYaml .Values.homepage.resources | nindent 10 }}
         ports:
         - name: {{ .Values.homepage.ports.http.name }}
           containerPort: {{ .Values.homepage.ports.http.targetPort }}

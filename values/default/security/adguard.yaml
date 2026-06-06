@@ -24,3 +24,9 @@ adguard:
       nodePort: 30156
       targetPort: 3000
   pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi

@@ -8,3 +8,9 @@ prowlarr:
       name: prowlarr-http
       targetPort: 9696
   replicasNb: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 192Mi
+    limits:
+      memory: 384Mi

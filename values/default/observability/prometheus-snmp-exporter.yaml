@@ -2,6 +2,12 @@ observability:
   prometheusSnmpExporter:
     label: prometheus-snmp-exporter
     image: prom/snmp-exporter:v0.29.0
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
     ports:
       http:
         name: http

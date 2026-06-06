@@ -21,6 +21,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.itTools.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.itTools.image }}
+        resources:
+          {{- toYaml .Values.itTools.resources | nindent 10 }}
         ports:
         - name: {{ .Values.itTools.ports.http.name }}
           containerPort: {{ .Values.itTools.ports.http.targetPort }}

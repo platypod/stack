@@ -18,3 +18,9 @@ jellyseerr:
       targetPort: 5055
   pvc: "{{ .Values.storage.defaultVolumes.apps }}"
   replicasNb: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 512Mi

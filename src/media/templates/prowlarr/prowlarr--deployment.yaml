@@ -22,6 +22,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.prowlarr.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.prowlarr.image }}
+        resources:
+          {{- toYaml .Values.prowlarr.resources | nindent 10 }}
         ports:
         - name: {{ .Values.prowlarr.ports.http.name }}
           containerPort: {{ .Values.prowlarr.ports.http.targetPort }}

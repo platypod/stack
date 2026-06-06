@@ -23,6 +23,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.traefik.image.registry }}{{ .Values.traefik.image.namespace }}{{ .Values.traefik.image.repository }}:{{ .Values.traefik.image.tag }}
+        resources:
+          {{- toYaml .Values.traefik.resources | nindent 10 }}
         args:
           # provider: file
           - --providers.file.directory=/file-providers

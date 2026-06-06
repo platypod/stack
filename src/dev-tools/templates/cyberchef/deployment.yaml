@@ -21,6 +21,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.cyberChef.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.cyberChef.image }}
+        resources:
+          {{- toYaml .Values.cyberChef.resources | nindent 10 }}
         ports:
         - name: {{ .Values.cyberChef.ports.http.name }}
           containerPort: {{ .Values.cyberChef.ports.http.targetPort }}

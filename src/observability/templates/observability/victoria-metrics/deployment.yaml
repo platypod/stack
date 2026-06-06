@@ -18,6 +18,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.observability.metrics.image }}
+        resources:
+          {{- toYaml .Values.observability.metrics.resources | nindent 10 }}
         args:
         - "-storageDataPath=/storage"
         - "-retentionPeriod=1y"

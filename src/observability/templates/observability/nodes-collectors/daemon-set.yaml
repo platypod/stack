@@ -24,12 +24,7 @@ spec:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ tpl .Values.observability.otelCollector.collectors.label . }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.observability.otelCollector.image }}
         resources:
-          limits:
-            cpu: 1
-            memory: 1Gi
-          requests:
-            cpu: 200m
-            memory: 400Mi
+          {{- toYaml .Values.observability.otelCollector.collectors.resources | nindent 10 }}
         env:
         - name: K8S_NODE_NAME
           valueFrom:

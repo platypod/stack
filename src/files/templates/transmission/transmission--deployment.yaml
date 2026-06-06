@@ -25,6 +25,8 @@ spec:
       # transmission
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.transmission.image }}
+        resources:
+          {{- toYaml .Values.transmission.resources | nindent 10 }}
         ports:
         - name: {{ .Values.transmission.ports.http.name }}
           containerPort: {{ .Values.transmission.ports.http.targetPort }}
@@ -69,12 +71,7 @@ spec:
         - name: WEB_ADDR
           value: ":{{ .Values.transmission.exporter.ports.http.targetPort }}"
         resources:
-          limits:
-            cpu: 100m
-            memory: 100Mi
-          requests:
-            cpu: 50m
-            memory: 50Mi
+          {{- toYaml .Values.transmission.exporter.resources | nindent 10 }}
       volumes:
       - name: {{ $mediaVolume }}
         persistentVolumeClaim:

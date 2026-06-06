@@ -40,6 +40,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.adguard.image }}
+        resources:
+          {{- toYaml .Values.adguard.resources | nindent 10 }}
         ports:
         - containerPort: {{ .Values.adguard.ports.dnsTcp.targetPort }}
         - containerPort: {{ .Values.adguard.ports.http.targetPort }}

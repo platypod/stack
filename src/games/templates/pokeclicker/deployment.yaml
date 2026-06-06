@@ -21,6 +21,8 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.pokeclicker.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.pokeclicker.image }}
+        resources:
+          {{- toYaml .Values.pokeclicker.resources | nindent 10 }}
         ports:
         - name: {{ .Values.pokeclicker.ports.http.name }}
           containerPort: {{ .Values.pokeclicker.ports.http.targetPort }}
