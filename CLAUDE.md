@@ -52,7 +52,17 @@ make deploy          # full stack
 3. `deploy MODULE=core` — deploys Traefik (gets a `192.168.122.200+` IP from MetalLB) and Homepage.
 4. `setup-dev-dns` — installs dnsmasq, adds `address=/.platypod.local/<traefik-lb-ip>`, creates `/etc/resolver/platypod.local`, restarts dnsmasq. Traefik's LB IP is auto-detected from kubectl.
 
-After `setup-dev`, re-run `make deploy` to bring up the full stack.
+After `setup-dev`, the base stack (persistence + core + security) is running.
+Deploy additional modules individually as needed — not all at once:
+
+```sh
+make deploy MODULE=observability   # add when you need dashboards
+make deploy MODULE=media           # add when you need Jellyfin/Sonarr/etc.
+# etc.
+```
+
+Running all modules simultaneously on the 4 GB dev worker is marginal.
+The base stack is the stable working set; extras are opt-in.
 
 ### Day-to-day dev commands
 
@@ -67,6 +77,28 @@ make status                  # list deployed releases
 ### After a cluster restart
 
 The kubeconfig and the TLS secret survive cluster reboots (the secret lives in etcd). The dnsmasq entry is permanent. Nothing to redo unless you rebuilt the cluster from scratch (`make destroy` + `make apply` in k8s-in-vms), in which case re-run `make setup-dev`.
+
+### Accessing persistent volume data (dev)
+
+Talos has no SSH, so you can't mount the worker's filesystem directly. Use
+`talosctl` to browse and transfer files on the worker node (`192.168.122.102`):
+
+```sh
+export TALOSCONFIG=../infra-as-code/k8s-in-vms/.generated/dev/talosconfig
+
+# Browse
+talosctl -n 192.168.122.102 ls /var/local/platypod/volumes/
+talosctl -n 192.168.122.102 ls /var/local/platypod/volumes/apps/
+
+# Read a file
+talosctl -n 192.168.122.102 read /var/local/platypod/volumes/apps/some-file
+
+# Copy from node to local machine
+talosctl -n 192.168.122.102 cp /var/local/platypod/volumes/apps/some-file ./some-file
+
+# Copy from local machine to node
+talosctl -n 192.168.122.102 cp ./some-file /var/local/platypod/volumes/apps/some-file
+```
 
 ---
 

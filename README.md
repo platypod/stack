@@ -140,14 +140,14 @@
 ### Modules
 
 The features are packaged in modules by thematics as follows:
-- [Persistence](src/00-persistence)
-- [Core](src/01-core)
-- [Security](src/02-security)
-- [Observability](src/03-observability)
-- [Dev Tools](src/04-dev-tools)
-- [Download](src/05-files)
-- [Media](src/06-media)
-- [Games](src/07-games)
+- [Persistence](src/persistence)
+- [Core](src/core)
+- [Security](src/security)
+- [Observability](src/observability)
+- [Dev Tools](src/dev-tools)
+- [Files](src/files)
+- [Media](src/media)
+- [Games](src/games)
 
 Each link redirects to the module's subfolder, which includes a detailed README.md file.
 
@@ -165,17 +165,21 @@ To get a copy up and running, follow these steps.
 
 ### Prerequisites
 
-1. Install [kubernetes](https://kubernetes.io/docs/setup/) on your server (be it a single-node instance for local dev, a massive cloud cluster or anything in-between). Personnaly, I use [orbstack](https://github.com/orbstack/orbstack) on MacOS.
-2. Install [traefik's CRDs](https://doc.traefik.io/traefik/providers/kubernetes-crd/) (Custom Resource Definitions) on your kubernetes cluster:
+1. A running Kubernetes cluster. This project uses [Talos Linux](https://www.talos.dev/) VMs provisioned via Terraform — see [`infra-as-code/k8s-in-vms/`](../infra-as-code/k8s-in-vms/) for the full setup.
+2. Install the required tools (helm, helmfile, kubectl, helm-diff):
     ```bash
-    kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/v3.5/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml
-    kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/v3.5/docs/content/reference/dynamic-configuration/kubernetes-crd-rbac.yml
+    make install-deps
     ```
-3. If you wish to use remote storage, for instance through nfs, install the required drivers on your cluster. For instance:
+3. Install [Traefik's CRDs](https://doc.traefik.io/traefik/providers/kubernetes-crd/) on the cluster:
+    ```bash
+    make install-crds          # dev
+    make install-crds ENV=prd  # prod
+    ```
+4. If using NFS storage (prod), install the CSI driver on the cluster:
     ```bash
     curl -skSL https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/v4.5.0/deploy/install-driver.sh | bash -s v4.5.0 --
     ```
-4. Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) to be able to clone the repo in the next step.
+5. Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) to be able to clone the repo.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -222,32 +226,70 @@ Please mind the storage provisionning: default features are offered and detailed
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Deployment
-0. Check your settings if you wish with
+
+**First-time dev setup** (one-shot):
 ```bash
-sh -c '. bin/helm.sh && install_or_upgrade --env <env> --dry-run'
+make setup-dev
 ```
-1. Deploy the whole stack with
+This runs in order: mkcert CA trust + wildcard TLS secret, Traefik CRDs, core module deploy, dnsmasq configuration. Requires a running dev cluster (`make apply ENV=dev` in `infra-as-code/k8s-in-vms/`).
+
+**Deploy the full stack:**
 ```bash
-sh -c '. bin/helm.sh && install_or_upgrade --env <env>'
+make deploy              # dev
+make deploy ENV=prd      # prod
 ```
-2. Or deploy a single module with
+
+**Deploy or redeploy a single module:**
 ```bash
-sh -c '. bin/helm.sh && install_or_upgrade_one --env <env> --src src/00-persistence'
-sh -c '. bin/helm.sh && install_or_upgrade_one --env <env> --src src/01-core'
-...
+make deploy MODULE=core
+make deploy MODULE=security
+# ...
+```
+
+**Other useful commands:**
+```bash
+make diff MODULE=core    # dry-run: show what would change
+make destroy MODULE=core # uninstall a single module
+make status              # list deployed releases and their status
 ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Usage
-- Either browse the home page (by default on [https://homepage.DOMAIN_NAME]()).
-- Or access each service by its own URL:
-  - See the host properties of each service in the yaml configuration files, or
-  - List the available URLs by studying the IngressRoutes with
-  (```kubectl get --namespace <namespace> ingressroutes```) and
-  (```kubectl describe --namespace <namespace> ingressroute/<route-name>```).
 
-#TODO Add a gif demonstration?
+All services are exposed via Traefik and protected by Authelia SSO. Start from the homepage:
+
+| Environment | URL |
+|-------------|-----|
+| dev | https://homepage.platypod.local/ |
+| prod | https://homepage.platypod.ovh/ |
+
+Log in with your Authelia credentials. The homepage lists all available services with links.
+
+To list all exposed URLs directly:
+```bash
+kubectl get ingressroutes --namespace <namespace>
+```
+
+#### Dev — accessing persistent volume data
+
+Talos nodes have no SSH. Use `talosctl` to browse and transfer files on the worker node:
+
+```bash
+export TALOSCONFIG=../infra-as-code/k8s-in-vms/.generated/dev/talosconfig
+
+# Browse
+talosctl -n 192.168.122.102 ls /var/local/platypod/volumes/
+
+# Read a file
+talosctl -n 192.168.122.102 read /var/local/platypod/volumes/apps/some-file
+
+# Copy from node to local machine
+talosctl -n 192.168.122.102 cp /var/local/platypod/volumes/apps/some-file ./some-file
+
+# Copy from local machine to node
+talosctl -n 192.168.122.102 cp ./some-file /var/local/platypod/volumes/apps/some-file
+```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -354,7 +396,9 @@ Project Link: [https://github.com/Pittinic/platypod](https://github.com/Pittinic
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-* [Orbstack](https://docs.orbstack.dev/) for its ease of use, including on a headless macos setup.
+* [Talos Linux](https://www.talos.dev/) for a clean, immutable Kubernetes OS.
+* [vfkit](https://github.com/crc-org/vfkit) and [socket_vmnet](https://github.com/lima-vm/socket_vmnet) for lightweight macOS virtualisation.
+* [mkcert](https://github.com/FiloSottile/mkcert) for zero-friction local TLS.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

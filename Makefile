@@ -32,8 +32,8 @@ setup-dev-tls:  ## Trust mkcert CA + create/refresh wildcard TLS secret in the c
 setup-dev-dns:  ## Configure dnsmasq for *.platypod.local → Traefik LB IP (auto-detected)
 	@sh bin/setup-dev-dns.sh
 
-setup-dev: setup-dev-tls install-crds  ## Full dev bootstrap: TLS, CRDs, core deploy, DNS
-	@$(MAKE) --no-print-directory deploy MODULE=core
+setup-dev: setup-dev-tls install-crds  ## Full dev bootstrap: TLS, CRDs, base deploy, DNS
+	@$(MAKE) --no-print-directory deploy-base
 	@$(MAKE) --no-print-directory setup-dev-dns
 
 # ---------------------------------------------------------------------------
@@ -51,13 +51,18 @@ install-crds:  ## Install Traefik CRDs on the cluster (TRAEFIK_VERSION=v3.5)
 # Deployment
 # ---------------------------------------------------------------------------
 
-.PHONY: diff deploy destroy
+.PHONY: diff deploy deploy-base destroy
 
 status:        ## List deployed releases and their status  (ENV=dev)
 	helm list --namespace $(ENV)-platypod
 
 diff:          ## Dry-run: show what would change  (ENV=dev MODULE=core)
 	$(HELMFILE) $(SELECTOR) diff --args="--disable-validation"
+
+deploy-base:   ## Deploy always-on base only: persistence, core, security  (ENV=dev)
+	@helmfile --environment $(ENV) --selector name=$(ENV)--platypod--persistence sync
+	@helmfile --environment $(ENV) --selector name=$(ENV)--platypod--core sync
+	@helmfile --environment $(ENV) --selector name=$(ENV)--platypod--security sync
 
 deploy:        ## Deploy full stack or a single module  (ENV=dev MODULE=core)
 	$(HELMFILE) $(SELECTOR) sync

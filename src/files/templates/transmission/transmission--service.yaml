@@ -17,7 +17,7 @@ spec:
     port: {{ .Values.transmission.ports.peer.targetPort }}
     targetPort: {{ .Values.transmission.ports.peer.targetPort }}
   - protocol: UDP
-    name: {{ .Values.transmission.ports.peer.name }}
+    name: {{ .Values.transmission.ports.peer.nameUdp }}
     nodePort: {{ .Values.transmission.ports.peer.nodePort }}
     port: {{ .Values.transmission.ports.peer.targetPort }}
     targetPort: {{ .Values.transmission.ports.peer.targetPort }}

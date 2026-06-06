@@ -30,7 +30,7 @@ spec:
           containerPort: {{ .Values.transmission.ports.http.targetPort }}
         - name: {{ .Values.transmission.ports.peer.name }}
           containerPort: {{ .Values.transmission.ports.peer.targetPort }}
-        - name: {{ .Values.transmission.ports.peer.name }}
+        - name: {{ .Values.transmission.ports.peer.nameUdp }}
           containerPort: {{ .Values.transmission.ports.peer.targetPort }}
           protocol: UDP
         env:

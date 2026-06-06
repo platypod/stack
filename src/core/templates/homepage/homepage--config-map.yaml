@@ -101,6 +101,9 @@ data:
       - IT-Tools:
           href: https://{{ tpl .Values.itTools.host . }}
           description: Useful tools for developer and people working in IT.
+      - CyberChef:
+          href: https://{{ tpl .Values.cyberChef.host . }}
+          description: Useful tools for "cyber" operations from a browser.
       - Who am I?:
           href: https://{{ tpl .Values.whoami.host . }}
           description: Tiny Go webserver that prints os information and HTTP request to output.
@@ -116,9 +119,6 @@ data:
       - Authelia:
           abbr: AU
           href: https://{{ tpl .Values.authelia.host . }}
-      - CyberChef:
-          href: https://{{ tpl .Values.cyberChef.host . }}
-          description: Useful tools for "cyber" operations from a browser.
     - Media-Maintainer:
       - Prowlarr:
           abbr: PR
