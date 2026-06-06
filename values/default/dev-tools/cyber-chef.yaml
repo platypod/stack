@@ -1,6 +1,6 @@
 cyberChef:
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.cyberChef.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: ghcr.io/gchq/cyberchef:10.19.4
+  image: ghcr.io/platypod/cyber-chef:v11.0.0
   label: cyber-chef
   ports:
     http:

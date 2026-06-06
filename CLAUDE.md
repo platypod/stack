@@ -30,15 +30,15 @@ helmfile.yaml.gotmpl    # Environments, value loading order, release dependency 
 | `observability` | OtelCollector, Loki, Tempo, VictoriaMetrics, Grafana |
 | `dev-tools` | Bookstack, PostgreSQL, IT-Tools, WhoAmI, DBeaver |
 | `files` | Transmission, QBitTorrent, Deluge |
-| `media` | Jellyfin, Prowlarr, Radarr, Sonarr, Readarr, Bazarr, Jellyseerr, Flaresolverr, youtube-downloader |
+| `media` | Jellyfin, Prowlarr, Radarr, Sonarr, Readarr, Bazarr, Jellyseerr, Flaresolverr, Mediarvester, PostgreSQL |
 | `games` | RommApp, Pokeclicker |
 
 ---
 
 ## Dev lifecycle (first time)
 
-Prerequisites: a running dev cluster (`make apply ENV=dev` in `infra-as-code/k8s-in-vms/`).
-The Makefile auto-discovers the kubeconfig at `../infra-as-code/k8s-in-vms/.generated/dev/kubeconfig`.
+Prerequisites: a running dev cluster (`make apply ENV=dev` in `infra/k8s-in-vms/`).
+The Makefile auto-discovers the kubeconfig at `../infra/k8s-in-vms/.generated/dev/kubeconfig`.
 
 ```sh
 make install-deps    # helm, helmfile, kubectl, helm-diff
@@ -50,7 +50,7 @@ make deploy          # full stack
 1. `setup-dev-tls` — installs mkcert, trusts the local CA in macOS Keychain (prompts for sudo), generates `*.platypod.local` cert, stores it as the `platypod-local-tls` K8s secret.
 2. `install-crds` — applies Traefik CRD manifests so IngressRoute and Middleware objects are recognised.
 3. `deploy MODULE=core` — deploys Traefik (gets a `192.168.122.200+` IP from MetalLB) and Homepage.
-4. `setup-dev-dns` — installs dnsmasq, adds `address=/.platypod.local/<traefik-lb-ip>`, creates `/etc/resolver/platypod.local`, restarts dnsmasq. Traefik's LB IP is auto-detected from kubectl.
+4. `setup-dev-dns` — sets the system DNS to Adguard's LoadBalancer IP (`192.168.122.201`) with `1.1.1.1` as fallback, cleans up any leftover dnsmasq config. Adguard handles the `*.platypod.local → 192.168.122.200` (Traefik) rewrite internally. When the cluster is suspended, internet DNS falls through to `1.1.1.1`; `*.platypod.local` simply won't resolve.
 
 After `setup-dev`, the base stack (persistence + core + security) is running.
 Deploy additional modules individually as needed — not all at once:
@@ -84,7 +84,7 @@ Talos has no SSH, so you can't mount the worker's filesystem directly. Use
 `talosctl` to browse and transfer files on the worker node (`192.168.122.102`):
 
 ```sh
-export TALOSCONFIG=../infra-as-code/k8s-in-vms/.generated/dev/talosconfig
+export TALOSCONFIG=../infra/k8s-in-vms/.generated/dev/talosconfig
 
 # Browse
 talosctl -n 192.168.122.102 ls /var/local/platypod/volumes/
@@ -135,7 +135,7 @@ Prod uses public DNS (`platypod.ovh`) and ACME/Let's Encrypt for TLS — no mkce
 - Values files use Go template syntax for cross-references: `{{ .Values.some.key }}`. The `.gotmpl` extension signals helmfile to render them before passing to Helm.
 - Values are loaded in dependency order in `helmfile.yaml.gotmpl` — foundational files first, cross-module aggregators (authelia) last, env override last of all.
 - Module release order is declared via `needs:` in `helmfile.yaml.gotmpl`; helmfile enforces it.
-- Custom images live in `images/` and are pushed to `ghcr.io/pittinic/<name>:<tag>`.
+- Custom images live in `images/` and are pushed to `ghcr.io/platypod/<name>:<tag>`.
 
 ### Pitfalls
 
@@ -171,7 +171,7 @@ Authelia has this; apply the same pattern to any other pod whose config is store
 
 1. Create `images/<name>/Dockerfile`.
 2. Build and push: `make build IMAGE=<name> VERSION=<tag>`
-3. Reference as `ghcr.io/pittinic/<name>:<tag>` in the values file.
+3. Reference as `ghcr.io/platypod/<name>:<tag>` in the values file.
 
 ---
 

@@ -14,6 +14,8 @@ database:
       main: cloudBeaver
     jellyseerr:
       main: jellyseerr
+    mediarvester:
+      main: mediarvester
     bazarr:
       main: bazarrMain
       logs: bazarrLogs

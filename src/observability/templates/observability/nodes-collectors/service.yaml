@@ -3,6 +3,7 @@ kind: Service
 
 metadata:
   name: {{ .Values.k8s.names.services.prefix }}{{ tpl .Values.observability.otelCollector.collectors.label . }}{{ .Values.k8s.names.services.suffix }}
+  namespace: {{ tpl .Values.observability.otelCollector.collectors.namespace . }}
 
 spec:
   ports:

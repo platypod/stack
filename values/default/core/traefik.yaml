@@ -28,6 +28,7 @@ traefik:
       targetPort: 443
       nodePort: 30679
   replicasNb: 1
+  loadBalancerIP: ""   # set per env; used by Adguard DNS rewrite
   resolverName: letsencrypt
   tls:
     selfSigned: false

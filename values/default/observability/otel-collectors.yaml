@@ -17,6 +17,13 @@ observability:
           targetPort: 4318
     collectors:
       label: "{{ .Values.observability.otelCollector.label }}-collector"
+      # Node-level collectors mount the host root (hostPath /) and run as root to
+      # read host metrics, which requires `privileged` PodSecurity. To avoid
+      # relaxing PodSecurity for the whole platypod namespace (which runs many
+      # internet-facing apps that process untrusted content), they live in their
+      # own dedicated namespace labelled enforce=privileged. See the Namespace
+      # manifest in templates/observability/nodes-collectors/namespace.yaml.
+      namespace: "{{ .Values.k8s.namespace }}--privileged"
       ports:
         grpc:
           name: otel-grpc

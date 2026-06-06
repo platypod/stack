@@ -24,14 +24,25 @@ data:
     identity_providers:
       oidc:
         cors:
-          allowed_origins:
-          - 'https://*.platypod.ovh'
-          allowed_origins_from_client_redirect_uris: false
+          allowed_origins_from_client_redirect_uris: true
           endpoints:
           - 'authorization'
           - 'token'
           - 'revocation'
           - 'introspection'
+        # Claims policy: inject `groups` (and friends) into the ID token.
+        # By default Authelia (>=4.38) only exposes groups at the userinfo
+        # endpoint, but Grafana evaluates role_attribute_path against the ID
+        # token — so without this, group-based role mapping always falls through
+        # to the default role. Attached to the Grafana client below.
+        claims_policies:
+          platypod:
+            id_token:
+            - 'groups'
+            - 'email'
+            - 'email_verified'
+            - 'name'
+            - 'preferred_username'
         ## See: https://www.authelia.com/c/oidc
         clients:
         - audience:
@@ -55,6 +66,7 @@ data:
         - audience:
           - 'https://{{ tpl .Values.observability.dashboard.host . }}'
           authorization_policy: 'one_factor'
+          claims_policy: 'platypod'
           client_id: '{{ .Values.observability.dashboard.oidc.clientId }}'
           client_name: 'Grafana'
           client_secret: '{{ .Values.observability.dashboard.oidc.clientSecret.hashed }}'
@@ -147,6 +159,11 @@ data:
       secret: {{ .Values.authelia.secrets.session }}
       expiration: 1h
       inactivity: 15m
+      # remember_me extends the session lifetime when the user checks "Remember me" at login.
+      # A long value (e.g. 30d) is recommended for personal clusters so that PWA share targets
+      # (e.g. mediarvester installed on the home screen) can authenticate silently without
+      # being interrupted by a login prompt mid-share. Set to -1 to disable the option entirely.
+      remember_me: 30d
       cookies:
       - domain: {{ .Values.traefik.domain }}
         authelia_url: https://{{ tpl .Values.authelia.host . }}

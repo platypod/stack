@@ -13,6 +13,8 @@ spec:
     metadata:
       labels:
         app: {{ $pod }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/observability/gateway/config-map.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.serviceAccounts.suffix }}
       containers:

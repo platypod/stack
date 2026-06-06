@@ -14,7 +14,26 @@ spec:
     metadata:
       labels:
         app: {{ $pod }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/observability/grafana/config-map.yaml") . | sha256sum }}
     spec:
+      {{- if .Values.traefik.loadBalancerIP }}
+      # Resolve the Authelia hostname to the Traefik LoadBalancer internally so
+      # Grafana's OIDC back-channel (token/userinfo) routes through Traefik,
+      # which injects the X-Forwarded-* headers Authelia needs to build the
+      # correct issuer. Without this, the external domain is NXDOMAIN in-cluster.
+      hostAliases:
+      - ip: {{ .Values.traefik.loadBalancerIP }}
+        hostnames:
+        - {{ tpl .Values.authelia.host . }}
+      {{- end }}
+      initContainers:
+      - name: init-permissions
+        image: busybox
+        command: ['sh', '-c', 'mkdir -p /data/grafana/data /data/grafana/plugins /data/grafana/provisioning && chown -R 472:472 /data/grafana']
+        volumeMounts:
+        - name: {{ $appVolume }}
+          mountPath: /data
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.dashboard.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.observability.dashboard.image }}

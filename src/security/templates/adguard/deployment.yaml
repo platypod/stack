@@ -1,5 +1,7 @@
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.adguard.label .Values.k8s.names.pods.suffix }}
-{{- $appVolume := "app-volume" }}
+{{- $appVolume  := "app-volume" }}
+{{- $confVolume := "conf-volume" }}
+{{- $configMap  := print .Values.k8s.names.configMaps.prefix .Values.adguard.label .Values.k8s.names.configMaps.suffix }}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -14,7 +16,27 @@ spec:
     metadata:
       labels:
         app: {{ $pod }}
+      annotations:
+        # Restart the pod whenever the ConfigMap changes so the new config
+        # (e.g. updated DNS rewrites) is applied immediately.
+        checksum/config: {{ include (print $.Template.BasePath "/adguard/config-map.yaml") . | sha256sum }}
     spec:
+      initContainers:
+      # Copy the ConfigMap into the persistent conf directory on every pod
+      # start. This seeds the config on first boot and re-applies it after
+      # any ConfigMap change (checksum annotation triggers a restart).
+      - name: {{ .Values.k8s.names.initContainers.prefix }}adguard-config-init{{ .Values.k8s.names.initContainers.suffix }}
+        image: busybox
+        command:
+        - sh
+        - -c
+        - cp /tmp/adguard-config/AdGuardHome.yaml /opt/adguardhome/conf/AdGuardHome.yaml
+        volumeMounts:
+        - name: config-map
+          mountPath: /tmp/adguard-config
+          readOnly: true
+        - name: {{ $confVolume }}
+          mountPath: /opt/adguardhome/conf
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.adguard.image }}
@@ -22,17 +44,21 @@ spec:
         - containerPort: {{ .Values.adguard.ports.dnsTcp.targetPort }}
         - containerPort: {{ .Values.adguard.ports.http.targetPort }}
         - containerPort: {{ .Values.adguard.ports.admin.targetPort }}
-        env:
-        - name: AGH_CONFIG
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.configMaps.suffix }}
-              key: AdGuardHome.yaml
         volumeMounts:
+        - mountPath: /opt/adguardhome/conf
+          name: {{ $confVolume }}
         - mountPath: /opt/adguardhome/work
           name: {{ $appVolume }}
           subPath: adguard
       volumes:
+      - name: config-map
+        configMap:
+          name: {{ $configMap }}
+      - name: {{ $confVolume }}
+        # emptyDir: the init container re-seeds from the ConfigMap on every
+        # pod start. Config is always authoritative from the ConfigMap;
+        # changes made via the Adguard UI do not persist across restarts.
+        emptyDir: {}
       - name: {{ $appVolume }}
         persistentVolumeClaim:
           claimName: {{ tpl .Values.adguard.pvc . }}

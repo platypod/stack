@@ -11,7 +11,7 @@ transmission:
     finished: "{{ .Values.media.system.data.path }}/finished"
   exporter:
     label: "{{ .Values.transmission.label }}-exporter"
-    image: ghcr.io/pittinic/transmission-exporter:arm64
+    image: ghcr.io/platypod/transmission-exporter:0.3.0
     ports:
       http:
         name: http

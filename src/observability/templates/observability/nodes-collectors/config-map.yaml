@@ -2,17 +2,19 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Values.k8s.names.configMaps.prefix }}{{ tpl .Values.observability.otelCollector.collectors.label . }}{{ .Values.k8s.names.configMaps.suffix }}
+  namespace: {{ tpl .Values.observability.otelCollector.collectors.namespace . }}
 data:
   collector.yaml: |
     receivers:
       filelog:
+        # Talos uses containerd, not Docker. Kubernetes container logs live at
+        # /var/log/pods/<ns>_<pod>_<uid>/<container>/<n>.log (the Docker path
+        # /var/lib/docker/containers does not exist on Talos).
         include:
-        #- /hostfs/var/log/pods/*/*/*.log
-        - /hostfs/var/lib/docker/containers/*/*.log
+        - /hostfs/var/log/pods/*/*/*.log
         start_at: beginning
         include_file_path: true
         include_file_name: false
-        #operators:
         #- type: container
         #  id: container-parser
       hostmetrics:
@@ -73,7 +75,7 @@ data:
         sampling_initial: 0
         sampling_thereafter: 0
       otlp:
-        endpoint: "{{ .Values.k8s.names.services.prefix }}{{ tpl .Values.observability.otelCollector.gateway.label . }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.otelCollector.gateway.ports.grpc.targetPort }}"
+        endpoint: "{{ .Values.k8s.names.services.prefix }}{{ tpl .Values.observability.otelCollector.gateway.label . }}{{ .Values.k8s.names.services.suffix }}.{{ .Values.k8s.namespace }}.svc.cluster.local:{{ .Values.observability.otelCollector.gateway.ports.grpc.targetPort }}"
         tls:
           insecure: true
 

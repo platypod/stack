@@ -21,10 +21,16 @@ data:
     groups_attribute_path = groups
     login_attribute_path = preferred_username
     name_attribute_path = name
-    role_attribute_path = contains(groups[*], 'admins') && 'Admin' || contains(groups[*], 'dev') && 'Editor' || 'Viewer'
+    ; GrafanaAdmin = full server admin (manage orgs, all users, server settings)
+    ; and implies org Admin. Requires allow_assign_grafana_admin = true below.
+    role_attribute_path = contains(groups, 'admins') && 'GrafanaAdmin' || contains(groups, 'dev') && 'Editor' || 'Viewer'
+    allow_assign_grafana_admin = true
     scopes = openid profile email groups
     token_url = https://{{ tpl .Values.authelia.host . }}/api/oidc/token
     use_pkce = false
+    ; dev uses a self-signed (mkcert) wildcard cert; skip verification on the
+    ; OAuth back-channel only when selfSigned is set. Prod (real ACME cert) → false.
+    tls_skip_verify_insecure = {{ .Values.traefik.tls.selfSigned }}
 
     [log]
     mode = console

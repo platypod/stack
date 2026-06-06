@@ -1,0 +1,58 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.mediarvester.label .Values.k8s.names.pods.suffix }}
+{{- $mediaVolume := "media-volume" }}
+{{- $appVolume := "app-volume" }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.mediarvester.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.mediarvester.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.mediarvester.image }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: {{ .Values.mediarvester.ports.http.name }}
+          containerPort: {{ .Values.mediarvester.ports.http.targetPort }}
+        env:
+        - name: DATABASE_URL
+          value: {{ tpl .Values.mediarvester.database.url . | quote }}
+        - name: MEDIA_ROOT
+          value: /app/downloads
+        - name: COOKIES_ROOT
+          value: /app/cookies
+        - name: AUTH_HEADER
+          value: {{ .Values.mediarvester.auth.header | quote }}
+        - name: DEFAULT_USER
+          value: {{ .Values.mediarvester.auth.defaultUser | quote }}
+        - name: DOWNLOAD_CONCURRENCY
+          value: {{ .Values.mediarvester.downloadConcurrency | quote }}
+        - name: LOG_LEVEL
+          value: {{ .Values.mediarvester.logLevel | quote }}
+        volumeMounts:
+        - mountPath: /app/downloads
+          subPath: {{ .Values.mediarvester.storage.mediaSubPath }}
+          name: {{ $mediaVolume }}
+        - mountPath: /app/cookies
+          subPath: {{ .Values.mediarvester.storage.cookiesSubPath }}
+          name: {{ $appVolume }}
+      volumes:
+      - name: {{ $mediaVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.mediarvester.storage.mediaPvc . }}
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.mediarvester.storage.appsPvc . }}

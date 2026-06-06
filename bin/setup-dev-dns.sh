@@ -1,109 +1,128 @@
 #!/bin/sh
-# Configure dnsmasq so that *.DOMAIN resolves to the Traefik LoadBalancer IP.
-# Reads DOMAIN from values/dev/values.yaml if not set in the environment.
-# Auto-detects TRAEFIK_IP from kubectl; prompts as a fallback.
+# Configure macOS to use Adguard as its system DNS server with 1.1.1.1 as
+# fallback. Adguard handles the *.DOMAIN → Traefik rewrite internally.
+#
+# When the cluster is suspended, Adguard doesn't respond; macOS falls through
+# to 1.1.1.1 for internet DNS. *.platypod.local simply won't resolve — that's
+# expected when the cluster is down.
+#
+# Also cleans up any leftover dnsmasq configuration from the old approach.
 #
 # Usage:
 #   bin/setup-dev-dns.sh
-#   DOMAIN=platypod.local TRAEFIK_IP=192.168.122.200 bin/setup-dev-dns.sh
+#   ADGUARD_IP=192.168.122.201 NETWORK_SERVICE="Wi-Fi" bin/setup-dev-dns.sh
 
 set -e
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 info() { printf '\033[1;33m[info]\033[0m   %s\n' "$*"; }
 ok()   { printf '\033[0;32m[ok]\033[0m     %s\n' "$*"; }
+warn() { printf '\033[0;33m[warn]\033[0m   %s\n' "$*"; }
 die()  { printf '\033[0;31m[error]\033[0m  %s\n' "$*" >&2; exit 1; }
-
-prompt() {
-  local var="$1" label="$2" default="$3"
-  if [ -n "$(eval echo \$$var)" ]; then
-    return
-  fi
-  if [ -n "$default" ]; then
-    printf '%s [%s]: ' "$label" "$default"
-  else
-    printf '%s: ' "$label"
-  fi
-  read -r input
-  eval "$var=\"${input:-$default}\""
-}
-
-# ---------------------------------------------------------------------------
-# Resolve inputs
-# ---------------------------------------------------------------------------
 
 [ "$(uname -s)" = "Darwin" ] || die "This script is macOS-only."
 
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+FALLBACK_DNS="1.1.1.1"
+
+# ---------------------------------------------------------------------------
+# Resolve DOMAIN and NAMESPACE from values files
+# ---------------------------------------------------------------------------
 
 if [ -z "$DOMAIN" ] && command -v yq > /dev/null 2>&1; then
   DOMAIN="$(yq e '.traefik.domain' "$SCRIPT_DIR/values/dev/values.yaml" 2>/dev/null || true)"
 fi
-prompt DOMAIN "Domain" "platypod.local"
-[ -n "$DOMAIN" ] || die "DOMAIN is required."
+DOMAIN="${DOMAIN:-platypod.local}"
 
 if [ -z "$NAMESPACE" ] && command -v yq > /dev/null 2>&1; then
   NAMESPACE="$(yq e '.k8s.namespace' "$SCRIPT_DIR/values/dev/values.yaml" 2>/dev/null || true)"
 fi
 NAMESPACE="${NAMESPACE:-dev-platypod}"
 
-# Auto-detect the Traefik LoadBalancer IP from kubectl if KUBECONFIG is set
-# and Traefik is already deployed. Falls back to interactive prompt.
-if [ -z "$TRAEFIK_IP" ] && command -v kubectl > /dev/null 2>&1 && [ -n "$KUBECONFIG" ]; then
-  info "Auto-detecting Traefik LoadBalancer IP from cluster..."
-  TRAEFIK_IP="$(kubectl get svc traefik -n "$NAMESPACE" \
+# ---------------------------------------------------------------------------
+# Auto-detect Adguard LoadBalancer IP
+# ---------------------------------------------------------------------------
+
+if [ -z "$ADGUARD_IP" ] && command -v kubectl > /dev/null 2>&1 && [ -n "$KUBECONFIG" ]; then
+  info "Auto-detecting Adguard LoadBalancer IP from cluster..."
+  ADGUARD_IP="$(kubectl get svc adguard -n "$NAMESPACE" \
     -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
-  if [ -n "$TRAEFIK_IP" ]; then
-    info "Detected Traefik IP: ${TRAEFIK_IP}"
+  if [ -n "$ADGUARD_IP" ]; then
+    info "Detected Adguard IP: ${ADGUARD_IP}"
   else
-    info "Traefik service not found or no IP yet — enter manually."
+    info "Adguard service not found or no IP yet — enter manually."
   fi
 fi
 
-prompt TRAEFIK_IP "Traefik LoadBalancer IP" ""
-[ -n "$TRAEFIK_IP" ] || die "TRAEFIK_IP is required (deploy core first: make deploy-one MODULE=core)."
+if [ -z "$ADGUARD_IP" ]; then
+  printf 'Adguard LoadBalancer IP: '
+  read -r ADGUARD_IP
+fi
+[ -n "$ADGUARD_IP" ] || die "ADGUARD_IP is required (deploy security first: make deploy-base)."
+
+# ---------------------------------------------------------------------------
+# Auto-detect active network service (e.g. "Wi-Fi", "Ethernet")
+# ---------------------------------------------------------------------------
+
+if [ -z "$NETWORK_SERVICE" ]; then
+  DEFAULT_IFACE="$(route get default 2>/dev/null | awk '/interface:/{print $2}')"
+  if [ -n "$DEFAULT_IFACE" ]; then
+    NETWORK_SERVICE="$(networksetup -listallhardwareports 2>/dev/null \
+      | awk -v dev="$DEFAULT_IFACE" '
+          /Hardware Port:/ { port = substr($0, index($0,$3)) }
+          /Device: / && $2 == dev { print port }
+        ')"
+  fi
+fi
+
+if [ -z "$NETWORK_SERVICE" ]; then
+  info "Could not auto-detect network service. Common values: Wi-Fi, Ethernet"
+  printf 'Network service name: '
+  read -r NETWORK_SERVICE
+fi
+[ -n "$NETWORK_SERVICE" ] || die "NETWORK_SERVICE is required."
+info "Network service: ${NETWORK_SERVICE}"
+
+# ---------------------------------------------------------------------------
+# Set system DNS: Adguard primary, 1.1.1.1 fallback
+# ---------------------------------------------------------------------------
+
+info "Setting system DNS to ${ADGUARD_IP} (primary) and ${FALLBACK_DNS} (fallback)..."
+sudo networksetup -setdnsservers "$NETWORK_SERVICE" "$ADGUARD_IP" "$FALLBACK_DNS"
+ok "System DNS set: ${ADGUARD_IP}, ${FALLBACK_DNS}"
+
+# ---------------------------------------------------------------------------
+# Remove /etc/resolver/DOMAIN — no longer needed (Adguard is system DNS now)
+# ---------------------------------------------------------------------------
+
+if [ -f "/etc/resolver/${DOMAIN}" ]; then
+  sudo rm "/etc/resolver/${DOMAIN}"
+  ok "Removed /etc/resolver/${DOMAIN} (superseded by system DNS)"
+fi
+
+# ---------------------------------------------------------------------------
+# Clean up leftover dnsmasq entry if present
+# ---------------------------------------------------------------------------
 
 DNSMASQ_CONF="/opt/homebrew/etc/dnsmasq.conf"
-ENTRY="address=/.${DOMAIN}/${TRAEFIK_IP}"
-
-# ---------------------------------------------------------------------------
-# Install dnsmasq
-# ---------------------------------------------------------------------------
-
-if ! command -v dnsmasq > /dev/null 2>&1; then
-  info "Installing dnsmasq via brew..."
-  brew install dnsmasq
-fi
-
-# ---------------------------------------------------------------------------
-# Configure dnsmasq
-# ---------------------------------------------------------------------------
-
 if grep -q "address=/\.${DOMAIN}/" "$DNSMASQ_CONF" 2>/dev/null; then
-  sed -i '' "s|address=/\.${DOMAIN}/.*|${ENTRY}|" "$DNSMASQ_CONF"
-  ok "Updated dnsmasq entry: ${ENTRY}"
-else
-  echo "$ENTRY" >> "$DNSMASQ_CONF"
-  ok "Added dnsmasq entry: ${ENTRY}"
+  sed -i '' "/address=\/\.${DOMAIN}\//d" "$DNSMASQ_CONF"
+  ok "Removed stale dnsmasq entry for .${DOMAIN}"
+  if command -v brew > /dev/null 2>&1 && brew services list 2>/dev/null | grep -q "^dnsmasq.*started"; then
+    sudo brew services restart dnsmasq
+    info "dnsmasq restarted to pick up config change"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
-# Configure macOS resolver
+# Flush DNS cache
 # ---------------------------------------------------------------------------
 
-sudo mkdir -p /etc/resolver
-printf 'nameserver 127.0.0.1\n' | sudo tee "/etc/resolver/${DOMAIN}" > /dev/null
-ok "Resolver created: /etc/resolver/${DOMAIN}"
-
-# ---------------------------------------------------------------------------
-# Restart dnsmasq
-# ---------------------------------------------------------------------------
-
-sudo brew services restart dnsmasq
-ok "dnsmasq restarted"
+sudo dscacheutil -flushcache
+sudo killall -HUP mDNSResponder 2>/dev/null || true
+ok "DNS cache flushed"
 
 echo ""
-ok "All *.${DOMAIN} → ${TRAEFIK_IP}"
+ok "System DNS: ${ADGUARD_IP} (Adguard) → ${FALLBACK_DNS} (fallback)"
+info "*.${DOMAIN} resolves via Adguard → Traefik (${ADGUARD_IP} rewrites to Traefik LB IP)."
+info "When the cluster is suspended, internet DNS falls through to ${FALLBACK_DNS}."
+info "*.${DOMAIN} will not resolve while the cluster is down — that's expected."

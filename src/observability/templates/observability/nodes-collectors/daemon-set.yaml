@@ -4,6 +4,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: {{ $pod }}
+  namespace: {{ tpl .Values.observability.otelCollector.collectors.namespace . }}
 spec:
   selector:
     matchLabels:
@@ -12,8 +13,10 @@ spec:
     metadata:
       labels:
         app: {{ $pod }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/observability/nodes-collectors/config-map.yaml") . | sha256sum }}
     spec:
-      serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.serviceAccounts.suffix }}
+      serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ tpl .Values.observability.otelCollector.collectors.label . }}{{ .Values.k8s.names.serviceAccounts.suffix }}
       securityContext:
         runAsUser: 0
         fsGroup: 0

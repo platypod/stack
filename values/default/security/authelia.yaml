@@ -61,7 +61,7 @@ authelia:
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.rommapp.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.readarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.youtubeDownloader.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.mediarvester.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
 
     - subject:
       - group:download
@@ -111,6 +111,8 @@ authelia:
       email: pl@ty.pod
       groups:
       - admins
+      - dev
+      - download
       - media
     dave:
       displayname: dave

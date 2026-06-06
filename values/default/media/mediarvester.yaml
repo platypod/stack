@@ -1,0 +1,23 @@
+mediarvester:
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.mediarvester.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: ghcr.io/platypod/mediarvester:latest
+  label: mediarvester
+  ports:
+    http:
+      name: http
+      targetPort: 8080
+  database:
+    # SQLAlchemy async connection string to the shared media PostgreSQL.
+    url: "postgresql+asyncpg://{{ .Values.database.credentials.username }}:{{ .Values.database.credentials.password }}@{{ .Values.k8s.names.services.prefix }}{{ .Values.database.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.database.ports.http.targetPort }}/{{ .Values.database.schemas.mediarvester.main }}"
+  auth:
+    # Authelia forwards the authenticated user via this header (see authResponseHeaders).
+    header: Remote-User
+    defaultUser: anonymous
+  downloadConcurrency: 2
+  logLevel: INFO
+  storage:
+    mediaPvc: "{{ .Values.storage.defaultVolumes.media }}"
+    mediaSubPath: mediarvester
+    appsPvc: "{{ .Values.storage.defaultVolumes.apps }}"
+    cookiesSubPath: mediarvester/cookies
+  replicasNb: 1

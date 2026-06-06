@@ -195,11 +195,6 @@ data:
           processors: [attributes/prometheus, batch, memory_limiter]
           exporters: [otlphttp/victoriametrics]
 
-        metrics/kubernetes:
-          receivers: [prometheus/kubernetes]
-          processors: [attributes/reivi, batch, memory_limiter]
-          exporters: [otlphttp/victoriametrics]
-
         traces:
           receivers: [otlp]
           processors: [batch, memory_limiter]

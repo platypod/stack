@@ -1,0 +1,23 @@
+{{- /*
+  Dedicated namespace for node-level agents that legitimately need elevated
+  host access (the OTel node collector mounts hostPath / and runs as root to
+  read host metrics).
+
+  WHY a separate namespace:
+  The main platypod namespace runs many internet-facing apps that process
+  untrusted content (the *arr stack, torrent clients, Jellyfin, Flaresolverr,
+  CyberChef, Bookstack). PodSecurity `baseline` (Talos default) blocks the
+  container-escape primitives (hostPath, privileged, host namespaces) for that
+  namespace — exactly where we want that guardrail. Relaxing the whole namespace
+  to `privileged` to satisfy one first-party metrics agent would remove that
+  protection for everything. Instead, only this namespace is `privileged`, and
+  it contains nothing but the node collectors we build and control.
+*/ -}}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ tpl .Values.observability.otelCollector.collectors.namespace . }}
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: privileged
+    pod-security.kubernetes.io/audit: privileged

@@ -31,7 +31,7 @@ bin/build.sh histube latest
 bin/build.sh transmission-exporter arm64
 ```
 
-Builds from `images/<name>/Dockerfile` and pushes to `ghcr.io/pittinic/<name>:<version>`.
+Builds from `images/<name>/Dockerfile` and pushes to `ghcr.io/platypod/<name>:<version>`.
 Requires docker authenticated to ghcr.io:
 ```sh
 echo $GITHUB_TOKEN | docker login ghcr.io -u pittinic --password-stdin

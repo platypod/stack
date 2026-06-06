@@ -48,10 +48,10 @@ data:
             type: jellyseerr
             url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.services.suffix }}
             key: {{ .Values.jellyseerr.apiKey }}
-      - Youtube-Downloader:
-          abbr: YD
-          href: https://{{ tpl .Values.youtubeDownloader.host . }}
-          description: Youtube videos or playlists downloader.
+      - Mediarvester:
+          abbr: MR
+          href: https://{{ tpl .Values.mediarvester.host . }}
+          description: Multi-platform media downloader (YouTube, Instagram, X, …).
     - Files:
       - Transmission:
           abbr: TR

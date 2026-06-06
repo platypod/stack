@@ -4,7 +4,7 @@ MODULE ?=
 # Always point at the kubeconfig written by infra-as-code/k8s-in-vms,
 # ignoring any KUBECONFIG already set in the shell (e.g. OrbStack).
 # Command-line override still works: make deploy KUBECONFIG=/other/path
-export KUBECONFIG := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/../infra-as-code/k8s-in-vms/.generated/$(ENV)/kubeconfig
+export KUBECONFIG := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/../infra/k8s-in-vms/.generated/$(ENV)/kubeconfig
 
 HELMFILE = helmfile --environment $(ENV)
 SELECTOR = $(if $(MODULE),--selector name=$(ENV)--platypod--$(MODULE),)
@@ -29,7 +29,7 @@ check-deps:    ## Check which tools are installed without installing anything
 setup-dev-tls:  ## Trust mkcert CA + create/refresh wildcard TLS secret in the cluster
 	@sh bin/setup-dev-tls.sh
 
-setup-dev-dns:  ## Configure dnsmasq for *.platypod.local → Traefik LB IP (auto-detected)
+setup-dev-dns:  ## Set system DNS to Adguard (primary) + 1.1.1.1 (fallback); clean up dnsmasq
 	@sh bin/setup-dev-dns.sh
 
 setup-dev: setup-dev-tls install-crds  ## Full dev bootstrap: TLS, CRDs, base deploy, DNS
