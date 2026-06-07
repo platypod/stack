@@ -1,0 +1,117 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.outline.label .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.outline.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      {{- if .Values.traefik.loadBalancerIP }}
+      # Resolve Authelia hostname to Traefik LoadBalancer so back-channel OIDC
+      # routes through Traefik (which injects X-Forwarded-* headers Authelia needs).
+      hostAliases:
+      - ip: {{ .Values.traefik.loadBalancerIP }}
+        hostnames:
+        - {{ tpl .Values.authelia.host . }}
+      {{- end }}
+      initContainers:
+      - name: wait-for-db
+        image: {{ .Values.outline.database.image }}
+        command:
+        - /bin/sh
+        - -c
+        - |
+          until pg_isready -h {{ .Values.k8s.names.services.prefix }}{{ tpl .Values.outline.database.label . }}{{ .Values.k8s.names.services.suffix }} -p {{ .Values.outline.database.ports.http.targetPort }}; do
+            sleep 2
+          done
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            memory: 64Mi
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.outline.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.outline.image }}
+        resources:
+          {{- toYaml .Values.outline.resources | nindent 10 }}
+        ports:
+        - name: {{ .Values.outline.ports.http.name }}
+          containerPort: {{ .Values.outline.ports.http.targetPort }}
+        env:
+        - name: NODE_ENV
+          value: production
+        - name: SECRET_KEY
+          value: "{{ .Values.outline.secretKey }}"
+        - name: UTILS_SECRET
+          value: "{{ .Values.outline.utilsSecret }}"
+        - name: DATABASE_URL
+          value: "postgres://{{ tpl .Values.outline.database.credentials.username . }}:{{ tpl .Values.outline.database.credentials.password . }}@{{ .Values.k8s.names.services.prefix }}{{ tpl .Values.outline.database.label . }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.outline.database.ports.http.targetPort }}/{{ tpl .Values.outline.database.name . }}"
+        - name: REDIS_URL
+          value: "redis://{{ .Values.k8s.names.services.prefix }}{{ tpl .Values.outline.redis.label . }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.outline.redis.ports.http.targetPort }}"
+        - name: URL
+          value: "https://{{ tpl .Values.outline.host . }}"
+        - name: PORT
+          value: "{{ .Values.outline.ports.http.targetPort }}"
+        - name: OIDC_CLIENT_ID
+          value: "{{ .Values.outline.oidc.clientId }}"
+        - name: OIDC_CLIENT_SECRET
+          value: "{{ .Values.outline.oidc.clientSecret.plain }}"
+        - name: OIDC_AUTH_URI
+          value: "https://{{ tpl .Values.authelia.host . }}/api/oidc/authorization"
+        - name: OIDC_TOKEN_URI
+          value: "https://{{ tpl .Values.authelia.host . }}/api/oidc/token"
+        - name: OIDC_USERINFO_URI
+          value: "https://{{ tpl .Values.authelia.host . }}/api/oidc/userinfo"
+        - name: OIDC_LOGOUT_URI
+          value: "https://{{ tpl .Values.authelia.host . }}/logout"
+        - name: OIDC_DISPLAY_NAME
+          value: "{{ .Values.outline.oidc.displayName }}"
+        - name: OIDC_SCOPES
+          value: "openid profile email"
+        - name: OIDC_USERNAME_CLAIM
+          value: preferred_username
+        - name: FILE_STORAGE
+          value: local
+        - name: FILE_STORAGE_LOCAL_ROOT_DIR
+          value: /var/lib/outline/data
+        - name: FILE_STORAGE_UPLOAD_MAX_SIZE
+          value: "26214400"
+        - name: FORCE_HTTPS
+          value: "false"
+        - name: PGSSLMODE
+          value: disable
+        {{- if .Values.traefik.tls.selfSigned }}
+        - name: NODE_EXTRA_CA_CERTS
+          value: /etc/ssl/mkcert/rootCA.pem
+        {{- end }}
+        volumeMounts:
+        {{- if .Values.traefik.tls.selfSigned }}
+        - mountPath: /etc/ssl/mkcert/rootCA.pem
+          name: mkcert-ca
+          subPath: rootCA.pem
+        {{- end }}
+        - mountPath: /var/lib/outline/data
+          name: outline-data
+          subPath: {{ .Values.outline.label }}
+      volumes:
+      {{- if .Values.traefik.tls.selfSigned }}
+      - name: mkcert-ca
+        configMap:
+          name: mkcert-ca
+      {{- end }}
+      - name: outline-data
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.outline.storage.pvc . }}

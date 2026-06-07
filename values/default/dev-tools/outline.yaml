@@ -1,0 +1,58 @@
+outline:
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.outline.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: outlinewiki/outline:latest
+  label: outline
+  secretKey: 60aa61ff577303bd4ec1043e3d684337c520cd9894553a22c507f0f308f699e2
+  utilsSecret: fb7285f1066b5c20bf39738cd3900f6dc468f75e06ae1747485ac9a7861f19e5
+  database:
+    host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.outline.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+    name: "{{ .Values.outline.label }}"
+    credentials:
+      username: "{{ .Values.outline.label }}User"
+      password: "{{ .Values.outline.label }}Password"
+    image: postgres:17
+    label: "{{ .Values.outline.label }}-db"
+    ports:
+      http:
+        name: pgsql
+        targetPort: 5432
+    replicasNb: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
+  redis:
+    image: redis:7-alpine
+    label: "{{ .Values.outline.label }}-redis"
+    ports:
+      http:
+        name: redis
+        targetPort: 6379
+    replicasNb: 1
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 64Mi
+  oidc:
+    clientId: e86ca919127d25888251274807628b7a4efa79345fec380fd78e4ef3e4493dec
+    clientSecret:
+      plain: 5b384522d84b06b25416238f9d79ae6989ac10c81e00217e07c5153c34c1812c
+      hashed: "$argon2id$v=19$m=65536,t=3,p=4$ZpeRbwdDPPMXHoqmLYQiyg$jqRM6FQI481hJMb4uL/VUoEpu0X/B2bGoE8mOX5OJVQ"
+    displayName: Authelia
+  ports:
+    http:
+      name: http
+      targetPort: 3000
+  storage:
+    pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  replicasNb: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi

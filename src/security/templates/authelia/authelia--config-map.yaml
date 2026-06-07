@@ -104,6 +104,23 @@ data:
           # (client_secret_post), not the Authorization header (basic).
           token_endpoint_auth_method: 'client_secret_post'
           userinfo_signed_response_alg: 'none'
+        - audience:
+          - 'https://{{ tpl .Values.outline.host . }}'
+          authorization_policy: 'one_factor'
+          claims_policy: 'platypod'
+          client_id: '{{ .Values.outline.oidc.clientId }}'
+          client_name: 'Outline'
+          client_secret: '{{ .Values.outline.oidc.clientSecret.hashed }}'
+          consent_mode: implicit
+          public: false
+          redirect_uris:
+          - 'https://{{ tpl .Values.outline.host . }}/auth/oidc.callback'
+          scopes:
+          - 'openid'
+          - 'profile'
+          - 'email'
+          token_endpoint_auth_method: 'client_secret_post'
+          userinfo_signed_response_alg: 'none'
         jwks:
         - key: {{ $jwks.Key | quote }}
           #certificate_chain: {{ $jwks.Cert | quote }}
