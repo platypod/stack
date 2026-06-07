@@ -1,0 +1,51 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.lldap.label .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.lldap.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.lldap.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.lldap.image }}
+        resources:
+          {{- toYaml .Values.lldap.resources | nindent 10 }}
+        ports:
+        - name: {{ .Values.lldap.ports.http.name }}
+          containerPort: {{ .Values.lldap.ports.http.targetPort }}
+        - name: {{ .Values.lldap.ports.ldap.name }}
+          containerPort: {{ .Values.lldap.ports.ldap.targetPort }}
+        env:
+        - name: LLDAP_JWT_SECRET
+          value: "{{ .Values.lldap.jwtSecret }}"
+        - name: LLDAP_LDAP_USER_PASS
+          value: "{{ .Values.lldap.adminPassword }}"
+        - name: LLDAP_LDAP_BASE_DN
+          value: "{{ .Values.lldap.baseDn }}"
+        - name: LLDAP_HTTP_URL
+          value: "https://{{ tpl .Values.lldap.host . }}"
+        - name: LLDAP_DATABASE_URL
+          value: "postgres://{{ tpl .Values.lldap.database.credentials.username . }}:{{ tpl .Values.lldap.database.credentials.password . }}@{{ .Values.k8s.names.services.prefix }}{{ tpl .Values.lldap.database.label . }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.lldap.database.ports.http.targetPort }}/{{ tpl .Values.lldap.database.name . }}"
+      initContainers:
+      - name: wait-for-db
+        image: {{ .Values.lldap.database.image }}
+        command: ["sh", "-c", "until pg_isready -h {{ .Values.k8s.names.services.prefix }}{{ tpl .Values.lldap.database.label . }}{{ .Values.k8s.names.services.suffix }} -p {{ .Values.lldap.database.ports.http.targetPort }}; do sleep 2; done"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            memory: 64Mi

@@ -65,7 +65,7 @@ deploy-base:   ## Deploy always-on base only: persistence, core, security  (ENV=
 	@helmfile --environment $(ENV) --selector name=$(ENV)--platypod--security sync
 
 deploy:        ## Deploy full stack or a single module  (ENV=dev MODULE=core)
-	$(HELMFILE) $(SELECTOR) sync
+	$(HELMFILE) $(SELECTOR) sync --args="--timeout 10m0s"
 
 destroy:       ## Destroy full stack or a single module  (ENV=dev MODULE=core)
 	$(HELMFILE) $(SELECTOR) destroy

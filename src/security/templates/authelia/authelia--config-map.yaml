@@ -9,11 +9,7 @@ metadata:
 data:
   setup.sh: |
     #!/bin/sh
-    cp /users_database.yml /config/users_database.yml
     cp /configuration.yml /config/configuration.yml
-  users_database.yml: |
-    users:
-      {{- toYaml .Values.authelia.users | nindent 6}}
   configuration.yml: |
     theme: dark
 
@@ -181,16 +177,13 @@ data:
           idle: 30s
 
     authentication_backend:
-      file:
-        path: /config/users_database.yml
-        watch: false
-        # customize passwords based on https://docs.authelia.com/configuration/authentication/file.html
-        password:
-          algorithm: argon2id
-          iterations: 1
-          salt_length: 16
-          parallelism: 8
-          memory: 1024 # blocks this much of the RAM. Tune this.
+      ldap:
+        # Authelia 4.38+ ships a built-in lldap preset — covers all filter/attribute defaults.
+        implementation: lldap
+        address: ldap://{{ .Values.k8s.names.services.prefix }}{{ .Values.lldap.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.lldap.ports.ldap.targetPort }}
+        base_dn: {{ .Values.lldap.baseDn }}
+        user: uid={{ .Values.lldap.adminUser }},ou=people,{{ .Values.lldap.baseDn }}
+        password: {{ .Values.lldap.adminPassword }}
 
     session:
       name: authelia_session

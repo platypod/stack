@@ -1,0 +1,77 @@
+lldap:
+  label: lldap
+  image: lldap/lldap:stable
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.lldap.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  # Internal LDAP base DN — environment-independent, not tied to the public domain.
+  baseDn: dc=platypod,dc=home
+  # LLDAP always exposes its bind user as uid=admin,ou=people,<baseDn>.
+  adminUser: admin
+  adminPassword: platypod-password
+  jwtSecret: eeaec9bbe54597b5e9cb767a0db1f72ca146be3ec83fde39905444773adbd1e6
+  database:
+    image: postgres:17
+    name: "{{ .Values.lldap.label }}"
+    label: "{{ .Values.lldap.label }}-db"
+    credentials:
+      username: "{{ .Values.lldap.label }}User"
+      password: "{{ .Values.lldap.label }}Password"
+    ports:
+      http:
+        name: pgsql
+        targetPort: 5432
+    replicasNb: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
+  ports:
+    http:
+      name: http
+      targetPort: 17170
+    ldap:
+      name: ldap
+      targetPort: 3890
+  storage:
+    pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  # Post-install/upgrade hook that pre-creates groups and users via the LLDAP
+  # REST/GraphQL API. Idempotent: skips already-existing groups/users.
+  # Passwords are only set on user creation — existing users keep theirs.
+  # The built-in LLDAP 'admin' user is always skipped (its password comes from
+  # the LLDAP_LDAP_USER_PASS env var, not this job).
+  seed:
+    image: python:3-alpine
+    groups:
+      - admins
+      - dev
+      - download
+      - media
+    users:
+      - id: admin
+        email: pl@ty.pod
+        displayName: admini
+        password: platypod-password
+        groups:
+          - admins
+          - dev
+          - download
+          - media
+      - id: dave
+        email: dave.thedev@gmail.com
+        displayName: dave
+        password: davethedev
+        groups:
+          - dev
+      - id: guest
+        email: gues@ty.pod
+        displayName: guesto
+        password: guest-password
+        groups: []
+  replicasNb: 1
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 64Mi

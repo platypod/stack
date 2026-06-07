@@ -48,9 +48,6 @@ spec:
         - mountPath: /setup.sh
           name: {{ $configMap }}
           subPath: setup.sh
-        - mountPath: /users_database.yml
-          name: {{ $configMap }}
-          subPath: users_database.yml
         - mountPath: /configuration.yml
           name: {{ $configMap }}
           subPath: configuration.yml

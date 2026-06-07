@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.k8s.names.services.prefix }}{{ tpl .Values.lldap.database.label . }}{{ .Values.k8s.names.services.suffix }}
+
+spec:
+  selector:
+    app: {{ .Values.k8s.names.pods.prefix }}{{ tpl .Values.lldap.database.label . }}{{ .Values.k8s.names.pods.suffix }}
+  ports:
+  - name: {{ .Values.lldap.database.ports.http.name }}
+    port: {{ .Values.lldap.database.ports.http.targetPort }}
+    targetPort: {{ .Values.lldap.database.ports.http.targetPort }}

@@ -1,0 +1,178 @@
+{{- /*
+  Seed LLDAP with groups and users after deploy.
+
+  Flow per run (idempotent):
+    1. Wait for LLDAP HTTP to be ready.
+    2. Log in as the LLDAP admin (credentials from env).
+    3. Create any missing groups.
+    4. For each user (excluding the built-in 'admin'):
+         - Create the user if absent, then set its initial password via the
+           resetUserPasswordAsAdmin → /auth/reset/step2 flow.
+         - Assign the user to its declared groups (skips existing memberships).
+    5. The built-in LLDAP admin user is skipped entirely — its password is
+       managed by the LLDAP_LDAP_USER_PASS env var on the LLDAP pod.
+
+  Re-running after a redeploy is harmless: existing users, groups, and
+  memberships are left untouched, missing ones are added.
+*/ -}}
+{{- $lldapSvc := print .Values.k8s.names.services.prefix .Values.lldap.label .Values.k8s.names.services.suffix }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.lldap.label }}-seed
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.lldap.label }}-seed
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: seed
+        image: {{ .Values.lldap.seed.image }}
+        env:
+        - name: LLDAP_URL
+          value: "http://{{ $lldapSvc }}:{{ .Values.lldap.ports.http.targetPort }}"
+        - name: LLDAP_ADMIN_USER
+          value: "{{ .Values.lldap.adminUser }}"
+        - name: LLDAP_ADMIN_PASS
+          value: "{{ .Values.lldap.adminPassword }}"
+        - name: GROUPS
+          value: {{ .Values.lldap.seed.groups | toJson | quote }}
+        - name: USERS
+          value: {{ .Values.lldap.seed.users | toJson | quote }}
+        command:
+        - python3
+        - -c
+        - |
+          import json, os, sys, time, urllib.request, urllib.error
+
+          BASE   = os.environ["LLDAP_URL"]
+          ADMIN  = os.environ["LLDAP_ADMIN_USER"]
+          PASSWD = os.environ["LLDAP_ADMIN_PASS"]
+          GROUPS = json.loads(os.environ["GROUPS"])
+          USERS  = json.loads(os.environ["USERS"])
+
+          def req(method, path, data=None, token=None):
+              body = json.dumps(data).encode() if data is not None else None
+              headers = {"Content-Type": "application/json"}
+              if token:
+                  headers["Authorization"] = f"Bearer {token}"
+              r = urllib.request.Request(BASE + path, data=body, headers=headers, method=method)
+              try:
+                  with urllib.request.urlopen(r) as resp:
+                      return json.loads(resp.read())
+              except urllib.error.HTTPError as e:
+                  raise RuntimeError(f"{method} {path} → {e.code}: {e.read().decode()}") from e
+
+          def gql(query, variables=None, token=None):
+              resp = req("POST", "/api/graphql", {"query": query, "variables": variables or {}}, token)
+              if "errors" in resp:
+                  raise RuntimeError(f"GraphQL error: {resp['errors']}")
+              return resp["data"]
+
+          # 1. Wait for LLDAP and login.
+          # LLDAP has no /health; we probe the login endpoint directly.
+          # Connection errors mean "not up yet"; any HTTP response means "up".
+          # Retry both connection errors AND 401s: LLDAP updates the admin
+          # password from LLDAP_LDAP_USER_PASS on restart, so the old pod may
+          # still be serving requests with the old password during a rolling update.
+          print("Waiting for LLDAP and successful login...")
+          token = None
+          for attempt in range(40):
+              try:
+                  token = req("POST", "/auth/simple/login", {"username": ADMIN, "password": PASSWD})["token"]
+                  break
+              except Exception as e:
+                  print(f"  attempt {attempt+1}: {e}")
+                  time.sleep(3)
+          if not token:
+              print("Could not log in to LLDAP after 120s — aborting.", file=sys.stderr)
+              sys.exit(1)
+          print("Logged in.")
+
+          # 3. Ensure groups exist
+          existing = {g["displayName"]: g["id"] for g in gql("{ groups { id displayName } }", token=token)["groups"]}
+          group_ids = {}
+          for name in GROUPS:
+              if name in existing:
+                  group_ids[name] = existing[name]
+                  print(f"Group '{name}' already exists.")
+              else:
+                  gid = gql(
+                      "mutation C($n: String!) { createGroup(name: $n) { id } }",
+                      {"n": name}, token
+                  )["createGroup"]["id"]
+                  group_ids[name] = gid
+                  print(f"Created group '{name}' (id={gid}).")
+
+          # 4. Ensure users exist
+          existing_uids = {u["id"] for u in gql("{ users { id } }", token=token)["users"]}
+
+          for user in USERS:
+              uid = user["id"]
+
+              # The built-in LLDAP admin already exists — skip creation and password
+              # reset (its password is managed by LLDAP_LDAP_USER_PASS), but DO
+              # update its email/displayName so Authelia can pass them to apps.
+              if uid == ADMIN:
+                  gql(
+                      """mutation U($u: UpdateUserInput!) { updateUser(user: $u) { ok } }""",
+                      {"u": {
+                          "id":          uid,
+                          "email":       user.get("email", f"{uid}@platypod.local"),
+                          "displayName": user.get("displayName", uid),
+                      }},
+                      token,
+                  )
+                  print(f"Updated profile for built-in admin '{uid}'.")
+              elif uid in existing_uids:
+                  print(f"User '{uid}' already exists — skipping creation.")
+              else:
+                  gql(
+                      """mutation C($u: CreateUserInput!) { createUser(user: $u) { id } }""",
+                      {"u": {
+                          "id":          uid,
+                          "email":       user.get("email", f"{uid}@platypod.local"),
+                          "displayName": user.get("displayName", uid),
+                          "firstName":   user.get("firstName", ""),
+                          "lastName":    user.get("lastName", ""),
+                      }},
+                      token,
+                  )
+                  print(f"Created user '{uid}'.")
+
+                  # Set initial password via admin reset flow.
+                  reset_tok = gql(
+                      'mutation { resetUserPasswordAsAdmin(userId: "%s") }' % uid,
+                      token=token,
+                  )["resetUserPasswordAsAdmin"]
+                  req("PUT", "/auth/reset/step2", {"token": reset_tok, "new_password": user["password"]})
+                  print(f"Password set for '{uid}'.")
+
+              # Assign groups (idempotent)
+              current_gids = {
+                  g["id"]
+                  for g in gql(
+                      '{ user(userId: "%s") { groups { id } } }' % uid, token=token
+                  )["user"]["groups"]
+              }
+              for gname in user.get("groups", []):
+                  gid = group_ids.get(gname)
+                  if gid is None:
+                      print(f"  Warning: group '{gname}' not found, skipping.")
+                  elif gid in current_gids:
+                      print(f"  '{uid}' already in '{gname}'.")
+                  else:
+                      gql(
+                          'mutation { addUserToGroup(userId: "%s", groupId: %d) { ok } }' % (uid, gid),
+                          token=token,
+                      )
+                      print(f"  Added '{uid}' -> '{gname}'.")
+
+          print("Seed complete.")
