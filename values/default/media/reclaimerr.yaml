@@ -1,0 +1,17 @@
+reclaimerr:
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.reclaimerr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: ghcr.io/jessielw/reclaimerr:latest
+  label: reclaimerr
+  ports:
+    http:
+      name: http
+      targetPort: 8000
+  pvc:
+    app: "{{ .Values.storage.defaultVolumes.apps }}"
+  replicasNb: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi

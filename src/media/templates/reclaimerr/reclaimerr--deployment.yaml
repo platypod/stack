@@ -1,0 +1,41 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.reclaimerr.label .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.reclaimerr.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.reclaimerr.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.reclaimerr.image }}
+        resources:
+          {{- toYaml .Values.reclaimerr.resources | nindent 10 }}
+        ports:
+        - name: {{ .Values.reclaimerr.ports.http.name }}
+          containerPort: {{ .Values.reclaimerr.ports.http.targetPort }}
+        env:
+        - name: API_HOST
+          value: "0.0.0.0"
+        - name: API_PORT
+          value: "{{ .Values.reclaimerr.ports.http.targetPort }}"
+        volumeMounts:
+        - mountPath: /app/data
+          name: data
+          subPath: {{ .Values.reclaimerr.label }}
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.reclaimerr.pvc.app . }}
