@@ -1,0 +1,44 @@
+{{- /*
+  RBAC for the OIDC seed Job's reload step: after seeding the strategy into the
+  DB, the Job rolls the Wiki.js Deployment so it reloads auth strategies (Wiki.js
+  only reads them at boot). Scoped to patching this namespace's deployments.
+  Created as hook resources (lower weight) so they exist before the Job runs.
+*/ -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.wikijs.label }}-oidc-seed
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Values.wikijs.label }}-oidc-seed
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.wikijs.label }}-oidc-seed
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.wikijs.label }}-oidc-seed
+  namespace: {{ .Values.k8s.namespace }}
+roleRef:
+  kind: Role
+  name: {{ .Values.wikijs.label }}-oidc-seed
+  apiGroup: rbac.authorization.k8s.io

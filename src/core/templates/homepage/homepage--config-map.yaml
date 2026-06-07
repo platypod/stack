@@ -98,6 +98,10 @@ data:
           abbr: BS
           href: https://{{ tpl .Values.bookstack.host . }}
           description: Simple, open-source, self-hosted, easy-to-use platform for organising and storing information.
+      - Wiki.js:
+          abbr: WJ
+          href: https://{{ tpl .Values.wikijs.host . }}
+          description: Powerful, extensible, open-source wiki with a modern editor and Git sync.
       - IT-Tools:
           href: https://{{ tpl .Values.itTools.host . }}
           description: Useful tools for developer and people working in IT.

@@ -28,7 +28,7 @@ helmfile.yaml.gotmpl    # Environments, value loading order, release dependency 
 | `core` | Traefik, Homepage |
 | `security` | Adguard, Authelia, CyberChef |
 | `observability` | OtelCollector, Loki, Tempo, VictoriaMetrics, Grafana |
-| `dev-tools` | Bookstack, PostgreSQL, IT-Tools, WhoAmI, DBeaver |
+| `dev-tools` | Bookstack, Wiki.js, PostgreSQL, IT-Tools, WhoAmI, DBeaver |
 | `files` | Transmission, QBitTorrent, Deluge |
 | `media` | Jellyfin, Prowlarr, Radarr, Sonarr, Readarr, Bazarr, Jellyseerr, Flaresolverr, Mediarvester, PostgreSQL |
 | `games` | RommApp, Pokeclicker |

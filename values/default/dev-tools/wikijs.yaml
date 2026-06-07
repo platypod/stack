@@ -1,0 +1,52 @@
+wikijs:
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.wikijs.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: ghcr.io/requarks/wiki:2
+  label: wikijs
+  database:
+    host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.wikijs.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+    name: "{{ .Values.wikijs.label }}"
+    credentials:
+      username: "{{ .Values.wikijs.label }}User"
+      password: "{{ .Values.wikijs.label }}Password"
+    image: postgres:17
+    label: "{{ .Values.wikijs.label }}-db"
+    ports:
+      http:
+        name: pgsql
+        targetPort: 5432
+    replicasNb: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
+  # Wiki.js v2 configures auth strategies in its admin UI / DB, NOT via env.
+  # These OIDC credentials are pre-provisioned in Authelia; paste them into
+  # Wiki.js > Administration > Authentication > add "Generic OpenID Connect".
+  oidc:
+    clientId: 5fc8d860b8ed729d50be5904a6ef171a6bae31ee584703577ac4d0fdf8f5d840
+    clientSecret:
+      plain: 318c61c011d3c6e12949167a4c9c81b2acf6dbc5d74654bbccc11e5af8e04c27
+      hashed: $argon2id$v=19$m=65536,t=3,p=4$XQL1zU2YSQzNSDCf5rLCeA$OkgBXbLISt8tQLKa6lQNAA905GKKSnpZaTSa6kdX7B8
+    # The wikijs-oidc-seed hook Job seeds the OIDC strategy with key='authelia',
+    # and Wiki.js derives the callback as ${host}/login/${key}/callback — so this
+    # redirect URI is deterministic.
+    redirectUri: "https://{{ tpl .Values.wikijs.host . }}/login/authelia/callback"
+  ports:
+    http:
+      name: http
+      targetPort: 3000
+  storage:
+    pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  # Post-install/upgrade hook Job that seeds the OIDC strategy then rolls Wiki.js
+  # so it reloads strategies. kubectlImage is the official k8s-published image.
+  seed:
+    kubectlImage: registry.k8s.io/kubectl:v1.34.0
+  replicasNb: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi

@@ -85,6 +85,25 @@ data:
           #token_endpoint_auth_method: 'private_key_jwt'
           # disable signing for userinfo
           userinfo_signed_response_alg: 'none'
+        - audience:
+          - 'https://{{ tpl .Values.wikijs.host . }}'
+          authorization_policy: 'one_factor'
+          claims_policy: 'platypod'
+          client_id: '{{ .Values.wikijs.oidc.clientId }}'
+          client_name: 'Wiki.js'
+          client_secret: '{{ .Values.wikijs.oidc.clientSecret.hashed }}'
+          public: false
+          redirect_uris:
+          - '{{ tpl .Values.wikijs.oidc.redirectUri . }}'
+          scopes:
+          - 'openid'
+          - 'profile'
+          - 'groups'
+          - 'email'
+          # Wiki.js's passport-openidconnect sends the client secret in the body
+          # (client_secret_post), not the Authorization header (basic).
+          token_endpoint_auth_method: 'client_secret_post'
+          userinfo_signed_response_alg: 'none'
         jwks:
         - key: {{ $jwks.Key | quote }}
           #certificate_chain: {{ $jwks.Cert | quote }}

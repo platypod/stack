@@ -1,0 +1,70 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.wikijs.label .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.wikijs.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      {{- if .Values.traefik.loadBalancerIP }}
+      # Resolve the Authelia hostname to the Traefik LoadBalancer internally so
+      # Wiki.js's OIDC discovery/back-channel routes through Traefik (which
+      # injects the X-Forwarded-* headers Authelia needs to build the correct
+      # issuer). Without this the external domain is NXDOMAIN in-cluster.
+      hostAliases:
+      - ip: {{ .Values.traefik.loadBalancerIP }}
+        hostnames:
+        - {{ tpl .Values.authelia.host . }}
+      {{- end }}
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.wikijs.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.wikijs.image }}
+        resources:
+          {{- toYaml .Values.wikijs.resources | nindent 10 }}
+        ports:
+        - name: {{ .Values.wikijs.ports.http.name }}
+          containerPort: {{ .Values.wikijs.ports.http.targetPort }}
+        env:
+        - name: DB_TYPE
+          value: postgres
+        - name: DB_HOST
+          value: "{{ .Values.k8s.names.services.prefix }}{{ tpl .Values.wikijs.database.label . }}{{ .Values.k8s.names.services.suffix }}"
+        - name: DB_PORT
+          value: "{{ .Values.wikijs.database.ports.http.targetPort }}"
+        - name: DB_USER
+          value: "{{ tpl .Values.wikijs.database.credentials.username . }}"
+        - name: DB_PASS
+          value: "{{ tpl .Values.wikijs.database.credentials.password . }}"
+        - name: DB_NAME
+          value: "{{ tpl .Values.wikijs.database.name . }}"
+        {{- if .Values.traefik.tls.selfSigned }}
+        # Dev-only: Node honours NODE_EXTRA_CA_CERTS natively, so Wiki.js's OIDC
+        # back-channel trusts the self-signed mkcert wildcard cert Traefik serves
+        # for authelia.{{ .Values.traefik.domain }}. Prod uses real ACME certs.
+        - name: NODE_EXTRA_CA_CERTS
+          value: /etc/ssl/mkcert/rootCA.pem
+        {{- end }}
+        {{- if .Values.traefik.tls.selfSigned }}
+        volumeMounts:
+        - mountPath: /etc/ssl/mkcert/rootCA.pem
+          name: mkcert-ca
+          subPath: rootCA.pem
+        {{- end }}
+      {{- if .Values.traefik.tls.selfSigned }}
+      volumes:
+      - name: mkcert-ca
+        configMap:
+          name: mkcert-ca
+      {{- end }}

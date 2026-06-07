@@ -1,0 +1,61 @@
+{{- /*
+  Align BookStack's built-in admin role display name with the Authelia `admins`
+  group so OIDC group->role sync maps `admins` members to full admin. BookStack
+  matches incoming group names against role display names (case-insensitive); the
+  role's protected identity (system_name='admin') is left untouched.
+
+  BookStack creates/seeds the `roles` table via migrations at first boot, so this
+  must run after the app starts — hence a post-install/post-upgrade hook Job
+  (not an init container). Idempotent. No app reload needed: BookStack reads
+  roles from the DB per request.
+*/ -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.bookstack.label }}-role-seed
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.bookstack.label }}-role-seed
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: seed
+        image: {{ .Values.bookstack.database.image }}
+        env:
+        - name: MYSQL_HOST
+          value: "{{ .Values.k8s.names.services.prefix }}{{ tpl .Values.bookstack.database.label . }}{{ .Values.k8s.names.services.suffix }}"
+        - name: MYSQL_PORT
+          value: "{{ .Values.bookstack.database.ports.http.targetPort }}"
+        - name: MYSQL_USER
+          value: "{{ tpl .Values.bookstack.database.credentials.username . }}"
+        - name: MYSQL_PWD
+          value: "{{ tpl .Values.bookstack.database.credentials.password . }}"
+        - name: MYSQL_DB
+          value: "{{ tpl .Values.bookstack.database.name . }}"
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "Waiting for BookStack to create the roles table..."
+          i=0
+          until mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER" "$MYSQL_DB" \
+                  -e "SELECT 1 FROM roles LIMIT 1" >/dev/null 2>&1; do
+            i=$((i+1))
+            if [ "$i" -gt 36 ]; then
+              echo "roles table absent after 3min — skipping (re-deploy after BookStack initializes)."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Aligning admin role display name to 'admins'..."
+          mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER" "$MYSQL_DB" \
+            -e "UPDATE roles SET display_name = 'admins' WHERE system_name = 'admin';"
+          echo "Done."

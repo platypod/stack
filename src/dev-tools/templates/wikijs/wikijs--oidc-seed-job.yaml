@@ -1,0 +1,118 @@
+{{- /*
+  Seed Wiki.js's Authelia OIDC strategy into its DB after the app has booted.
+
+  Wiki.js v2 has no env/file config for auth strategies — they live in the
+  `authentication` table, which Wiki.js itself creates via runtime migrations.
+  So seeding must happen AFTER the app starts (an init container can't: the
+  table wouldn't exist yet). This post-install/post-upgrade hook Job:
+    1. (seed) waits for the table, then idempotently UPSERTs the strategy with a
+       fixed key 'authelia' → deterministic callback ${host}/login/authelia/callback.
+    2. (reload) rolls the Wiki.js Deployment so it reloads strategies (Wiki.js
+       only reads them at boot), but only if step 1 actually seeded.
+
+  Templated from values, so dev/prod each get the correct Authelia URLs + secret.
+  On a brand-new DB that hasn't completed Wiki.js's first-run setup wizard yet,
+  the `authentication` table doesn't exist; the seed times out gracefully (exit 0,
+  no reload) so the deploy still succeeds — re-deploy once setup is done.
+*/ -}}
+{{- $wikijsPod := print .Values.k8s.names.pods.prefix .Values.wikijs.label .Values.k8s.names.pods.suffix }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.wikijs.label }}-oidc-seed
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.wikijs.label }}-oidc-seed
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ .Values.wikijs.label }}-oidc-seed
+      initContainers:
+      - name: seed
+        image: {{ .Values.wikijs.database.image }}
+        env:
+        - name: PGHOST
+          value: "{{ .Values.k8s.names.services.prefix }}{{ tpl .Values.wikijs.database.label . }}{{ .Values.k8s.names.services.suffix }}"
+        - name: PGPORT
+          value: "{{ .Values.wikijs.database.ports.http.targetPort }}"
+        - name: PGUSER
+          value: "{{ tpl .Values.wikijs.database.credentials.username . }}"
+        - name: PGPASSWORD
+          value: "{{ tpl .Values.wikijs.database.credentials.password . }}"
+        - name: PGDATABASE
+          value: "{{ tpl .Values.wikijs.database.name . }}"
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "Waiting for Wiki.js to create the authentication schema..."
+          i=0
+          until [ "$(psql -tAc "SELECT to_regclass('public.authentication')" 2>/dev/null)" = "authentication" ]; do
+            i=$((i+1))
+            if [ "$i" -gt 36 ]; then
+              echo "authentication table absent after 3min (Wiki.js setup wizard not completed?)."
+              echo "Skipping seed; re-deploy once first-run setup is done."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Schema present — seeding Authelia OIDC strategy..."
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO authentication
+            (key, "strategyKey", "isEnabled", config, "selfRegistration", "domainWhitelist", "autoEnrollGroups", "order", "displayName")
+          VALUES (
+            'authelia',
+            'oidc',
+            true,
+            '{
+               "clientId": "{{ .Values.wikijs.oidc.clientId }}",
+               "clientSecret": "{{ .Values.wikijs.oidc.clientSecret.plain }}",
+               "authorizationURL": "https://{{ tpl .Values.authelia.host . }}/api/oidc/authorization",
+               "tokenURL": "https://{{ tpl .Values.authelia.host . }}/api/oidc/token",
+               "userInfoURL": "https://{{ tpl .Values.authelia.host . }}/api/oidc/userinfo",
+               "skipUserProfile": false,
+               "issuer": "https://{{ tpl .Values.authelia.host . }}",
+               "emailClaim": "email",
+               "displayNameClaim": "name",
+               "pictureClaim": "picture",
+               "mapGroups": false,
+               "groupsClaim": "groups",
+               "logoutURL": "https://{{ tpl .Values.authelia.host . }}/logout",
+               "acrValues": ""
+             }'::json,
+            true,
+            '{"v": []}'::json,
+            '{"v": [1]}'::json,
+            1,
+            'Authelia'
+          )
+          ON CONFLICT (key) DO UPDATE SET
+            "strategyKey"      = EXCLUDED."strategyKey",
+            "isEnabled"        = EXCLUDED."isEnabled",
+            config             = EXCLUDED.config,
+            "selfRegistration" = EXCLUDED."selfRegistration",
+            "domainWhitelist"  = EXCLUDED."domainWhitelist",
+            "autoEnrollGroups" = EXCLUDED."autoEnrollGroups",
+            "order"            = EXCLUDED."order",
+            "displayName"      = EXCLUDED."displayName";
+          SQL
+          echo "Seeded."
+      # Roll Wiki.js so it reloads auth strategies (it only reads them at boot).
+      # The official kubectl image is distroless (no shell), so invoke kubectl
+      # directly via args. Always rolling is harmless and idempotent.
+      containers:
+      - name: reload
+        image: {{ .Values.wikijs.seed.kubectlImage }}
+        args:
+        - rollout
+        - restart
+        - deployment/{{ $wikijsPod }}
+        - -n
+        - {{ .Values.k8s.namespace }}

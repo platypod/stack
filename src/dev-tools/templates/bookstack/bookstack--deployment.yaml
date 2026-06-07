@@ -75,7 +75,8 @@ spec:
         # OIDC group -> BookStack role sync. Authelia injects `groups` into the
         # id_token (claims_policy 'platypod'); BookStack matches group names
         # against role names (case-insensitive). The built-in Admin role is
-        # renamed to "admins" (seed-roles.sql) so the `admins` group grants admin.
+        # renamed to "admins" (by the bookstack-role-seed hook Job) so the
+        # `admins` group grants admin.
         - name: OIDC_ADDITIONAL_SCOPES
           value: "groups"
         - name: OIDC_USER_TO_GROUPS
