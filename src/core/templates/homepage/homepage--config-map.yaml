@@ -114,15 +114,36 @@ data:
       - DBeaver?:
           href: https://{{ tpl .Values.dbeaver.host . }}
           description: Databases web interface.
+      - Outline:
+          abbr: OL
+          href: https://{{ tpl .Values.outline.host . }}
+          description: Team wiki and knowledge base with real-time collaboration.
     - Games:
       - RommApp:
           abbr: RA
           href: https://{{ tpl .Values.rommapp.host . }}
           description: Various consoles emulator.
+      - Pokeclicker:
+          abbr: PC
+          href: https://{{ tpl .Values.pokeclicker.host . }}
+          description: Pokémon idle clicker game.
     - Security:
       - Authelia:
           abbr: AU
           href: https://{{ tpl .Values.authelia.host . }}
+      - Adguard:
+          abbr: AG
+          href: https://{{ tpl .Values.adguard.adminHost . }}
+          description: Network-wide DNS-based ad and tracker blocker.
+          widget:
+            type: adguard
+            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.services.suffix }}
+            username: {{ .Values.adguard.credentials.username }}
+            password: {{ .Values.adguard.credentials.password }}
+      - LLDAP:
+          abbr: LD
+          href: https://{{ tpl .Values.lldap.host . }}
+          description: Lightweight LDAP server for user and group management.
     - Media-Maintainer:
       - Prowlarr:
           abbr: PR
@@ -168,6 +189,10 @@ data:
           abbr: FS
           href: https://{{ tpl .Values.flaresolverr.host . }}
           description: Proxy server used to bypass CloudFlare's anti-bot protection.
+      - Reclaimerr:
+          abbr: RC
+          href: https://{{ tpl .Values.reclaimerr.host . }}
+          description: Automatically removes media from Radarr/Sonarr to reclaim disk space.
   widgets.yaml: |
     # https://gethomepage.dev/widgets/info/resources/
     - resources:
