@@ -1,0 +1,38 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.dashy.label .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/dashy/dashy--config-map.yaml") . | sha256sum }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.dashy.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.dashy.image }}
+        resources:
+          {{- toYaml .Values.dashy.resources | nindent 10 }}
+        ports:
+        - name: {{ .Values.dashy.ports.http.name }}
+          containerPort: {{ .Values.dashy.ports.http.targetPort }}
+        volumeMounts:
+        - mountPath: /app/user-data/conf.yml
+          name: config
+          subPath: conf.yml
+      volumes:
+      - name: config
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.dashy.label }}{{ .Values.k8s.names.configMaps.suffix }}

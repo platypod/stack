@@ -1,0 +1,14 @@
+dashy:
+  label: dashy
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.dashy.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: lissy93/dashy:latest
+  ports:
+    http:
+      name: dashy-http
+      targetPort: 8080
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi

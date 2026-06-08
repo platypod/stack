@@ -6,193 +6,226 @@ metadata:
 
 data:
   kubernetes.yaml: ""
-  settings.yaml: ""
+  settings.yaml: |
+    title: Platypod
+    maxGroupColumns: 3
+    useEqualHeights: true
+    layout:
+      Media-User:
+        style: row
+        columns: 3
+        icon: mdi-television-play
+      Files:
+        style: row
+        columns: 3
+        icon: mdi-download
+      Infrastructure:
+        style: row
+        columns: 3
+        icon: mdi-server-network
+      Dev Tools:
+        style: row
+        columns: 4
+        icon: mdi-tools
+      Games:
+        style: row
+        columns: 2
+        icon: mdi-gamepad-variant
+      Media-Maintainer:
+        style: row
+        columns: 4
+        icon: mdi-movie-cog
   custom.css: ""
   custom.js: ""
   bookmarks.yaml: |
     - Dev:
       - Github:
-        - abbr: GH
+        - icon: si-github
           href: https://github.com/
-          description: Code versionning server.
+          description: Code versioning server.
     - Social:
       - Reddit:
-        - abbr: RE
+        - icon: si-reddit
           href: https://reddit.com/
           description: Social network.
     - Entertainment:
       - Invidious:
-        - abbr: In
+        - icon: si-youtube
           href: https://api.invidious.io/
-          description: Youtube alternative without advertisement.
+          description: YouTube without ads.
   services.yaml: |
     - Media-User:
       - Jellyfin:
-          abbr: JE
+          icon: jellyfin.png
           href: https://{{ tpl .Values.jellyfin.host . }}
           description: Media server with streaming capacities.
           widget:
             type: jellyfin
-            url: http://{{ .Values.jellyfin.proxy.host }}:{{ .Values.jellyfin.proxy.port }}{{ .Values.jellyfin.baseUrl }}
+            url: http://{{ .Values.jellyfin.label }}:{{ .Values.jellyfin.ports.http.targetPort }}{{ .Values.jellyfin.baseUrl }}
             key: {{ .Values.jellyfin.apiKey }}
-            enableBlocks: true # optional, defaults to false
-            enableNowPlaying: true # optional, defaults to true
-            enableUser: true # optional, defaults to false
-            showEpisodeNumber: true # optional, defaults to false
-            expandOneStreamToTwoRows: false # optional, defaults to true
+            enableBlocks: true
+            enableNowPlaying: true
+            enableUser: true
+            showEpisodeNumber: true
+            expandOneStreamToTwoRows: false
       - JellySeerr:
-          abbr: JS
+          icon: jellyseerr.png
           href: https://{{ tpl .Values.jellyseerr.host . }}
           description: Media catalog to pick movies and series.
           widget:
             type: jellyseerr
-            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.services.suffix }}
+            url: http://{{ .Values.jellyseerr.label }}:{{ .Values.jellyseerr.ports.http.targetPort }}
             key: {{ .Values.jellyseerr.apiKey }}
       - Mediarvester:
-          abbr: MR
+          icon: mdi-download-circle
           href: https://{{ tpl .Values.mediarvester.host . }}
           description: Multi-platform media downloader (YouTube, Instagram, X, …).
     - Files:
       - Transmission:
-          abbr: TR
+          icon: transmission.png
           href: https://{{ tpl .Values.transmission.host . }}
           description: Torrenting service.
           widget:
             type: transmission
-            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.services.suffix }}
+            url: http://{{ .Values.transmission.label }}:{{ .Values.transmission.ports.http.targetPort }}
             username: {{ .Values.transmission.credentials.username }}
             password: {{ .Values.transmission.credentials.password }}
             rpcUrl: /transmission/
       - Deluge:
-          abbr: DL
+          icon: deluge.png
           href: https://{{ tpl .Values.deluge.host . }}
           description: Torrenting service.
           widget:
             type: deluge
-            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.deluge.label }}{{ .Values.k8s.names.services.suffix }}
+            url: http://{{ .Values.deluge.label }}:{{ .Values.deluge.ports.http.targetPort }}
             password: {{ .Values.deluge.credentials.password }}
             enableLeechProgress: true
       - QBitTorrent:
-          abbr: QB
+          icon: qbittorrent.png
           href: https://{{ tpl .Values.qbittorrent.host . }}
           description: Torrenting service.
           widget:
             type: qbittorrent
-            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.qbittorrent.label }}{{ .Values.k8s.names.services.suffix }}
+            url: http://{{ .Values.qbittorrent.label }}:{{ .Values.qbittorrent.ports.http.targetPort }}
             username: {{ .Values.qbittorrent.credentials.username }}
             password: {{ .Values.qbittorrent.credentials.password }}
             enableLeechProgress: true
-    - Dev:
+    - Infrastructure:
       - Traefik:
-          abbr: TR
+          icon: traefik.png
           href: https://{{ tpl .Values.traefik.host . }}/dashboard/
           description: Reverse-proxy exposing this stack to the users.
           widget:
             type: traefik
-            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.traefik.dashboardLabel }}{{ .Values.k8s.names.services.suffix }}
-      - Grafana:
-          abbr: GF
-          href: https://{{ tpl .Values.observability.dashboard.host . }}
-          description: Dashboards to monitor everything and know what's up.
-      - Bookstack:
-          abbr: BS
-          href: https://{{ tpl .Values.bookstack.host . }}
-          description: Simple, open-source, self-hosted, easy-to-use platform for organising and storing information.
-      - Wiki.js:
-          abbr: WJ
-          href: https://{{ tpl .Values.wikijs.host . }}
-          description: Powerful, extensible, open-source wiki with a modern editor and Git sync.
-      - IT-Tools:
-          href: https://{{ tpl .Values.itTools.host . }}
-          description: Useful tools for developer and people working in IT.
-      - CyberChef:
-          href: https://{{ tpl .Values.cyberChef.host . }}
-          description: Useful tools for "cyber" operations from a browser.
-      - Who am I?:
-          href: https://{{ tpl .Values.whoami.host . }}
-          description: Tiny Go webserver that prints os information and HTTP request to output.
-      - DBeaver?:
-          href: https://{{ tpl .Values.dbeaver.host . }}
-          description: Databases web interface.
-      - Outline:
-          abbr: OL
-          href: https://{{ tpl .Values.outline.host . }}
-          description: Team wiki and knowledge base with real-time collaboration.
-    - Games:
-      - RommApp:
-          abbr: RA
-          href: https://{{ tpl .Values.rommapp.host . }}
-          description: Various consoles emulator.
-      - Pokeclicker:
-          abbr: PC
-          href: https://{{ tpl .Values.pokeclicker.host . }}
-          description: Pokémon idle clicker game.
-    - Security:
-      - Authelia:
-          abbr: AU
-          href: https://{{ tpl .Values.authelia.host . }}
-      - Adguard:
-          abbr: AG
-          href: https://{{ tpl .Values.adguard.adminHost . }}
-          description: Network-wide DNS-based ad and tracker blocker.
+            url: http://{{ .Values.traefik.dashboardLabel }}:{{ .Values.traefik.ports.dashboard.targetPort }}
+      - AdGuard:
+          icon: adguard-home.png
+          href: https://{{ tpl .Values.adguard.host . }}
+          description: DNS-level ad & tracker blocker.
           widget:
             type: adguard
-            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.services.suffix }}
+            url: http://{{ .Values.adguard.label }}:{{ .Values.adguard.ports.http.targetPort }}
             username: {{ .Values.adguard.credentials.username }}
             password: {{ .Values.adguard.credentials.password }}
+      - Grafana:
+          icon: grafana.png
+          href: https://{{ tpl .Values.observability.dashboard.host . }}
+          description: Dashboards to monitor everything and know what's up.
+      - Authelia:
+          icon: authelia.png
+          href: https://{{ tpl .Values.authelia.host . }}
+          description: SSO & 2FA gateway.
       - LLDAP:
-          abbr: LD
+          icon: lldap.png
           href: https://{{ tpl .Values.lldap.host . }}
-          description: Lightweight LDAP server for user and group management.
+          description: Lightweight LDAP user & group management.
+    - Dev Tools:
+      - Bookstack:
+          icon: bookstack.png
+          href: https://{{ tpl .Values.bookstack.host . }}
+          description: Simple wiki and documentation platform.
+      - Wiki.js:
+          icon: wikijs.png
+          href: https://{{ tpl .Values.wikijs.host . }}
+          description: Powerful wiki with modern editor and Git sync.
+      - Outline:
+          icon: outline.png
+          href: https://{{ tpl .Values.outline.host . }}
+          description: Team wiki and knowledge base.
+      - IT-Tools:
+          icon: it-tools.png
+          href: https://{{ tpl .Values.itTools.host . }}
+          description: Useful tools for developers.
+      - CyberChef:
+          icon: cyberchef.png
+          href: https://{{ tpl .Values.cyberChef.host . }}
+          description: Cyber operations from a browser.
+      - DBeaver:
+          icon: mdi-database-search
+          href: https://{{ tpl .Values.dbeaver.host . }}
+          description: Database web interface.
+      - Who am I?:
+          icon: mdi-server-network
+          href: https://{{ tpl .Values.whoami.host . }}
+          description: Prints OS info and HTTP request details.
+    - Games:
+      - RommApp:
+          icon: romm.png
+          href: https://{{ tpl .Values.rommapp.host . }}
+          description: Console ROM manager and emulator frontend.
+      - Pokeclicker:
+          icon: mdi-pokeball
+          href: https://{{ tpl .Values.pokeclicker.host . }}
+          description: Pokémon idle clicker game.
     - Media-Maintainer:
       - Prowlarr:
-          abbr: PR
+          icon: prowlarr.png
           href: https://{{ tpl .Values.prowlarr.host . }}
-          description: Indexer manager, used as proxy between the collection managers and the torrent trackers or usenet indexers.
+          description: Indexer manager for torrent trackers and usenet indexers.
           widget:
             type: prowlarr
-            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.prowlarr.label }}{{ .Values.k8s.names.services.suffix }}
+            url: http://{{ .Values.prowlarr.label }}:{{ .Values.prowlarr.ports.http.targetPort }}
             key: {{ .Values.prowlarr.apiKey }}
       - Radarr:
-          abbr: RA
+          icon: radarr.png
           href: https://{{ tpl .Values.radarr.host . }}
-          description: Movies collection manager, used to monitor RSS feeds and manage movies downloads.
+          description: Movie collection manager.
           widget:
             type: radarr
-            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.services.suffix }}
+            url: http://{{ .Values.radarr.label }}:{{ .Values.radarr.ports.http.targetPort }}
             key: {{ .Values.radarr.apiKey }}
-      - Readarr:
-          abbr: RE
-          href: https://{{ tpl .Values.readarr.host . }}
-          description: Books collection manager, used to monitor RSS feeds and manage books downloads.
-          widget:
-            type: readarr
-            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.readarr.label }}{{ .Values.k8s.names.services.suffix }}
-            key: {{ .Values.readarr.apiKey }}
       - Sonarr:
-          abbr: SR
+          icon: sonarr.png
           href: https://{{ tpl .Values.sonarr.host . }}
-          description: Series collection manager, used to monitor RSS feeds and manage series downloads.
+          description: Series collection manager.
           widget:
             type: sonarr
-            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.services.suffix }}
+            url: http://{{ .Values.sonarr.label }}:{{ .Values.sonarr.ports.http.targetPort }}
             key: {{ .Values.sonarr.apiKey }}
+      - Readarr:
+          icon: readarr.png
+          href: https://{{ tpl .Values.readarr.host . }}
+          description: Books collection manager.
+          widget:
+            type: readarr
+            url: http://{{ .Values.readarr.label }}:{{ .Values.readarr.ports.http.targetPort }}
+            key: {{ .Values.readarr.apiKey }}
       - Bazarr:
-          abbr: BZ
+          icon: bazarr.png
           href: https://{{ tpl .Values.bazarr.host . }}
-          description: Subtitles collection manager, used to download subtitles for Radarr and Sonarr.
+          description: Subtitles manager for Radarr and Sonarr.
           widget:
             type: bazarr
-            url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.bazarr.label }}{{ .Values.k8s.names.services.suffix }}
+            url: http://{{ .Values.bazarr.label }}:{{ .Values.bazarr.ports.http.targetPort }}
             key: {{ .Values.bazarr.apiKey }}
       - FlareSolverr:
-          abbr: FS
+          icon: flaresolverr.png
           href: https://{{ tpl .Values.flaresolverr.host . }}
-          description: Proxy server used to bypass CloudFlare's anti-bot protection.
+          description: CloudFlare bypass proxy.
       - Reclaimerr:
-          abbr: RC
+          icon: mdi-delete-sweep
           href: https://{{ tpl .Values.reclaimerr.host . }}
-          description: Automatically removes media from Radarr/Sonarr to reclaim disk space.
+          description: Automatically reclaims media disk space.
   widgets.yaml: |
     # https://gethomepage.dev/widgets/info/resources/
     - resources:

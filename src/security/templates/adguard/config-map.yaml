@@ -8,7 +8,7 @@ data:
     bind_port: {{ .Values.adguard.ports.http.targetPort }}
     users:
       - name: {{ .Values.adguard.credentials.username }}
-        password: {{ .Values.adguard.credentials.username }}
+        password: {{ .Values.adguard.credentials.passwordHash }}
     auth_attempts: 5
     block_auth_min: 15
     http_proxy: ""

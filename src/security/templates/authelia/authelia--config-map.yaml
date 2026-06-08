@@ -128,6 +128,9 @@ data:
           forward-auth:
             implementation: 'ForwardAuth'
 
+    ntp:
+      disable_failure: true
+
     log:
       level: {{ .Values.authelia.log.level }}
       format: {{ .Values.authelia.log.format }}
@@ -198,7 +201,7 @@ data:
       cookies:
       - domain: {{ .Values.traefik.domain }}
         authelia_url: https://{{ tpl .Values.authelia.host . }}
-        default_redirection_url: https://{{ tpl .Values.homepage.host . }}
+        default_redirection_url: https://{{ tpl .Values.dashy.host . }}
 
     regulation:
       max_retries: 5

@@ -1,0 +1,232 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.dashy.label }}{{ .Values.k8s.names.configMaps.suffix }}
+
+data:
+  conf.yml: |
+    pageInfo:
+      title: Platypod
+      description: Home server dashboard
+
+    appConfig:
+      theme: nord
+      layout: auto
+      iconSize: medium
+      language: en
+      enableMultiTasking: true
+      statusCheck: true
+      statusCheckInterval: 300
+      disableConfiguration: false
+
+    sections:
+
+      - name: Overview
+        displayData:
+          cols: 2
+        widgets:
+          - type: clock
+            options:
+              timeZone: Europe/Paris
+              format:
+                timeStyle: short
+                dateStyle: long
+                hour12: false
+          - type: adguard-stats
+            options:
+              hostname: http://{{ .Values.adguard.label }}:{{ .Values.adguard.ports.http.targetPort }}
+              username: {{ .Values.adguard.credentials.username }}
+              password: {{ .Values.adguard.credentials.password }}
+
+      - name: Infrastructure
+        displayData:
+          cols: 4
+        items:
+          - title: Traefik
+            url: https://{{ tpl .Values.traefik.host . }}/dashboard/
+            icon: hl-traefik
+            description: Reverse proxy & ingress
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.traefik.dashboardLabel }}:{{ .Values.traefik.ports.dashboard.targetPort }}/api/overview
+          - title: Authelia
+            url: https://{{ tpl .Values.authelia.host . }}
+            icon: hl-authelia
+            description: SSO & 2FA gateway
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.authelia.label }}:{{ .Values.authelia.ports.http.targetPort }}/api/health
+          - title: AdGuard
+            url: https://{{ tpl .Values.adguard.host . }}
+            icon: hl-adguard-home
+            description: DNS-level ad & tracker blocker
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.adguard.label }}:{{ .Values.adguard.ports.http.targetPort }}/control/status
+            statusCheckAcceptCodes: "200,401"
+          - title: LLDAP
+            url: https://{{ tpl .Values.lldap.host . }}
+            icon: favicon
+            description: User & group management
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.lldap.label }}:{{ .Values.lldap.ports.http.targetPort }}
+          - title: Grafana
+            url: https://{{ tpl .Values.observability.dashboard.host . }}
+            icon: hl-grafana
+            description: Monitoring dashboards
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.observability.dashboard.label }}:{{ .Values.observability.dashboard.ports.http.targetPort }}/api/health
+
+      - name: Media
+        displayData:
+          cols: 3
+        items:
+          - title: Jellyfin
+            url: https://{{ tpl .Values.jellyfin.host . }}
+            icon: hl-jellyfin
+            description: Media streaming server
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.jellyfin.label }}:{{ .Values.jellyfin.ports.http.targetPort }}/health
+          - title: Jellyseerr
+            url: https://{{ tpl .Values.jellyseerr.host . }}
+            icon: favicon
+            description: Media request & discovery
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.jellyseerr.label }}:{{ .Values.jellyseerr.ports.http.targetPort }}/api/v1/status
+          - title: Mediarvester
+            url: https://{{ tpl .Values.mediarvester.host . }}
+            icon: favicon
+            description: YouTube / Instagram downloader
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.mediarvester.label }}:{{ .Values.mediarvester.ports.http.targetPort }}
+
+      - name: Media Management
+        displayData:
+          cols: 4
+        items:
+          - title: Prowlarr
+            url: https://{{ tpl .Values.prowlarr.host . }}
+            icon: hl-prowlarr
+            description: Indexer manager
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.prowlarr.label }}:{{ .Values.prowlarr.ports.http.targetPort }}/ping
+          - title: Radarr
+            url: https://{{ tpl .Values.radarr.host . }}
+            icon: hl-radarr
+            description: Movie collection manager
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.radarr.label }}:{{ .Values.radarr.ports.http.targetPort }}/ping
+          - title: Sonarr
+            url: https://{{ tpl .Values.sonarr.host . }}
+            icon: hl-sonarr
+            description: Series collection manager
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.sonarr.label }}:{{ .Values.sonarr.ports.http.targetPort }}/ping
+          - title: Readarr
+            url: https://{{ tpl .Values.readarr.host . }}
+            icon: hl-readarr
+            description: Books collection manager
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.readarr.label }}:{{ .Values.readarr.ports.http.targetPort }}/ping
+          - title: Bazarr
+            url: https://{{ tpl .Values.bazarr.host . }}
+            icon: hl-bazarr
+            description: Subtitles manager
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.bazarr.label }}:{{ .Values.bazarr.ports.http.targetPort }}/ping
+          - title: FlareSolverr
+            url: https://{{ tpl .Values.flaresolverr.host . }}
+            icon: favicon
+            description: CloudFlare bypass proxy
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.flaresolverr.label }}:{{ .Values.flaresolverr.ports.http.targetPort }}/health
+          - title: Reclaimerr
+            url: https://{{ tpl .Values.reclaimerr.host . }}
+            icon: favicon
+            description: Media space reclaimer
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.reclaimerr.label }}:{{ .Values.reclaimerr.ports.http.targetPort }}
+
+      - name: Downloads
+        displayData:
+          cols: 3
+        items:
+          - title: Transmission
+            url: https://{{ tpl .Values.transmission.host . }}
+            icon: hl-transmission
+            description: Torrent client
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.transmission.label }}:{{ .Values.transmission.ports.http.targetPort }}/transmission/rpc
+          - title: Deluge
+            url: https://{{ tpl .Values.deluge.host . }}
+            icon: hl-deluge
+            description: Torrent client
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.deluge.label }}:{{ .Values.deluge.ports.http.targetPort }}
+          - title: QBitTorrent
+            url: https://{{ tpl .Values.qbittorrent.host . }}
+            icon: hl-qbittorrent
+            description: Torrent client
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.qbittorrent.label }}:{{ .Values.qbittorrent.ports.http.targetPort }}
+
+      - name: Knowledge
+        displayData:
+          cols: 3
+        items:
+          - title: Bookstack
+            url: https://{{ tpl .Values.bookstack.host . }}
+            icon: hl-bookstack
+            description: Wiki & documentation
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.bookstack.label }}:{{ .Values.bookstack.ports.http.targetPort }}
+          - title: Wiki.js
+            url: https://{{ tpl .Values.wikijs.host . }}
+            icon: hl-wikijs
+            description: Modern wiki platform
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.wikijs.label }}:{{ .Values.wikijs.ports.http.targetPort }}
+          - title: Outline
+            url: https://{{ tpl .Values.outline.host . }}
+            icon: favicon
+            description: Team wiki & knowledge base
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.outline.label }}:{{ .Values.outline.ports.http.targetPort }}
+
+      - name: Dev Tools
+        displayData:
+          cols: 4
+        items:
+          - title: IT-Tools
+            url: https://{{ tpl .Values.itTools.host . }}
+            icon: favicon
+            description: Useful tools for developers
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.itTools.label }}:{{ .Values.itTools.ports.http.targetPort }}
+          - title: CyberChef
+            url: https://{{ tpl .Values.cyberChef.host . }}
+            icon: favicon
+            description: Cyber operations from a browser
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.cyberChef.label }}:{{ .Values.cyberChef.ports.http.targetPort }}
+          - title: DBeaver
+            url: https://{{ tpl .Values.dbeaver.host . }}
+            icon: favicon
+            description: Database web interface
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.dbeaver.label }}:{{ .Values.dbeaver.ports.http.targetPort }}
+
+      - name: Games
+        displayData:
+          cols: 2
+        items:
+          - title: RommApp
+            url: https://{{ tpl .Values.rommapp.host . }}
+            icon: favicon
+            description: Console emulator frontend
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.rommapp.label }}:{{ .Values.rommapp.ports.http.targetPort }}
+          - title: Pokeclicker
+            url: https://{{ tpl .Values.pokeclicker.host . }}
+            icon: favicon
+            description: Pokémon idle clicker
+            statusCheck: true
+            statusCheckUrl: http://{{ .Values.pokeclicker.label }}:{{ .Values.pokeclicker.ports.http.targetPort }}

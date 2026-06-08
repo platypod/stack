@@ -3,6 +3,7 @@ adguard:
   credentials:
     username: adguard-admin
     password: adguard-password
+    passwordHash: "$2y$10$tWluEzume4CMHBAd6kCCqO6vi4DRDBMctfNyjInjtfQa2JwWV83xS"
   image: adguard/adguardhome:latest
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   label: adguard

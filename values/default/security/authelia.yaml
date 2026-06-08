@@ -54,6 +54,7 @@ authelia:
 
     - policy: one_factor
       domain:
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.dashy.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.homepage.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.pokeclicker.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
 
