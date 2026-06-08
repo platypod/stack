@@ -33,6 +33,7 @@ transmission:
       name: peer-listening
       nameUdp: peer-udp
       nodePort: 31413
+      nodePortUdp: 31414
       targetPort: 51413
   pvc:
     app: "{{ .Values.storage.defaultVolumes.apps }}"

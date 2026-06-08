@@ -19,14 +19,9 @@ spec:
     targetPort: {{ .Values.transmission.ports.peer.targetPort }}
   - protocol: UDP
     name: {{ .Values.transmission.ports.peer.nameUdp }}
-    nodePort: {{ .Values.transmission.ports.peer.nodePort }}
+    nodePort: {{ .Values.transmission.ports.peer.nodePortUdp }}
     port: {{ .Values.transmission.ports.peer.targetPort }}
     targetPort: {{ .Values.transmission.ports.peer.targetPort }}
-  - protocol: TCP
-    name: {{ .Values.transmission.exporter.ports.http.name }}
-    nodePort: {{ .Values.transmission.exporter.ports.http.nodePort }}
-    port: {{ .Values.transmission.exporter.ports.http.targetPort }}
-    targetPort: {{ .Values.transmission.exporter.ports.http.targetPort }}
   selector:
     app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.pods.suffix }}
   type: NodePort
