@@ -1,0 +1,18 @@
+{{- if .Values.vaultwarden.enabled }}
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.vaultwarden.label }}{{ .Values.k8s.names.services.suffix }}
+
+spec:
+  selector:
+    app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.vaultwarden.label }}{{ .Values.k8s.names.pods.suffix }}
+  ports:
+  - name: {{ .Values.vaultwarden.ports.http.name }}
+    port: {{ .Values.vaultwarden.ports.http.targetPort }}
+    targetPort: {{ .Values.vaultwarden.ports.http.targetPort }}
+  - name: {{ .Values.vaultwarden.ports.websocket.name }}
+    port: {{ .Values.vaultwarden.ports.websocket.targetPort }}
+    targetPort: {{ .Values.vaultwarden.ports.websocket.targetPort }}
+{{- end }}

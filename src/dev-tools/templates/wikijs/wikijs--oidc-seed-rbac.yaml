@@ -1,3 +1,4 @@
+{{- if .Values.wikijs.enabled }}
 {{- /*
   RBAC for the OIDC seed Job's reload step: after seeding the strategy into the
   DB, the Job rolls the Wiki.js Deployment so it reloads auth strategies (Wiki.js
@@ -42,3 +43,4 @@ roleRef:
   kind: Role
   name: {{ .Values.wikijs.label }}-oidc-seed
   apiGroup: rbac.authorization.k8s.io
+{{- end }}

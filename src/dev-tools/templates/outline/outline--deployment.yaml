@@ -1,3 +1,4 @@
+{{- if .Values.outline.enabled }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.outline.label .Values.k8s.names.pods.suffix }}
 
 apiVersion: apps/v1
@@ -115,3 +116,4 @@ spec:
       - name: outline-data
         persistentVolumeClaim:
           claimName: {{ tpl .Values.outline.storage.pvc . }}
+{{- end }}

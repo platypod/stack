@@ -1,4 +1,5 @@
 reclaimerr:
+  enabled: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.reclaimerr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: ghcr.io/jessielw/reclaimerr:latest
   label: reclaimerr

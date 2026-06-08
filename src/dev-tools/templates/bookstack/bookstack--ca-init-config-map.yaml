@@ -1,3 +1,4 @@
+{{- if .Values.bookstack.enabled }}
 {{- if .Values.traefik.tls.selfSigned }}
 # Dev-only: a LinuxServer custom-cont-init script that merges the mounted
 # mkcert root CA into the system trust store at container start (as root,
@@ -12,4 +13,5 @@ data:
   10-mkcert-ca.sh: |
     #!/bin/sh
     update-ca-certificates
+{{- end }}
 {{- end }}

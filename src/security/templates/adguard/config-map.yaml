@@ -1,3 +1,4 @@
+{{- if .Values.adguard.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -175,3 +176,4 @@ data:
       user: ""
       rlimit_nofile: 0
     schema_version: 20
+{{- end }}

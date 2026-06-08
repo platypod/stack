@@ -1,0 +1,25 @@
+vaultwarden:
+  enabled: true
+  label: vaultwarden
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.vaultwarden.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: vaultwarden/server:latest
+  ports:
+    http:
+      name: vw-http
+      targetPort: 80
+    websocket:
+      name: vw-ws
+      targetPort: 3012
+  credentials:
+    adminToken: vaultwardenAdminToken
+  signupsAllowed: false
+  invitationsAllowed: true
+  logLevel: warn
+  pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  replicasNb: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi

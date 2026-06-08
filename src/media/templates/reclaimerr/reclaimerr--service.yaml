@@ -1,3 +1,4 @@
+{{- if .Values.reclaimerr.enabled }}
 apiVersion: v1
 kind: Service
 
@@ -11,3 +12,4 @@ spec:
   - name: {{ .Values.reclaimerr.ports.http.name }}
     port: {{ .Values.reclaimerr.ports.http.targetPort }}
     targetPort: {{ .Values.reclaimerr.ports.http.targetPort }}
+{{- end }}

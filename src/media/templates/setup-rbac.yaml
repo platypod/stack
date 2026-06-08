@@ -1,0 +1,36 @@
+{{- /*
+  RBAC for the Jellyfin and Jellyseerr setup Jobs.
+  The Jobs need to:
+    - Create / patch the jellyfin-apikey Secret (so Homepage can read it via envFrom)
+    - Patch the Homepage Deployment to trigger a rollout after writing the key
+*/ -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: media-setup-sa
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: media-setup-role
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "create", "patch"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: media-setup-rolebinding
+subjects:
+- kind: ServiceAccount
+  name: media-setup-sa
+roleRef:
+  kind: Role
+  name: media-setup-role
+  apiGroup: rbac.authorization.k8s.io

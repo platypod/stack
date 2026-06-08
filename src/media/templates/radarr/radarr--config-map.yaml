@@ -1,3 +1,4 @@
+{{- if .Values.radarr.enabled }}
 apiVersion: v1
 kind: ConfigMap
 
@@ -29,3 +30,4 @@ data:
       <PostgresMainDb>{{ .Values.database.schemas.radarr.main }}</PostgresMainDb>
       <PostgresLogDb>{{ .Values.database.schemas.radarr.logs }}</PostgresLogDb>
     </Config>
+{{- end }}

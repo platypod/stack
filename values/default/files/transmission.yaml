@@ -1,4 +1,5 @@
 transmission:
+  enabled: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: lscr.io/linuxserver/transmission:latest
   label: transmission

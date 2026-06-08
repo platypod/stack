@@ -1,0 +1,46 @@
+{{- if .Values.vaultwarden.enabled }}
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+
+metadata:
+  name: {{ .Values.k8s.names.ingresses.prefix }}{{ .Values.vaultwarden.label }}{{ .Values.k8s.names.ingresses.suffix }}
+
+spec:
+  entryPoints:
+  - {{ .Values.traefik.ports.https.name }}
+
+  routes:
+  # Main app + API — no Authelia (Bitwarden clients authenticate directly)
+  - kind: Rule
+    match: Host(`{{ tpl .Values.vaultwarden.host . }}`)
+    services:
+    - kind: Service
+      name: {{ .Values.k8s.names.services.prefix }}{{ .Values.vaultwarden.label }}{{ .Values.k8s.names.services.suffix }}
+      port: {{ .Values.vaultwarden.ports.http.targetPort }}
+  # WebSocket endpoint for real-time sync
+  - kind: Rule
+    match: Host(`{{ tpl .Values.vaultwarden.host . }}`) && PathPrefix(`/notifications/hub`)
+    services:
+    - kind: Service
+      name: {{ .Values.k8s.names.services.prefix }}{{ .Values.vaultwarden.label }}{{ .Values.k8s.names.services.suffix }}
+      port: {{ .Values.vaultwarden.ports.websocket.targetPort }}
+  # Admin panel — protected by Authelia
+  - kind: Rule
+    match: Host(`{{ tpl .Values.vaultwarden.host . }}`) && PathPrefix(`/admin`)
+    middlewares:
+    - name: {{ .Values.k8s.names.middlewares.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.middlewares.suffix }}
+      namespace: {{ .Values.k8s.namespace }}
+    services:
+    - kind: Service
+      name: {{ .Values.k8s.names.services.prefix }}{{ .Values.vaultwarden.label }}{{ .Values.k8s.names.services.suffix }}
+      port: {{ .Values.vaultwarden.ports.http.targetPort }}
+
+  {{- if .Values.traefik.tls.selfSigned }}
+  tls:
+    store:
+      name: default
+  {{- else }}
+  tls:
+    certResolver: {{ .Values.traefik.resolverName }}
+  {{- end }}
+{{- end }}

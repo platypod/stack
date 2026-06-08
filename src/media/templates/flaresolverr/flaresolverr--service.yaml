@@ -1,3 +1,4 @@
+{{- if .Values.flaresolverr.enabled }}
 apiVersion: v1
 kind: Service
 
@@ -11,3 +12,4 @@ spec:
     port: {{ .Values.flaresolverr.ports.http.targetPort }}
   selector:
     app: {{ .Values.k8s.names.services.prefix }}{{ .Values.flaresolverr.label }}{{ .Values.k8s.names.pods.suffix }}
+{{- end }}

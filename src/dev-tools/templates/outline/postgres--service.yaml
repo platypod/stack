@@ -1,3 +1,4 @@
+{{- if .Values.outline.enabled }}
 apiVersion: v1
 kind: Service
 
@@ -11,3 +12,4 @@ spec:
   - name: {{ .Values.outline.database.ports.http.name }}
     port: {{ .Values.outline.database.ports.http.targetPort }}
     targetPort: {{ .Values.outline.database.ports.http.targetPort }}
+{{- end }}

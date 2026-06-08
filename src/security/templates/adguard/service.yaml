@@ -1,3 +1,4 @@
+{{- if .Values.adguard.enabled }}
 apiVersion: v1
 kind: Service
 
@@ -26,3 +27,7 @@ spec:
   selector:
     app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.pods.suffix }}
   type: LoadBalancer
+  {{- if .Values.adguard.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.adguard.loadBalancerIP }}
+  {{- end }}
+{{- end }}

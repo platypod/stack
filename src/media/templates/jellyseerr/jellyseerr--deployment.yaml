@@ -1,3 +1,4 @@
+{{- if .Values.jellyseerr.enabled }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.jellyseerr.label .Values.k8s.names.pods.suffix }}
 {{- $appVolume := "app-volume" }}
 {{- $configMap := "config-map" }}
@@ -74,3 +75,4 @@ spec:
       - name: {{ $configMap }}
         configMap:
           name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.configMaps.suffix }}
+{{- end }}

@@ -1,3 +1,4 @@
+{{- if .Values.bazarr.enabled }}
 {{- $appVolume := "app-volume" }}
 {{- $mediaVolume := "media-volume" }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.bazarr.label .Values.k8s.names.pods.suffix }}
@@ -20,6 +21,29 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
+      initContainers:
+      # Seed config.yaml from ConfigMap on first start so Bazarr uses the
+      # predefined API key from values instead of generating a random one.
+      - name: seed-config
+        image: busybox:1
+        command:
+        - sh
+        - -c
+        - |
+          DEST=/config/config/config.yaml
+          mkdir -p /config/config
+          if [ ! -f "$DEST" ]; then
+            echo "Seeding Bazarr config.yaml from ConfigMap..."
+            cp /seed/config.yaml "$DEST"
+          else
+            echo "config.yaml already exists, skipping seed."
+          fi
+        volumeMounts:
+        - mountPath: /config
+          name: {{ $appVolume }}
+          subPath: bazarr/config
+        - mountPath: /seed
+          name: config-seed
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.bazarr.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.bazarr.image }}
@@ -52,3 +76,7 @@ spec:
       - name: {{ $appVolume }}
         persistentVolumeClaim:
           claimName: {{ tpl .Values.bazarr.pvc.app . }}
+      - name: config-seed
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.bazarr.label }}{{ .Values.k8s.names.configMaps.suffix }}
+{{- end }}

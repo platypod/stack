@@ -27,6 +27,13 @@ spec:
         image: {{ .Values.homepage.image.registry }}{{ .Values.homepage.image.namespace }}{{ .Values.homepage.image.repository }}:{{ .Values.homepage.image.tag }}
         resources:
           {{- toYaml .Values.homepage.resources | nindent 10 }}
+        # Jellyfin generates a random API key on first start; the jellyfin-setup Job
+        # writes it here so Homepage can reference it as HOMEPAGE_VAR_JELLYFIN_API_KEY.
+        # optional=true lets Homepage start before the Job has run.
+        envFrom:
+        - secretRef:
+            name: jellyfin-apikey
+            optional: true
         ports:
         - name: {{ .Values.homepage.ports.http.name }}
           containerPort: {{ .Values.homepage.ports.http.targetPort }}

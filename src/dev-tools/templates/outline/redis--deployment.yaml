@@ -1,3 +1,4 @@
+{{- if .Values.outline.enabled }}
 {{- $pod := print .Values.k8s.names.pods.prefix (tpl .Values.outline.redis.label .) .Values.k8s.names.pods.suffix }}
 
 apiVersion: apps/v1
@@ -26,3 +27,4 @@ spec:
         ports:
         - name: {{ .Values.outline.redis.ports.http.name }}
           containerPort: {{ .Values.outline.redis.ports.http.targetPort }}
+{{- end }}

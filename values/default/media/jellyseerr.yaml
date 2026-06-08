@@ -1,4 +1,5 @@
 jellyseerr:
+  enabled: true
   apiKey: MTczNjUwNTY0MTMwNmRmY2EzNWZhLWNjNzYtNDA1ZC05MDE4LTVkYTc1NWNjN2E0Yg==
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: ghcr.io/seerr-team/seerr:v3.1.0
@@ -8,8 +9,8 @@ jellyseerr:
     type: postgres
     host: "{{ .Values.k8s.names.services.prefix }}{{ .Values.database.label }}{{ .Values.k8s.names.services.suffix }}"
     port: "{{ .Values.database.ports.http.targetPort }}"
-    username: "{{ .Values.database.credentials.username }}"
-    password: "{{ .Values.database.credentials.password }}"
+    username: "{{ .Values.database.serviceCredentials.jellyseerr.username }}"
+    password: "{{ .Values.database.serviceCredentials.jellyseerr.password }}"
     name: "{{ .Values.database.schemas.jellyseerr.main }}"
     logQueries: false
   ports:

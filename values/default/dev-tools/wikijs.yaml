@@ -1,4 +1,5 @@
 wikijs:
+  enabled: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.wikijs.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: ghcr.io/requarks/wiki:2
   label: wikijs

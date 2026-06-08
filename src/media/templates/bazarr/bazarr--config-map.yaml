@@ -1,3 +1,4 @@
+{{- if .Values.bazarr.enabled }}
 apiVersion: v1
 kind: ConfigMap
 
@@ -5,27 +6,13 @@ metadata:
   name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.bazarr.label }}{{ .Values.k8s.names.configMaps.suffix }}
 
 data:
-  config.xml: |
-    <Config>
-      <BindAddress>*</BindAddress>
-      <Port>{{ .Values.bazarr.ports.http.targetPort }}</Port>
-      <SslPort>9898</SslPort>
-      <EnableSsl>False</EnableSsl>
-      <LaunchBrowser>True</LaunchBrowser>
-      <ApiKey>{{ .Values.bazarr.apiKey }}</ApiKey>
-      <AuthenticationMethod>External</AuthenticationMethod>
-      <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
-      <Branch>master</Branch>
-      <LogLevel>info</LogLevel>
-      <SslCertPath></SslCertPath>
-      <SslCertPassword></SslCertPassword>
-      <UrlBase></UrlBase>
-      <InstanceName>bazarr</InstanceName>
-      <UpdateMechanism>Docker</UpdateMechanism>
-      <PostgresHost>{{ .Values.k8s.names.services.prefix }}{{ .Values.database.label }}{{ .Values.k8s.names.services.suffix }}</PostgresHost>
-      <PostgresPort>{{ .Values.database.ports.http.targetPort }}</PostgresPort>
-      <PostgresUser>{{ .Values.database.credentials.username }}</PostgresUser>
-      <PostgresPassword>{{ .Values.database.credentials.password }}</PostgresPassword>
-      <PostgresMainDb>{{ .Values.database.schemas.bazarr.main }}</PostgresMainDb>
-      <PostgresLogDb>{{ .Values.database.schemas.bazarr.logs }}</PostgresLogDb>
-    </Config>
+  # Minimal seed — Bazarr merges this with its defaults on first start.
+  # Only auth.apikey needs to be pre-set for a stable, known key.
+  config.yaml: |
+    ---
+    auth:
+      apikey: {{ .Values.bazarr.apiKey }}
+      password: ''
+      type: null
+      username: ''
+{{- end }}

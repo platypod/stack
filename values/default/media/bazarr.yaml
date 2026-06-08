@@ -1,5 +1,6 @@
 bazarr:
-  apiKey: 1b229188fe9e4488a2333c2135b1a058
+  enabled: true
+  apiKey: 056d619e7abe9a958050aeb157d13a04
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bazarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: linuxserver/bazarr:latest
   label: bazarr

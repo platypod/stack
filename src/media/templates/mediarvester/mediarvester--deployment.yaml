@@ -1,3 +1,4 @@
+{{- if .Values.mediarvester.enabled }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.mediarvester.label .Values.k8s.names.pods.suffix }}
 {{- $mediaVolume := "media-volume" }}
 {{- $appVolume := "app-volume" }}
@@ -58,3 +59,4 @@ spec:
       - name: {{ $appVolume }}
         persistentVolumeClaim:
           claimName: {{ tpl .Values.mediarvester.storage.appsPvc . }}
+{{- end }}

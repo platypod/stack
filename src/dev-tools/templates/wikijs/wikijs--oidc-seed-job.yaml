@@ -1,3 +1,4 @@
+{{- if .Values.wikijs.enabled }}
 {{- /*
   Seed Wiki.js's Authelia OIDC strategy into its DB after the app has booted.
 
@@ -116,3 +117,4 @@ spec:
         - deployment/{{ $wikijsPod }}
         - -n
         - {{ .Values.k8s.namespace }}
+{{- end }}

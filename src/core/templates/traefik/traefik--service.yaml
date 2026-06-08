@@ -20,3 +20,6 @@ spec:
   selector:
     app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.pods.suffix }}
   type: LoadBalancer
+  {{- if .Values.traefik.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.traefik.loadBalancerIP }}
+  {{- end }}

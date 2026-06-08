@@ -1,4 +1,5 @@
 mediarvester:
+  enabled: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.mediarvester.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: ghcr.io/platypod/mediarvester:v0.2.0
   label: mediarvester
@@ -8,7 +9,7 @@ mediarvester:
       targetPort: 8080
   database:
     # SQLAlchemy async connection string to the shared media PostgreSQL.
-    url: "postgresql+asyncpg://{{ .Values.database.credentials.username }}:{{ .Values.database.credentials.password }}@{{ .Values.k8s.names.services.prefix }}{{ .Values.database.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.database.ports.http.targetPort }}/{{ .Values.database.schemas.mediarvester.main }}"
+    url: "postgresql+asyncpg://{{ .Values.database.serviceCredentials.mediarvester.username }}:{{ .Values.database.serviceCredentials.mediarvester.password }}@{{ .Values.k8s.names.services.prefix }}{{ .Values.database.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.database.ports.http.targetPort }}/{{ .Values.database.schemas.mediarvester.main }}"
   auth:
     # Authelia forwards the authenticated user via this header (see authResponseHeaders).
     header: Remote-User

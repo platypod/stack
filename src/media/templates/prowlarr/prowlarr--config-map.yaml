@@ -1,3 +1,4 @@
+{{- if .Values.prowlarr.enabled }}
 apiVersion: v1
 kind: ConfigMap
 
@@ -29,3 +30,4 @@ data:
       <PostgresMainDb>{{ .Values.database.schemas.prowlarr.main }}</PostgresMainDb>
       <PostgresLogDb>{{ .Values.database.schemas.prowlarr.logs }}</PostgresLogDb>
     </Config>
+{{- end }}

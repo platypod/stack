@@ -1,0 +1,151 @@
+{{- if .Values.jellyseerr.enabled }}
+{{- /*
+  Jellyseerr first-boot setup Job.
+
+  Runs after the Jellyfin setup Job (hook-weight 20 > Jellyfin's 10) so the
+  Jellyfin admin user already exists before this job connects to it.
+
+  Flow (idempotent):
+    1. Wait for Jellyseerr HTTP to be ready.
+    2. Try to login without hostname (succeeds if Jellyfin host already configured).
+         "No hostname provided" → not initialized → run full init (step 3).
+         "Jellyfin hostname already configured" → init done → login without hostname.
+         200 → already fully set up.
+    3. First-time init:
+         POST /auth/jellyfin with hostname + serverType=2 → creates Seerr admin user
+         and saves the Jellyfin connection to the database.
+    4. Always: ensure the external Jellyfin hostname is set in Seerr's settings
+         (needed for "Watch on Jellyfin" links to work in the UI).
+
+  The Jellyseerr API key is deterministic: it is pre-seeded in settings.json via
+  the ConfigMap and backed by the API_KEY env var, so no key injection is needed.
+*/ -}}
+{{- $jellyfinSvc := print .Values.k8s.names.services.prefix .Values.jellyfin.label .Values.k8s.names.services.suffix }}
+{{- $seerrSvc    := print .Values.k8s.names.services.prefix .Values.jellyseerr.label .Values.k8s.names.services.suffix }}
+apiVersion: batch/v1
+kind: Job
+
+metadata:
+  name: jellyseerr-setup
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "20"
+    "helm.sh/hook-delete-policy": before-hook-creation
+
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: jellyseerr-setup
+        image: python:3-alpine
+        env:
+        - name: SEERR_URL
+          value: "http://{{ $seerrSvc }}:{{ .Values.jellyseerr.ports.http.targetPort }}"
+        - name: JELLYFIN_HOST
+          value: "{{ $jellyfinSvc }}"
+        - name: JELLYFIN_PORT
+          value: "{{ .Values.jellyfin.ports.http.targetPort }}"
+        - name: JELLYFIN_EXTERNAL_URL
+          value: "https://{{ tpl .Values.jellyfin.host . }}"
+        - name: ADMIN_USERNAME
+          value: "{{ .Values.jellyfin.credentials.username }}"
+        - name: ADMIN_PASSWORD
+          value: "{{ .Values.jellyfin.credentials.password }}"
+        command:
+        - python3
+        - -c
+        - |
+          import json, os, time, urllib.request, urllib.error, http.cookiejar
+
+          BASE         = os.environ["SEERR_URL"]
+          JF_HOST      = os.environ["JELLYFIN_HOST"]
+          JF_PORT      = int(os.environ["JELLYFIN_PORT"])
+          JF_EXT_URL   = os.environ["JELLYFIN_EXTERNAL_URL"]
+          USERNAME     = os.environ["ADMIN_USERNAME"]
+          PASSWORD     = os.environ["ADMIN_PASSWORD"]
+
+          # Cookie-aware client — Seerr uses connect.sid session cookies
+          jar = http.cookiejar.CookieJar()
+          opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+
+          def seerr(method, path, body=None):
+              url = f"{BASE}{path}"
+              data = json.dumps(body).encode() if body is not None else None
+              req = urllib.request.Request(url, data=data, method=method)
+              req.add_header("Content-Type", "application/json")
+              try:
+                  with opener.open(req, timeout=15) as r:
+                      raw = r.read()
+                      return json.loads(raw) if raw else {}
+              except urllib.error.HTTPError as e:
+                  raise RuntimeError(json.loads(e.read().decode()).get("error", str(e)))
+
+          # ── wait for Seerr ─────────────────────────────────────────────────────
+
+          print("Waiting for Jellyseerr to be ready...")
+          for i in range(120):
+              try:
+                  seerr("GET", "/api/v1/settings/public")
+                  print(f"  [{i}] Jellyseerr is up.")
+                  break
+              except Exception as e:
+                  print(f"  [{i}] Not ready: {e}")
+                  time.sleep(5)
+          else:
+              raise SystemExit("Jellyseerr never became ready")
+
+          # ── login / initialize ─────────────────────────────────────────────────
+
+          try:
+              # No hostname → works if Jellyfin connection is already saved in DB
+              resp = seerr("POST", "/api/v1/auth/jellyfin",
+                           {"username": USERNAME, "password": PASSWORD})
+              print(f"Logged in as '{resp.get('jellyfinUsername', '?')}' (already configured).")
+
+          except RuntimeError as e:
+              err = str(e)
+
+              if "already configured" in err:
+                  # Hostname saved but we passed none — re-login without it
+                  resp = seerr("POST", "/api/v1/auth/jellyfin",
+                               {"username": USERNAME, "password": PASSWORD})
+                  print(f"Re-logged in as '{resp.get('jellyfinUsername', '?')}'.")
+
+              elif "No hostname" in err or "not initialized" in err.lower() or "INVALID_URL" in err or "404" in err:
+                  # First boot or broken Jellyfin IP — initialize with the connection
+                  print(f"Initializing Jellyseerr with Jellyfin at {JF_HOST}:{JF_PORT}...")
+                  seerr("POST", "/api/v1/auth/jellyfin", {
+                      "username":   USERNAME,
+                      "password":   PASSWORD,
+                      "hostname":   JF_HOST,
+                      "port":       JF_PORT,
+                      "urlBase":    "",
+                      "useSsl":     False,
+                      "serverType": 2,   # MediaServerType.JELLYFIN
+                  })
+                  print("Jellyseerr initialized — admin user created.")
+
+              else:
+                  raise SystemExit(f"Unexpected auth error: {err}")
+
+          # ── ensure external Jellyfin hostname is set ───────────────────────────
+
+          # The internal field name is 'ip' (not 'hostname') — always use ip+port
+          try:
+              seerr("POST", "/api/v1/settings/jellyfin", {
+                  "ip":               JF_HOST,
+                  "port":             JF_PORT,
+                  "useSsl":           False,
+                  "urlBase":          "",
+                  "externalHostname": JF_EXT_URL,
+                  "jellyfinForgotPasswordUrl": "",
+              })
+              print(f"Jellyfin connection: ip={JF_HOST}:{JF_PORT}, external={JF_EXT_URL}.")
+          except Exception as e:
+              print(f"Warning: could not update Jellyfin settings: {e}")
+
+          print("Jellyseerr setup complete.")
+
+{{- end }}

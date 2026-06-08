@@ -1,3 +1,4 @@
+{{- if .Values.jellyfin.enabled }}
 {{- if .Values.jellyfin.enable }}
 
 apiVersion: traefik.io/v1alpha1
@@ -30,4 +31,5 @@ spec:
     certResolver: {{ .Values.traefik.resolverName }}
   {{- end }}
 
+{{- end }}
 {{- end }}

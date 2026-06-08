@@ -1,3 +1,4 @@
+{{- if .Values.whoami.enabled }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.whoami.label .Values.k8s.names.pods.suffix }}
 
 apiVersion: apps/v1
@@ -26,3 +27,4 @@ spec:
         ports:
         - name: {{ .Values.whoami.ports.http.name }}
           containerPort: {{ .Values.whoami.ports.http.targetPort }}
+{{- end }}

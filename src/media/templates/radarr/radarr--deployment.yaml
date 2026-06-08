@@ -1,3 +1,4 @@
+{{- if .Values.radarr.enabled }}
 {{- $appVolume := "app-volume" }}
 {{- $configMap := "config-map" }}
 {{- $mediaVolume := "media-volume" }}
@@ -56,3 +57,4 @@ spec:
         configMap:
           name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.configMaps.suffix }}
           defaultMode: 0666
+{{- end }}

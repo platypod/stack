@@ -1,0 +1,255 @@
+{{- if .Values.jellyfin.enabled }}
+{{- /*
+  Jellyfin first-boot setup Job.
+
+  Runs as a Helm post-install/post-upgrade hook after every media deploy.
+
+  Flow (idempotent):
+    1. Poll /System/Info/Public until Jellyfin is up.
+    2. If StartupWizardCompleted=true:
+         Try to auth with the configured credentials.
+         Success → already set up, exit 0.
+         Failure → unexpected state, exit 1.
+    3. If StartupWizardCompleted=false:
+         POST /Startup/Complete  → creates "root" user (empty password)
+         Auth as root, rename to configured username, set configured password.
+         POST /Auth/Keys?app=Homepage → generate API key.
+         Create/patch K8s Secret "jellyfin-apikey" with the key so Homepage can
+         read it via envFrom (HOMEPAGE_VAR_JELLYFIN_API_KEY).
+         Patch the Homepage Deployment to trigger a rollout so it picks up the key.
+
+  Re-running after Jellyfin is already set up exits quickly (step 2 path).
+*/ -}}
+{{- $jellyfinSvc := print .Values.k8s.names.services.prefix .Values.jellyfin.label .Values.k8s.names.services.suffix }}
+{{- $homepageDeploy := print .Values.k8s.names.pods.prefix .Values.homepage.label .Values.k8s.names.pods.suffix }}
+apiVersion: batch/v1
+kind: Job
+
+metadata:
+  name: jellyfin-setup
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: media-setup-sa
+      containers:
+      - name: jellyfin-setup
+        image: python:3-alpine
+        env:
+        - name: JELLYFIN_URL
+          value: "http://{{ $jellyfinSvc }}:{{ .Values.jellyfin.ports.http.targetPort }}"
+        - name: ADMIN_USERNAME
+          value: "{{ .Values.jellyfin.credentials.username }}"
+        - name: ADMIN_PASSWORD
+          value: "{{ .Values.jellyfin.credentials.password }}"
+        - name: HOMEPAGE_DEPLOY
+          value: "{{ $homepageDeploy }}"
+        - name: SECRET_NAME
+          value: "jellyfin-apikey"
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        command:
+        - python3
+        - -c
+        - |
+          import json, os, ssl, time, urllib.request
+          from datetime import datetime, timezone
+
+          BASE        = os.environ["JELLYFIN_URL"]
+          USERNAME    = os.environ["ADMIN_USERNAME"]
+          PASSWORD    = os.environ["ADMIN_PASSWORD"]
+          NAMESPACE   = os.environ["NAMESPACE"]
+          SECRET_NAME = os.environ["SECRET_NAME"]
+          HP_DEPLOY   = os.environ["HOMEPAGE_DEPLOY"]
+
+          HDR = ("X-Emby-Authorization",
+                 'MediaBrowser Client="Setup",Device="Setup",DeviceId="jf-setup-001",Version="1.0"')
+
+          # ── helpers ──────────────────────────────────────────────────────────────
+
+          def jf(method, path, body=None, token=None):
+              url = f"{BASE}{path}"
+              data = json.dumps(body).encode() if body else b""
+              req = urllib.request.Request(url, data=data or None, method=method)
+              req.add_header("Content-Type", "application/json")
+              req.add_header(*HDR)
+              if token:
+                  req.add_header("X-Emby-Token", token)
+              try:
+                  with urllib.request.urlopen(req, timeout=10) as r:
+                      raw = r.read()
+                      return json.loads(raw) if raw else {}
+              except urllib.error.HTTPError as e:
+                  raise RuntimeError(f"{method} {path} → HTTP {e.code}: {e.read().decode()}")
+
+          def k8s(method, path, body=None):
+              with open("/var/run/secrets/kubernetes.io/serviceaccount/token") as f:
+                  sa_token = f.read()
+              ca = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+              k8s_host = os.environ["KUBERNETES_SERVICE_HOST"]
+              k8s_port = os.environ["KUBERNETES_SERVICE_PORT"]
+              url = f"https://{k8s_host}:{k8s_port}{path}"
+              data = json.dumps(body).encode() if body else None
+              req = urllib.request.Request(url, data=data, method=method)
+              req.add_header("Authorization", f"Bearer {sa_token}")
+              req.add_header("Content-Type", "application/strategic-merge-patch+json" if method == "PATCH" else "application/json")
+              ctx = ssl.create_default_context(cafile=ca)
+              with urllib.request.urlopen(req, context=ctx, timeout=10) as r:
+                  return json.loads(r.read())
+
+          # ── wait for Jellyfin ─────────────────────────────────────────────────────
+
+          print("Waiting for Jellyfin to be ready...")
+          for i in range(120):
+              try:
+                  info = jf("GET", "/System/Info/Public")
+                  wizard = info.get("StartupWizardCompleted")
+                  print(f"  [{i}] Jellyfin up — StartupWizardCompleted={wizard}")
+                  break
+              except Exception as e:
+                  print(f"  [{i}] Not ready: {e}")
+                  time.sleep(5)
+          else:
+              raise SystemExit("Jellyfin never became ready")
+
+          # ── already set up? ───────────────────────────────────────────────────────
+
+          if wizard:
+              print("Wizard already complete — verifying admin credentials...")
+              try:
+                  auth = jf("POST", "/Users/AuthenticateByName",
+                             {"Username": USERNAME, "Pw": PASSWORD})
+                  token = auth["AccessToken"]
+                  print(f"Auth OK for '{USERNAME}' — Jellyfin already configured.")
+              except RuntimeError as e:
+                  raise SystemExit(f"Wizard complete but auth failed: {e}")
+
+              # Ensure the API key Secret exists (may be missing if this path ran before)
+              keys = jf("GET", "/Auth/Keys", token=token)
+              hp_keys = [k for k in keys["Items"] if k["AppName"] == "Homepage"]
+              if not hp_keys:
+                  jf("POST", "/Auth/Keys?app=Homepage", token=token)
+                  keys = jf("GET", "/Auth/Keys", token=token)
+                  hp_keys = [k for k in keys["Items"] if k["AppName"] == "Homepage"]
+              api_key = hp_keys[0]["AccessToken"]
+              print(f"Homepage API key: {api_key[:8]}...")
+
+              secret_body = {
+                  "apiVersion": "v1", "kind": "Secret",
+                  "metadata": {"name": SECRET_NAME, "namespace": NAMESPACE},
+                  "stringData": {"HOMEPAGE_VAR_JELLYFIN_API_KEY": api_key},
+              }
+              try:
+                  k8s("POST", f"/api/v1/namespaces/{NAMESPACE}/secrets", secret_body)
+                  print(f"Secret '{SECRET_NAME}' created.")
+              except Exception:
+                  k8s("PATCH", f"/api/v1/namespaces/{NAMESPACE}/secrets/{SECRET_NAME}", secret_body)
+                  print(f"Secret '{SECRET_NAME}' patched.")
+
+              now = datetime.now(timezone.utc).isoformat()
+              k8s("PATCH", f"/apis/apps/v1/namespaces/{NAMESPACE}/deployments/{HP_DEPLOY}", {
+                  "spec": {"template": {"metadata": {"annotations": {
+                      "kubectl.kubernetes.io/restartedAt": now,
+                  }}}},
+              })
+              print("Homepage rollout triggered. Jellyfin setup complete.")
+              raise SystemExit(0)
+
+          # ── run the startup wizard ────────────────────────────────────────────────
+
+          print("Running startup wizard...")
+
+          # Complete wizard — Jellyfin creates a 'root' user with an empty password.
+          jf("POST", "/Startup/Complete")
+          print("Wizard completed.")
+
+          # Auth as root (empty password)
+          auth = jf("POST", "/Users/AuthenticateByName", {"Username": "root", "Pw": ""})
+          token   = auth["AccessToken"]
+          user_id = auth["User"]["Id"]
+          print(f"Authenticated as root (id={user_id[:8]}...)")
+
+          # Rename root → configured username and set password.
+          jf("POST", f"/Users/{user_id}", {
+              "Name": USERNAME,
+              "Configuration": {
+                  "PlayDefaultAudioTrack": True, "SubtitleLanguagePreference": "",
+                  "DisplayMissingEpisodes": False, "GroupedFolders": [],
+                  "SubtitleMode": "Default", "DisplayCollectionsView": False,
+                  "EnableLocalPassword": False, "OrderedViews": [],
+                  "LatestItemsExcludes": [], "MyMediaExcludes": [],
+                  "HidePlayedInLatest": True, "RememberAudioSelections": True,
+                  "RememberSubtitleSelections": True, "EnableNextEpisodeAutoPlay": True,
+                  "CastReceiverId": "",
+              },
+              "Policy": {
+                  "IsAdministrator": True, "IsHidden": True,
+                  "EnableCollectionManagement": False, "EnableMediaPlayback": True,
+                  "EnableAudioPlaybackTranscoding": True, "EnableVideoPlaybackTranscoding": True,
+                  "EnablePlaybackRemuxing": True, "ForceRemoteSourceTranscoding": False,
+                  "EnableContentDeletion": False, "EnableContentDownloading": False,
+                  "EnableSyncTranscoding": True, "EnableMediaConversion": True,
+                  "EnabledDevices": [], "EnableAllDevices": True,
+                  "EnabledChannels": [], "EnableAllChannels": True,
+                  "EnabledFolders": [], "EnableAllFolders": True,
+                  "InvalidLoginAttemptCount": 0, "LoginAttemptsBeforeLockout": -1,
+                  "MaxActiveSessions": 0, "EnablePublicSharing": True,
+                  "BlockedMediaFolders": [], "BlockedChannels": [],
+                  "RemoteClientBitrateLimit": 0,
+                  "AuthenticationProviderId": "Jellyfin.Server.Implementations.Users.DefaultAuthenticationProvider",
+                  "PasswordResetProviderId": "Jellyfin.Server.Implementations.Users.DefaultPasswordResetProvider",
+                  "SyncPlayAccess": "CreateAndJoinGroups",
+              },
+          }, token=token)
+          print(f"Renamed root → '{USERNAME}'.")
+
+          jf("POST", f"/Users/{user_id}/Password",
+             {"CurrentPw": "", "NewPw": PASSWORD}, token=token)
+          print("Password set.")
+
+          # Re-auth with the new credentials
+          auth2 = jf("POST", "/Users/AuthenticateByName", {"Username": USERNAME, "Pw": PASSWORD})
+          token = auth2["AccessToken"]
+          print(f"Re-authenticated as '{USERNAME}'.")
+
+          # Create API key for Homepage
+          jf("POST", "/Auth/Keys?app=Homepage", token=token)
+          keys = jf("GET", "/Auth/Keys", token=token)
+          api_key = next(k["AccessToken"] for k in keys["Items"] if k["AppName"] == "Homepage")
+          print(f"API key created: {api_key[:8]}...")
+
+          # ── store key in K8s Secret ───────────────────────────────────────────────
+
+          secret_body = {
+              "apiVersion": "v1",
+              "kind": "Secret",
+              "metadata": {"name": SECRET_NAME, "namespace": NAMESPACE},
+              "stringData": {"HOMEPAGE_VAR_JELLYFIN_API_KEY": api_key},
+          }
+          try:
+              k8s("POST", f"/api/v1/namespaces/{NAMESPACE}/secrets", secret_body)
+              print(f"Secret '{SECRET_NAME}' created.")
+          except Exception:
+              k8s("PATCH", f"/api/v1/namespaces/{NAMESPACE}/secrets/{SECRET_NAME}", secret_body)
+              print(f"Secret '{SECRET_NAME}' patched.")
+
+          # ── restart Homepage so it picks up the new env var ───────────────────────
+
+          now = datetime.now(timezone.utc).isoformat()
+          k8s("PATCH", f"/apis/apps/v1/namespaces/{NAMESPACE}/deployments/{HP_DEPLOY}", {
+              "spec": {"template": {"metadata": {"annotations": {
+                  "kubectl.kubernetes.io/restartedAt": now,
+              }}}},
+          })
+          print(f"Triggered rollout restart of '{HP_DEPLOY}'.")
+          print("Jellyfin setup complete.")
+
+{{- end }}

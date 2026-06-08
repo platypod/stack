@@ -6,7 +6,7 @@ lldap:
   baseDn: dc=platypod,dc=home
   # LLDAP always exposes its bind user as uid=admin,ou=people,<baseDn>.
   adminUser: admin
-  adminPassword: platypod-password
+  adminPassword: password
   jwtSecret: eeaec9bbe54597b5e9cb767a0db1f72ca146be3ec83fde39905444773adbd1e6
   database:
     image: postgres:17
@@ -51,7 +51,7 @@ lldap:
       - id: admin
         email: pl@ty.pod
         displayName: admini
-        password: platypod-password
+        password: "{{ .Values.lldap.adminPassword }}"
         groups:
           - admins
           - dev

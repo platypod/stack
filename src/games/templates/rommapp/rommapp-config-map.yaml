@@ -1,3 +1,4 @@
+{{- if .Values.rommapp.enabled }}
 apiVersion: v1
 kind: ConfigMap
 
@@ -54,3 +55,4 @@ data:
 
     # The folder name where your roms are located
     filesystem: {} # { roms_folder: 'roms' } For example if your folder structure is /home/user/library/roms_folder
+{{- end }}

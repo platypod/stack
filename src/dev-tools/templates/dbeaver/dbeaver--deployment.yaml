@@ -1,5 +1,7 @@
+{{- if .Values.dbeaver.enabled }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.dbeaver.label .Values.k8s.names.pods.suffix }}
 {{- $appVolume := "app-volume" }}
+{{- $configMap := "config-map" }}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -46,7 +48,14 @@ spec:
         - mountPath: /opt/cloudbeaver/workspace
           name: {{ $appVolume }}
           subPath: dbeaver
+        - mountPath: /opt/cloudbeaver/conf/initial-data.conf
+          name: {{ $configMap }}
+          subPath: initial-data.conf
       volumes:
       - name: {{ $appVolume }}
         persistentVolumeClaim:
-          claimName: {{ tpl .Values.jellyseerr.pvc . }}
+          claimName: {{ tpl .Values.dbeaver.pvc . }}
+      - name: {{ $configMap }}
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.dbeaver.label }}{{ .Values.k8s.names.configMaps.suffix }}
+{{- end }}

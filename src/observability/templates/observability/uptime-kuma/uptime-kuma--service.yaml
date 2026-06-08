@@ -1,0 +1,15 @@
+{{- if .Values.uptimeKuma.enabled }}
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.uptimeKuma.label }}{{ .Values.k8s.names.services.suffix }}
+
+spec:
+  selector:
+    app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.uptimeKuma.label }}{{ .Values.k8s.names.pods.suffix }}
+  ports:
+  - name: {{ .Values.uptimeKuma.ports.http.name }}
+    port: {{ .Values.uptimeKuma.ports.http.targetPort }}
+    targetPort: {{ .Values.uptimeKuma.ports.http.targetPort }}
+{{- end }}

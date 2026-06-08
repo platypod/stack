@@ -1,4 +1,4 @@
-{{- if .Values.jellyfin.enable }}
+{{- if .Values.jellyfin.enabled }}
 
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.jellyfin.label .Values.k8s.names.pods.suffix }}
 {{- $appVolume := "app-volume" }}
@@ -22,6 +22,30 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
+      initContainers:
+      # Seed system.xml from ConfigMap into the PVC on first start.
+      # ConfigMap mounts are read-only; Jellyfin needs to write to system.xml, so
+      # we copy the template to the PVC once and let Jellyfin own it afterwards.
+      - name: seed-config
+        image: busybox:1
+        command:
+        - sh
+        - -c
+        - |
+          DEST=/config/config/system.xml
+          mkdir -p /config/config
+          if [ ! -f "$DEST" ]; then
+            echo "Seeding system.xml from ConfigMap..."
+            cp /seed/settings.json "$DEST"
+          else
+            echo "system.xml already exists, skipping seed."
+          fi
+        volumeMounts:
+        - mountPath: /config
+          name: {{ $appVolume }}
+          subPath: jellyfin
+        - mountPath: /seed
+          name: {{ $configMap }}
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.jellyfin.image }}
@@ -30,34 +54,11 @@ spec:
         ports:
         - name: {{ .Values.jellyfin.ports.http.name }}
           containerPort: {{ .Values.jellyfin.ports.http.targetPort }}
-        env:
-        - name: API_KEY
-          value: "{{ .Values.jellyfin.apiKey }}"
-        - name: LOG_LEVEL
-          value: "{{ .Values.jellyfin.logLevel }}"
-        - name: DB_TYPE
-          value: "{{ .Values.jellyfin.database.type }}"
-        - name: DB_HOST
-          value: "{{ .Values.jellyfin.database.host }}"
-        - name: DB_PORT
-          value: "{{ .Values.jellyfin.database.port }}"
-        - name: DB_USER
-          value: "{{ .Values.jellyfin.database.username }}"
-        - name: DB_PASS
-          value: "{{ .Values.jellyfin.database.password }}"
-        - name: DB_NAME
-          value: "{{ .Values.jellyfin.database.name }}"
-        - name: DB_LOG_QUERIES
-          value: "{{ .Values.jellyfin.database.logQueries }}"
-        - name: PORT
-          value: "{{ .Values.jellyfin.ports.http.targetPort }}"
         volumeMounts:
-        - mountPath: /app/config
+        # /config is Jellyfin's default config directory (JELLYFIN_ConfigDir)
+        - mountPath: /config
           name: {{ $appVolume }}
-          subPath: jellyfin/config
-        - mountPath: /settings.json
-          name: {{ $configMap }}
-          subPath: settings.json
+          subPath: jellyfin
       volumes:
       - name: {{ $appVolume }}
         persistentVolumeClaim:

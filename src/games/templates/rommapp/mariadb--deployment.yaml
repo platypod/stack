@@ -1,3 +1,4 @@
+{{- if .Values.rommapp.enabled }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.rommapp.database.label .Values.k8s.names.pods.suffix }}
 
 apiVersion: apps/v1
@@ -43,3 +44,4 @@ spec:
       - name: {{ tpl .Values.rommapp.pvc . }}
         persistentVolumeClaim:
           claimName: {{ tpl .Values.rommapp.pvc . }}
+{{- end }}

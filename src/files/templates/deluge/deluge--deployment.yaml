@@ -1,3 +1,4 @@
+{{- if .Values.deluge.enabled }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.deluge.label .Values.k8s.names.pods.suffix }}
 {{- $configMap := "config-map" }}
 {{- $appVolume := "app-volume" }}
@@ -81,3 +82,4 @@ spec:
         configMap:
           name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.deluge.label }}{{ .Values.k8s.names.configMaps.suffix }}
           defaultMode: 0555
+{{- end }}

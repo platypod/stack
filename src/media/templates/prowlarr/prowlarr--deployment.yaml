@@ -1,3 +1,4 @@
+{{- if .Values.prowlarr.enabled }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.prowlarr.label .Values.k8s.names.pods.suffix }}
 {{- $configMap := "config-map" }}
 
@@ -43,3 +44,4 @@ spec:
         configMap:
           name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.prowlarr.label }}{{ .Values.k8s.names.configMaps.suffix }}
   
+{{- end }}

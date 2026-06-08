@@ -14,12 +14,37 @@ data:
         --username "$POSTGRES_USER" \
         --dbname "$POSTGRES_DB" \
     <<-EOSQL
+      -- Superuser (used only for admin/init tasks)
       CREATE USER {{ $.Values.database.credentials.username }} PASSWORD '{{ $.Values.database.credentials.password }}';
-      {{- range $app, $map := .Values.database.schemas }}
-      {{- range $key, $dbName := $map }}
 
+      -- Per-service users (each service gets its own user with access to its own DBs only)
+      {{- range $svc, $creds := .Values.database.serviceCredentials }}
+      CREATE USER "{{ $creds.username }}" PASSWORD '{{ $creds.password }}';
+      {{- end }}
+
+      -- Databases: one per schema entry; grant to the matching service user when one exists
+      {{- range $app, $map := .Values.database.schemas }}
+      {{- $svcCreds := index $.Values.database.serviceCredentials $app }}
+      {{- range $key, $dbName := $map }}
       CREATE DATABASE "{{ $dbName }}";
       GRANT ALL PRIVILEGES ON DATABASE "{{ $dbName }}" TO "{{ $.Values.database.credentials.username }}";
-  	  {{- end }}
-  	  {{- end }}
+      {{- if $svcCreds }}
+      GRANT ALL PRIVILEGES ON DATABASE "{{ $dbName }}" TO "{{ $svcCreds.username }}";
+      {{- end }}
+      {{- end }}
+      {{- end }}
+
+      -- PostgreSQL 15+ no longer grants CREATE on public schema by default.
+      -- Connect to each service DB and grant schema-level privileges so services
+      -- can run migrations without superuser.
+      {{- range $app, $map := .Values.database.schemas }}
+      {{- $svcCreds := index $.Values.database.serviceCredentials $app }}
+      {{- range $key, $dbName := $map }}
+      \connect "{{ $dbName }}"
+      GRANT USAGE, CREATE ON SCHEMA public TO "{{ $.Values.database.credentials.username }}";
+      {{- if $svcCreds }}
+      GRANT USAGE, CREATE ON SCHEMA public TO "{{ $svcCreds.username }}";
+      {{- end }}
+      {{- end }}
+      {{- end }}
     EOSQL

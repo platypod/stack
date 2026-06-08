@@ -1,3 +1,4 @@
+{{- if .Values.transmission.enabled }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.transmission.label .Values.k8s.names.pods.suffix }}
 {{- $configMap := "config-map" }}
 {{- $appVolume := "app-volume" }}
@@ -21,8 +22,22 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
+      initContainers:
+      - name: seed-config
+        image: busybox:1
+        command:
+        - sh
+        - -c
+        - |
+          echo "Writing Transmission settings.json from ConfigMap..."
+          cp /seed/settings.json /config/settings.json
+        volumeMounts:
+        - mountPath: /config
+          name: {{ $appVolume }}
+          subPath: transmission/config
+        - mountPath: /seed
+          name: {{ $configMap }}
       containers:
-      # transmission
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.transmission.image }}
         resources:
@@ -48,30 +63,37 @@ spec:
           value: "{{ .Values.transmission.credentials.username }}"
         - name: PASS
           value: "{{ .Values.transmission.credentials.password }}"
+        lifecycle:
+          postStart:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - |
+                # The linuxserver init script hardcodes rpc-whitelist (IP) and
+                # rpc-host-whitelist (Host header) to localhost-only, which blocks
+                # Homepage and Traefik. Patch them out via the RPC from localhost
+                # (which always bypasses the IP whitelist).
+                RPC=http://127.0.0.1:{{ .Values.transmission.ports.http.targetPort }}/transmission/rpc
+                for i in $(seq 1 30); do
+                  TOKEN=$(curl -si "$RPC" 2>/dev/null | grep -i "X-Transmission-Session-Id:" | tr -d '\r' | awk '{print $2}')
+                  [ -n "$TOKEN" ] && break
+                  sleep 2
+                done
+                [ -z "$TOKEN" ] && exit 0
+                curl -sf -X POST "$RPC" \
+                  -u "${USER}:${PASS}" \
+                  -H "X-Transmission-Session-Id: $TOKEN" \
+                  -H "Content-Type: application/json" \
+                  -d '{"method":"session-set","arguments":{"rpc-whitelist-enabled":false,"rpc-host-whitelist-enabled":false}}' \
+                  || true
         volumeMounts:
-        - mountPath: /config/settings.json
-          name: {{ $configMap }}
-          subPath: settings.json
         - mountPath: /config
           name: {{ $appVolume }}
           subPath: transmission/config
         - mountPath: {{ .Values.media.system.data.path }}
           name: {{ $mediaVolume }}
           subPath: downloads/transmission
-      # transmission-exporter
-      - name: {{ .Values.k8s.names.containers.prefix }}{{  tpl .Values.transmission.exporter.label .  }}{{ .Values.k8s.names.containers.suffix }}
-        image: {{ .Values.transmission.exporter.image }}
-        ports:
-        - containerPort: {{ .Values.transmission.exporter.ports.http.targetPort }}
-        env:
-        - name: TRANSMISSION_ADDR
-          value: "http://localhost:{{ .Values.transmission.ports.http.targetPort }}"
-        - name: WEB_PATH
-          value: "/metrics"
-        - name: WEB_ADDR
-          value: ":{{ .Values.transmission.exporter.ports.http.targetPort }}"
-        resources:
-          {{- toYaml .Values.transmission.exporter.resources | nindent 10 }}
       volumes:
       - name: {{ $mediaVolume }}
         persistentVolumeClaim:
@@ -82,4 +104,4 @@ spec:
       - name: {{ $configMap }}
         configMap:
           name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.configMaps.suffix }}
-          defaultMode: 0555
+{{- end }}

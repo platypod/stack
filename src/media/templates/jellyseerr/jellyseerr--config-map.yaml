@@ -1,3 +1,4 @@
+{{- if .Values.jellyseerr.enabled }}
 apiVersion: v1
 kind: ConfigMap
 
@@ -235,3 +236,4 @@ data:
       }
      }
     }
+{{- end }}

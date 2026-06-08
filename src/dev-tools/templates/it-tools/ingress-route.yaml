@@ -1,3 +1,4 @@
+{{- if .Values.itTools.enabled }}
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 
@@ -27,3 +28,4 @@ spec:
   tls:
     certResolver: {{ .Values.traefik.resolverName }}
   {{- end }}
+{{- end }}

@@ -7,7 +7,7 @@
     3. Create any missing groups.
     4. For each user (excluding the built-in 'admin'):
          - Create the user if absent, then set its initial password via the
-           resetUserPasswordAsAdmin → /auth/reset/step2 flow.
+           lldap_set_password binary (resetUserPasswordAsAdmin was removed in current LLDAP).
          - Assign the user to its declared groups (skips existing memberships).
     5. The built-in LLDAP admin user is skipped entirely — its password is
        managed by the LLDAP_LDAP_USER_PASS env var on the LLDAP pod.
@@ -32,6 +32,16 @@ spec:
         app: {{ .Values.lldap.label }}-seed
     spec:
       restartPolicy: Never
+      initContainers:
+      - name: copy-tools
+        image: {{ .Values.lldap.image }}
+        command: ["cp", "/app/lldap_set_password", "/tools/lldap_set_password"]
+        volumeMounts:
+        - name: tools
+          mountPath: /tools
+      volumes:
+      - name: tools
+        emptyDir: {}
       containers:
       - name: seed
         image: {{ .Values.lldap.seed.image }}
@@ -46,6 +56,9 @@ spec:
           value: {{ .Values.lldap.seed.groups | toJson | quote }}
         - name: USERS
           value: {{ .Values.lldap.seed.users | toJson | quote }}
+        volumeMounts:
+        - name: tools
+          mountPath: /tools
         command:
         - python3
         - -c
@@ -131,28 +144,37 @@ spec:
                       token,
                   )
                   print(f"Updated profile for built-in admin '{uid}'.")
-              elif uid in existing_uids:
-                  print(f"User '{uid}' already exists — skipping creation.")
               else:
-                  gql(
-                      """mutation C($u: CreateUserInput!) { createUser(user: $u) { id } }""",
-                      {"u": {
-                          "id":          uid,
-                          "email":       user.get("email", f"{uid}@platypod.local"),
-                          "displayName": user.get("displayName", uid),
-                          "firstName":   user.get("firstName", ""),
-                          "lastName":    user.get("lastName", ""),
-                      }},
-                      token,
-                  )
-                  print(f"Created user '{uid}'.")
+                  import subprocess
 
-                  # Set initial password via admin reset flow.
-                  reset_tok = gql(
-                      'mutation { resetUserPasswordAsAdmin(userId: "%s") }' % uid,
-                      token=token,
-                  )["resetUserPasswordAsAdmin"]
-                  req("PUT", "/auth/reset/step2", {"token": reset_tok, "new_password": user["password"]})
+                  if uid in existing_uids:
+                      print(f"User '{uid}' already exists — ensuring password is set.")
+                  else:
+                      gql(
+                          """mutation C($u: CreateUserInput!) { createUser(user: $u) { id } }""",
+                          {"u": {
+                              "id":          uid,
+                              "email":       user.get("email", f"{uid}@platypod.local"),
+                              "displayName": user.get("displayName", uid),
+                              "firstName":   user.get("firstName", ""),
+                              "lastName":    user.get("lastName", ""),
+                          }},
+                          token,
+                      )
+                      print(f"Created user '{uid}'.")
+
+                  # Always set password (idempotent; also fixes users created before
+                  # the password step ran). resetUserPasswordAsAdmin was removed in
+                  # current LLDAP; lldap_set_password is the supported replacement.
+                  subprocess.run(
+                      ["/tools/lldap_set_password",
+                       "--base-url", BASE,
+                       "--admin-username", ADMIN,
+                       "--admin-password", PASSWD,
+                       "--username", uid,
+                       "--password", user["password"]],
+                      check=True,
+                  )
                   print(f"Password set for '{uid}'.")
 
               # Assign groups (idempotent)

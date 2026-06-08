@@ -1,0 +1,17 @@
+uptimeKuma:
+  enabled: true
+  label: uptime-kuma
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.uptimeKuma.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: louislam/uptime-kuma:1
+  ports:
+    http:
+      name: uk-http
+      targetPort: 3001
+  pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  replicasNb: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi

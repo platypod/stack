@@ -1,8 +1,20 @@
 database:
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.database.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  # Superuser — used only by the init job; never shared with services.
   credentials:
     username: postgresMedia
     password: postgresPassword
+  # Per-service credentials — each service gets its own DB user.
+  serviceCredentials:
+    jellyseerr:
+      username: jellyseerrUser
+      password: jellyseerrPassword
+    mediarvester:
+      username: mediarvesterUser
+      password: mediarvesterPassword
+    cloudBeaver:
+      username: cloudBeaverUser
+      password: cloudBeaverPassword
   image: postgres:17
   label: transverse-db
   ports:

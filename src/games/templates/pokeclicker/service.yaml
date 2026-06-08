@@ -1,3 +1,4 @@
+{{- if .Values.pokeclicker.enabled }}
 apiVersion: v1
 kind: Service
 
@@ -11,3 +12,4 @@ spec:
     port: {{ .Values.pokeclicker.ports.http.targetPort }}
   selector:
     app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.pokeclicker.label }}{{ .Values.k8s.names.pods.suffix }}
+{{- end }}

@@ -1,3 +1,4 @@
+{{- if .Values.bookstack.enabled }}
 {{- /*
   Align BookStack's built-in admin role display name with the Authelia `admins`
   group so OIDC group->role sync maps `admins` members to full admin. BookStack
@@ -59,3 +60,4 @@ spec:
           mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER" "$MYSQL_DB" \
             -e "UPDATE roles SET display_name = 'admins' WHERE system_name = 'admin';"
           echo "Done."
+{{- end }}

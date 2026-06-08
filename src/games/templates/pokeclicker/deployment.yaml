@@ -1,3 +1,4 @@
+{{- if .Values.pokeclicker.enabled }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.pokeclicker.label .Values.k8s.names.pods.suffix }}
 
 apiVersion: apps/v1
@@ -23,6 +24,10 @@ spec:
         image: {{ .Values.pokeclicker.image }}
         resources:
           {{- toYaml .Values.pokeclicker.resources | nindent 10 }}
+        env:
+        - name: NODE_OPTIONS
+          value: "--max-old-space-size=768"
         ports:
         - name: {{ .Values.pokeclicker.ports.http.name }}
           containerPort: {{ .Values.pokeclicker.ports.http.targetPort }}
+{{- end }}

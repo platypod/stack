@@ -1,3 +1,4 @@
+{{- if .Values.deluge.enabled }}
 apiVersion: v1
 kind: ConfigMap
 
@@ -109,3 +110,4 @@ data:
         "upnp": true,
         "utpex": true
     }
+{{- end }}

@@ -1,4 +1,5 @@
 flaresolverr:
+  enabled: true
   captchaSolver: none
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.flaresolverr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: flaresolverr/flaresolverr:latest
