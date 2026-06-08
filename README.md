@@ -101,6 +101,7 @@
 
 [![Authelia][Authelia]][Authelia-url]
 [![AdGuardHome][AdGuardHome]][AdGuardHome-url]
+[![LLDAP][LLDAP]][LLDAP-url]
 
 [![OpenTelemetryCollector][OpenTelemetryCollector]][OpenTelemetryCollector-url]
 [![Grafana][Grafana]][Grafana-url]
@@ -109,10 +110,12 @@
 [![VictoriaMetrics][VictoriaMetrics]][VictoriaMetrics-url]
 
 [![Bookstack][Bookstack]][Bookstack-url]
+[![CyberChef][CyberChef]][CyberChef-url]
 [![DBeaver][DBeaver]][DBeaver-url]
 [![ItTools][ItTools]][ItTools-url]
 [![MariaDB][MariaDB]][MariaDB-url]
 [![PostgreSQL][PostgreSQL]][PostgreSQL-url]
+[![Vaultwarden][Vaultwarden]][Vaultwarden-url]
 [![WhoAmI][WhoAmI]][WhoAmI-url]
 
 [![Deluge][Deluge]][Deluge-url]
@@ -127,10 +130,9 @@
 [![Radarr][Radarr]][Radarr-url]
 [![Readarr][Readarr]][Readarr-url]
 [![Sonarr][Sonarr]][Sonarr-url]
-[![Tdarr][Tdarr]][Tdarr-url]
 
 [![RommApp][RommApp]][RommApp-url]
-[![DockerMinecraftServer][DockerMinecraftServer]][DockerMinecraftServer-url]
+[![Pokeclicker][Pokeclicker]][Pokeclicker-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -305,8 +307,7 @@ talosctl -n 192.168.122.102 cp ./some-file /var/local/platypod/volumes/apps/some
 - Security
   - [x] **Adguard** -> *DNS-sinkhole*
   - [x] **Authelia** -> *SSO*
-  - [ ] **OpenLDAP** -> *RBAC*
-  - [ ] **Kalinux** -> *pentest-env*
+  - [x] **LLDAP** -> *LDAP / RBAC*
 - Observability
   - [x] **OtelCollector** -> *collector*
   - [x] **Loki** -> *logs*
@@ -315,18 +316,21 @@ talosctl -n 192.168.122.102 cp ./some-file /var/local/platypod/volumes/apps/some
   - [ ] **Mimir** -> *metrics* (en remplacement de VictoriaMetrics)
   - [x] **Grafana** -> *dashboards*
 - Dev
-  - [ ] **Airflow** -> *orchestrator*
   - [x] **Bookstack** -> *documentation-space*
-  - [ ] **DBeaver** -> *database-interface*
+  - [x] **CyberChef** -> *data-transformation*
+  - [x] **DBeaver** -> *database-interface*
   - [x] **IT-Tools** -> *various-tools*
-  - [ ] **OpenMetadata** or **DataHub** -> *metadata*
-  - [ ] **Structurizr** -> *c4-model*
+  - [x] **Outline** -> *wiki*
+  - [x] **Vaultwarden** -> *password-manager*
+  - [x] **Wiki.js** -> *wiki*
   - [x] **WhoAmI** -> *testing-tool*
+  - [ ] **Airflow** -> *orchestrator*
+  - [ ] **OpenMetadata** or **DataHub** -> *metadata*
 - Download
   - [x] **Transmission** -> *torrent*
+  - [x] **QBitTorrent** -> *torrent*
   - [ ] **Deluge** -> *torrent*
-  - [x] **QbitTorrent** -> *torrent*
-  - [ ] **Sabnzbd** -> *direct-download*
+  - [ ] **SABnzbd** -> *usenet-download*
 - Media
   - [x] **Jellyfin** -> *streaming*
   - [x] **Prowlarr** -> *indexer*
@@ -335,14 +339,14 @@ talosctl -n 192.168.122.102 cp ./some-file /var/local/platypod/volumes/apps/some
   - [x] **Readarr** -> *books*
   - [x] **Bazarr** -> *subtitles*
   - [x] **Jellyseerr** -> *requester*
-  - [ ] **Tdarr** -> *transcoding*
+  - [ ] **Tdarr** -> *hardware-transcoding*
   - [x] **Flaresolverr** -> *cloudflare*
   - [ ] **Invidious** -> *youtube*
   - [ ] **SftpGo** -> *files*
 - Games
-  - [ ] **Minecraft** -> *cubes*
-  - [ ] **DockerScorch** -> *dos*
   - [x] **RommApp** -> *consoles-emulator*
+  - [x] **Pokeclicker** -> *idle-game*
+  - [ ] **Minecraft** -> *cubes*
 - Home
   - [ ] **HomeAssistant** -> *automation*
   - [ ] **HomeBridge** -> *homekit*
@@ -430,7 +434,9 @@ Project Link: [https://github.com/Pittinic/platypod](https://github.com/Pittinic
 [Authelia]: https://img.shields.io/badge/authelia-%23113155?style=for-the-badge&logo=authelia&logoColor=FFFFFF
 [Authelia-url]: https://github.com/authelia/authelia
 [AdGuardHome]: https://img.shields.io/badge/adguard-%2368BC71?style=for-the-badge&logo=adguard&logoColor=FFFFFF
-[AdGuardHome-url]: https://github.com/authelia/authelia
+[AdGuardHome-url]: https://github.com/AdguardTeam/AdGuardHome
+[LLDAP]: https://img.shields.io/badge/lldap-%23326CE5?style=for-the-badge&logoColor=FFFFFF
+[LLDAP-url]: https://github.com/lldap/lldap
 [OpenTelemetryCollector]: https://img.shields.io/badge/opentelemetry-%23FFFFFF?style=for-the-badge&logo=opentelemetry&logoColor=000000
 [OpenTelemetryCollector-url]: https://github.com/open-telemetry/opentelemetry-collector-contrib
 [Grafana]: https://img.shields.io/badge/grafana-%23F46800?style=for-the-badge&logo=grafana&logoColor=FFFFFF
@@ -443,8 +449,12 @@ Project Link: [https://github.com/Pittinic/platypod](https://github.com/Pittinic
 [VictoriaMetrics-url]: https://github.com/VictoriaMetrics/VictoriaMetrics
 [Bookstack]: https://img.shields.io/badge/bookstack-%230288D1?style=for-the-badge&logo=bookstack&logoColor=FFFFFF
 [Bookstack-url]: https://github.com/BookStackApp/BookStack
+[CyberChef]: https://img.shields.io/badge/cyberchef-%23333333?style=for-the-badge&logoColor=FFFFFF
+[CyberChef-url]: https://github.com/gchq/CyberChef
 [DBeaver]: https://img.shields.io/badge/dbeaver-%23382923?style=for-the-badge&logo=dbeaver&logoColor=FFFFFF
-[DBeaver-url]: https://github.com/BookStackApp/BookStack
+[DBeaver-url]: https://github.com/dbeaver/dbeaver
+[Vaultwarden]: https://img.shields.io/badge/vaultwarden-%23175DDC?style=for-the-badge&logo=bitwarden&logoColor=FFFFFF
+[Vaultwarden-url]: https://github.com/dani-garcia/vaultwarden
 [ItTools]: https://img.shields.io/badge/it_tools-%23336644?style=for-the-badge
 [ItTools-url]: https://github.com/CorentinTh/it-tools
 [MariaDB]: https://img.shields.io/badge/mariadb-%23003545?style=for-the-badge&logo=mariadb&logoColor=FFFFFF
@@ -479,5 +489,5 @@ Project Link: [https://github.com/Pittinic/platypod](https://github.com/Pittinic
 [Tdarr-url]: https://github.com/HaveAGitGat/Tdarr
 [RommApp]: https://img.shields.io/badge/rommapp-%23888888?style=for-the-badge
 [RommApp-url]: https://github.com/rommapp/romm
-[DockerMinecraftServer]: https://img.shields.io/badge/minecraft-%23888888?style=for-the-badge
-[DockerMinecraftServer-url]: https://github.com/rommapp/romm
+[Pokeclicker]: https://img.shields.io/badge/pokeclicker-%23CC0000?style=for-the-badge&logoColor=FFFFFF
+[Pokeclicker-url]: https://github.com/pokeclicker/pokeclicker

@@ -26,7 +26,7 @@ helmfile.yaml.gotmpl    # Environments, value loading order, release dependency 
 |-----|----------|
 | `persistence` | PV/PVC (local-storage or NFS) |
 | `core` | Traefik, Homepage |
-| `security` | Adguard, Authelia, CyberChef |
+| `security` | Adguard, Authelia, LLDAP, CyberChef, Vaultwarden, Uptime Kuma |
 | `observability` | OtelCollector, Loki, Tempo, VictoriaMetrics, Grafana |
 | `dev-tools` | Bookstack, Wiki.js, PostgreSQL, IT-Tools, WhoAmI, DBeaver |
 | `files` | Transmission, QBitTorrent, Deluge |
@@ -154,6 +154,78 @@ template:
       checksum/config: {{ include (print $.Template.BasePath "/<config-map-file>.yaml") . | sha256sum }}
 ```
 Authelia has this; apply the same pattern to any other pod whose config is stored in a ConfigMap.
+
+**Helm Go templates parse `{{ }}` everywhere — including YAML comments.**  
+A YAML comment like `# reference {{MY_VAR}}` will cause a template parse error
+(`function "MY_VAR" not defined`). Escape literal braces in comments using a
+string literal: `{{ "{{MY_VAR}}" }}`, or simply avoid `{{ }}` in comments.
+
+**The linuxserver Transmission image always overwrites RPC whitelist settings.**  
+The linuxserver init script hardcodes `rpc-whitelist: "127.0.0.1,::1"` and
+`rpc-host-whitelist: ""` (empty = block all hosts) on every container start,
+regardless of what is in `settings.json`. This blocks access from other pods
+(e.g. Homepage widget) and from Traefik.  
+Fix: use a `lifecycle.postStart` hook that calls the Transmission RPC from
+`localhost` (which bypasses the IP whitelist) to disable both checks:
+```yaml
+lifecycle:
+  postStart:
+    exec:
+      command: ["/bin/sh", "-c", "...curl session-set rpc-whitelist-enabled=false..."]
+```
+See `src/files/templates/transmission/transmission--deployment.yaml` for the
+full hook.
+
+**LLDAP does not update the admin password on restart.**  
+`LLDAP_LDAP_USER_PASS` only takes effect when the admin user is first created
+(i.e. on a fresh database). If the database already exists, changing the env
+var has no effect. To change the admin password on a running instance, use:
+```sh
+kubectl -n <ns> run -it --rm pw --image=lldap/lldap:stable --restart=Never \
+  --command -- /app/lldap_set_password \
+  --base-url http://lldap:<port> \
+  --admin-username admin --admin-password <current> \
+  --username admin --password <new>
+```
+Keep `lldap.adminPassword` in values in sync with the actual DB password.
+
+---
+
+## First-boot automation (setup Jobs)
+
+Some services require out-of-band initialisation after their first deploy (admin
+user creation, API key generation, service wiring). These are implemented as
+Helm post-install/post-upgrade hook Jobs so they run automatically on every
+`make deploy` and are idempotent.
+
+| Job | Hook weight | What it does |
+|-----|-------------|--------------|
+| `jellyfin-setup` | 10 | Completes the startup wizard, creates the `admin` user, generates a Homepage API key, writes it to the `jellyfin-apikey` Secret, restarts Homepage. On re-runs: verifies credentials and ensures the Secret exists. |
+| `jellyseerr-setup` | 20 | Connects Jellyseerr to Jellyfin (sets `ip`, `port`, external hostname). Handles both first-boot (full init via `POST /auth/jellyfin`) and re-runs (re-login without hostname). |
+
+Both jobs run in the `media` module. `jellyseerr-setup` has a higher weight so
+it always runs after `jellyfin-setup`.
+
+**Homepage API key injection.**  
+The Jellyfin API key is stored in the `jellyfin-apikey` Secret
+(`HOMEPAGE_VAR_JELLYFIN_API_KEY`). Homepage mounts it via `envFrom` with
+`optional: true` (so it starts before the Job has run). The ConfigMap references
+it as the literal string `{{HOMEPAGE_VAR_JELLYFIN_API_KEY}}`, which Homepage
+substitutes at runtime. The setup Job patches the Homepage Deployment to trigger
+a rollout after writing the Secret.
+
+**Seeding config files on first boot.**  
+Services whose images rewrite their config on startup (e.g. Bazarr, Jellyfin,
+Transmission) use an init container to seed the config from a ConfigMap only
+when no file already exists, preserving runtime changes on pod restarts:
+```yaml
+initContainers:
+- name: seed-config
+  image: busybox:1
+  command: ["sh", "-c", "[ ! -f /config/config.yaml ] && cp /seed/config.yaml /config/config.yaml || true"]
+```
+Transmission is an exception: its linuxserver init script always overwrites
+settings — see the postStart hook pitfall above.
 
 ---
 
