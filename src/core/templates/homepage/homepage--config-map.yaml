@@ -59,7 +59,7 @@ data:
           widget:
             type: jellyfin
             url: http://{{ if .Values.jellyfin.proxy.enable }}{{ .Values.jellyfin.proxy.host }}:{{ .Values.jellyfin.proxy.port }}{{ else }}{{ .Values.jellyfin.label }}:{{ .Values.jellyfin.ports.http.targetPort }}{{ end }}{{ .Values.jellyfin.baseUrl }}
-            key: "{{`{{HOMEPAGE_VAR_JELLYFIN_API_KEY}}`}}"
+            key: "{{ if .Values.jellyfin.proxy.enable }}{{ .Values.jellyfin.apiKey }}{{ else }}{{`{{HOMEPAGE_VAR_JELLYFIN_API_KEY}}`}}{{ end }}"
             enableBlocks: true
             enableNowPlaying: true
             enableUser: true
