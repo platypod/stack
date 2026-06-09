@@ -107,8 +107,20 @@ talosctl -n 192.168.122.102 cp ./some-file /var/local/platypod/volumes/apps/some
 ```sh
 make install-deps
 make install-crds ENV=prd
+make install-csi  ENV=prd   # NFS CSI driver — required for the NFS-backed prod PVs
 make deploy ENV=prd
 ```
+
+Prod stores PV data on the Synology NFS (`192.168.1.30:/volume1/kubernetes`). The
+PVs reference the `nfs.csi.k8s.io` driver, which is **not** built into Talos —
+`make install-csi` deploys it (csi-driver-nfs, pinned via `CSI_DRIVER_NFS_VERSION`).
+Dev uses local hostPath storage and does not need it.
+
+**Synology export ACL.** Talos VM traffic to the NFS is NAT-masqueraded to each
+host's LAN IP (see `infra/.../host-nat.sh`), so the Synology sees mounts arriving
+from the *host* IPs, not the `10.0.x.x` VM IPs. The `/volume1/kubernetes` export
+must allow both worker hosts: `192.168.1.60` (mini1/w2) and `192.168.1.61`
+(mini4/w1). Empirically confirmed via egress probe.
 
 Prod uses public DNS (`platypod.ovh`) and ACME/Let's Encrypt for TLS — no mkcert step needed. The ACME email and endpoint are in `values/prd/values.yaml`.
 

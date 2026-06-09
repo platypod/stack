@@ -1,9 +1,19 @@
 acme:
+  # Master gate. When false, Traefik never loads the ACME resolver (acme.json is
+  # left mode 660 → "resolver skipped" → self-signed/default cert, ZERO Let's
+  # Encrypt traffic). Only set true once inbound reachability for the chosen
+  # challenge is wired, ideally after a staging test. This prevents the resolver
+  # from silently activating and hammering LE (see the 2026-06-09 rate-limit incident).
+  enable: false
   email: acme@mail.com
   endpoint: https://acme-staging-v02.api.letsencrypt.org/directory
+  # ACME storage file (under /etc/traefik/acme/). Use a separate file for staging
+  # so a staging run never clobbers the production account/certs in acme.json.
+  storage: acme.json
   challenge:
     dns:
       enable: false
+      provider: ""
       env:
       - name: OVH_ENDPOINT
         value: ""
@@ -19,3 +29,5 @@ acme:
         value: ""
     tls:
       enable: true
+    http:
+      enable: false

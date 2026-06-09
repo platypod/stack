@@ -1,4 +1,4 @@
-{{- if .Values.jellyfin.enabled }}
+{{- if and .Values.jellyfin.enabled .Values.jellyfin.enable }}
 {{- /*
   Jellyfin first-boot setup Job.
 

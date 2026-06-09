@@ -93,7 +93,7 @@ data:
             icon: hl-jellyfin
             description: Media streaming server
             statusCheck: true
-            statusCheckUrl: http://{{ .Values.jellyfin.label }}:{{ .Values.jellyfin.ports.http.targetPort }}/health
+            statusCheckUrl: http://{{ if .Values.jellyfin.proxy.enable }}{{ .Values.jellyfin.proxy.host }}:{{ .Values.jellyfin.proxy.port }}{{ else }}{{ .Values.jellyfin.label }}:{{ .Values.jellyfin.ports.http.targetPort }}{{ end }}/health
 {{- end }}
 {{- if .Values.jellyseerr.enabled }}
           - title: Jellyseerr

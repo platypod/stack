@@ -14,7 +14,7 @@ data:
     echo "localclient:1c4f10bd7c6f15872ac2491e3b0b138684cb8421:10" > /config/auth
     # add custom user
     username="{{ .Values.deluge.credentials.username }}"
-    password="$({{ .Values.deluge.credentials.password }})"
+    password="{{ .Values.deluge.credentials.password }}"
     echo "${username}:${password}:10" >> /config/auth
   core.conf: |
     {

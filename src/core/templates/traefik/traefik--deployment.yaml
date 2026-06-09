@@ -20,6 +20,20 @@ spec:
         app: {{ $pod }}
     spec:
       serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.serviceAccounts.suffix }}
+      {{- if .Values.acme.enable }}
+      initContainers:
+      # ACME is gated behind .Values.acme.enable. Traefik refuses to load the
+      # resolver unless acme.json is mode 600; a Synology NFS restore can
+      # reintroduce 660. Only chmod when ACME is deliberately enabled, so the
+      # resolver never activates by accident (see 2026-06-09 rate-limit incident).
+      - name: fix-acme-perms
+        image: busybox:1
+        command: ["sh", "-c", "chmod 600 /etc/traefik/acme/*.json 2>/dev/null || true"]
+        volumeMounts:
+        - mountPath: /etc/traefik/acme
+          name: {{ tpl .Values.traefik.storage.pvc . }}
+          subPath: traefik/acme
+      {{- end }}
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.traefik.image.registry }}{{ .Values.traefik.image.namespace }}{{ .Values.traefik.image.repository }}:{{ .Values.traefik.image.tag }}
@@ -43,12 +57,17 @@ spec:
           # letsencrypt resolver
           {{ if .Values.acme.challenge.dns.enable }}
           - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.dnschallenge=true
+          - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.dnschallenge.provider={{ .Values.acme.challenge.dns.provider }}
           {{ end }}
           {{ if .Values.acme.challenge.tls.enable }}
           - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.tlschallenge=true
           {{ end }}
+          {{ if .Values.acme.challenge.http.enable }}
+          - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.httpchallenge=true
+          - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.httpchallenge.entrypoint={{ .Values.traefik.ports.http.name }}
+          {{ end }}
           - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.email={{ .Values.acme.email }}
-          - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.storage=/etc/traefik/acme/acme.json
+          - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.storage=/etc/traefik/acme/{{ .Values.acme.storage }}
           - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.caserver={{ .Values.acme.endpoint }}
           # entrypoints
           - --entryPoints.{{ .Values.traefik.ports.dashboard.name }}.address=:{{ .Values.traefik.ports.dashboard.targetPort }}
@@ -57,9 +76,9 @@ spec:
           - --entryPoints.{{ .Values.traefik.ports.http.name }}.http.redirections.entryPoint.scheme=https
           - --entryPoints.{{ .Values.traefik.ports.https.name }}.address=:{{ .Values.traefik.ports.https.targetPort }}
         env:
-          {{ if .Values.acme.challenge.dns.enable }}
-          {{- toYaml .Values.acme.challenge.dns.env | nindent 5}}
-          {{ end }}
+        {{- if .Values.acme.challenge.dns.enable }}
+        {{- toYaml .Values.acme.challenge.dns.env | nindent 8 }}
+        {{- end }}
         ports:
         - name: {{ .Values.traefik.ports.http.name }}
           containerPort: {{ .Values.traefik.ports.http.targetPort }}

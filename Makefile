@@ -41,11 +41,18 @@ setup-dev: setup-dev-tls install-crds  ## Full dev bootstrap: TLS, CRDs, base de
 # ---------------------------------------------------------------------------
 
 TRAEFIK_VERSION ?= v3.5
+CSI_DRIVER_NFS_VERSION ?= 4.13.2
 
-.PHONY: install-crds
+.PHONY: install-crds install-csi
 install-crds:  ## Install Traefik CRDs on the cluster (TRAEFIK_VERSION=v3.5)
 	kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/$(TRAEFIK_VERSION)/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml
 	kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/$(TRAEFIK_VERSION)/docs/content/reference/dynamic-configuration/kubernetes-crd-rbac.yml
+
+install-csi:   ## Install the NFS CSI driver (nfs.csi.k8s.io) — required for NFS-backed prod storage
+	helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
+	helm repo update csi-driver-nfs
+	helm upgrade --install csi-driver-nfs csi-driver-nfs/csi-driver-nfs \
+	  --namespace kube-system --version $(CSI_DRIVER_NFS_VERSION) --wait
 
 # ---------------------------------------------------------------------------
 # Deployment

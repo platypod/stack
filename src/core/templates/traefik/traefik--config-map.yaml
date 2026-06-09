@@ -12,7 +12,7 @@ data:
         jellyfin-local:
           entryPoints:
           - {{ .Values.traefik.ports.https.name }}
-          {{- if .Values.traefik.tls.selfSigned }}
+          {{- if or .Values.traefik.tls.selfSigned .Values.traefik.tls.wildcard }}
           tls: {}
           {{- else }}
           tls:

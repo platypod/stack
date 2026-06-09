@@ -21,11 +21,13 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
-      securityContext:
-        fsGroup: 1000
+      # No pod-level fsGroup: it would make Kubernetes recursively chown the
+      # ENTIRE shared NFS volume on every start (very slow over NFS — wedged
+      # startup) AND rewrite the group of files owned by other services. subPath
+      # mounts ignore fsGroup anyway, so the init container below chowns only the
+      # jellyseerr config dir, which is all that's actually needed.
       initContainers:
-      # seerr runs as uid 1000 (node) but the hostPath subPath dir is created
-      # root-owned, and subPath mounts do not honour fsGroup — so chown it here.
+      # seerr runs as uid 1000 (node) but the subPath dir is created root-owned.
       - name: init-permissions
         image: busybox
         command: ['sh', '-c', 'mkdir -p /data/jellyseerr/config && chown -R 1000:1000 /data/jellyseerr/config']

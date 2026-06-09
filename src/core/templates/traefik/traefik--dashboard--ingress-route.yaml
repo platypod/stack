@@ -19,7 +19,7 @@ spec:
       name: {{ .Values.k8s.names.services.prefix }}{{ .Values.traefik.dashboardLabel }}{{ .Values.k8s.names.services.suffix }}
       port: {{ .Values.traefik.ports.dashboard.targetPort }}
 
-  {{- if .Values.traefik.tls.selfSigned }}
+  {{- if or .Values.traefik.tls.selfSigned .Values.traefik.tls.wildcard }}
   tls:
     store:
       name: default

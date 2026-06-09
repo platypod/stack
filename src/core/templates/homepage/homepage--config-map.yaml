@@ -58,7 +58,7 @@ data:
           description: Media server with streaming capacities.
           widget:
             type: jellyfin
-            url: http://{{ .Values.jellyfin.label }}:{{ .Values.jellyfin.ports.http.targetPort }}{{ .Values.jellyfin.baseUrl }}
+            url: http://{{ if .Values.jellyfin.proxy.enable }}{{ .Values.jellyfin.proxy.host }}:{{ .Values.jellyfin.proxy.port }}{{ else }}{{ .Values.jellyfin.label }}:{{ .Values.jellyfin.ports.http.targetPort }}{{ end }}{{ .Values.jellyfin.baseUrl }}
             key: "{{`{{HOMEPAGE_VAR_JELLYFIN_API_KEY}}`}}"
             enableBlocks: true
             enableNowPlaying: true

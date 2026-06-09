@@ -35,11 +35,11 @@ spec:
         - name: CLOUDBEAVER_DB_URL
           value: "{{ tpl .Values.dbeaver.database.url . }}"
         - name: CLOUDBEAVER_DB_SCHEMA
-          value: "{{ .Values.dbeaver.database.schema }}"
+          value: "{{ tpl .Values.dbeaver.database.schema . }}"
         - name: CLOUDBEAVER_DB_USER
-          value: "{{ .Values.dbeaver.database.credentials.username }}"
+          value: "{{ tpl .Values.dbeaver.database.credentials.username . }}"
         - name: CLOUDBEAVER_DB_PASSWORD
-          value: "{{ .Values.dbeaver.database.credentials.password }}"
+          value: "{{ tpl .Values.dbeaver.database.credentials.password . }}"
         - name: CB_ADMIN_NAME
           value: "{{ .Values.dbeaver.credentials.username }}"
         - name: CB_ADMIN_PASSWORD

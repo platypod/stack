@@ -1,4 +1,4 @@
-{{- if .Values.jellyfin.enabled }}
+{{- if and .Values.jellyfin.enabled .Values.jellyfin.enable }}
 
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.jellyfin.label .Values.k8s.names.pods.suffix }}
 {{- $appVolume := "app-volume" }}
