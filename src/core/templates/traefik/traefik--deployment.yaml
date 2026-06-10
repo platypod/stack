@@ -50,6 +50,14 @@ spec:
           - --providers.kubernetesingress.namespaces={{ .Values.k8s.namespace }}
           # dashboard
           - --api.insecure=true
+          # prometheus metrics, served on the dashboard entrypoint (:{{ .Values.traefik.ports.dashboard.targetPort }}/metrics).
+          # Scraped by the otel gateway via the internal traefik-metrics Service;
+          # per-entrypoint/per-service labels power the services usage dashboard.
+          - --metrics.prometheus=true
+          - --metrics.prometheus.entryPoint={{ .Values.traefik.ports.dashboard.name }}
+          - --metrics.prometheus.addEntryPointsLabels=true
+          - --metrics.prometheus.addServicesLabels=true
+          - --metrics.prometheus.addRoutersLabels=true
           # logging
           - --log.level={{ .Values.traefik.logging.level }}
           - --log.format={{ .Values.traefik.logging.format }}

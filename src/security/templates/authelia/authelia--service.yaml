@@ -9,5 +9,8 @@ spec:
   - protocol: TCP
     name: {{ .Values.authelia.ports.http.name }}
     port: {{ .Values.authelia.ports.http.targetPort }}
+  - protocol: TCP
+    name: {{ .Values.authelia.ports.metrics.name }}
+    port: {{ .Values.authelia.ports.metrics.targetPort }}
   selector:
     app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.pods.suffix }}

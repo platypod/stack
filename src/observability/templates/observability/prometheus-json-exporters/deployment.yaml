@@ -14,6 +14,11 @@ spec:
     metadata:
       labels:
         app: {{ $pod }}
+      annotations:
+        # json_exporter only reads its config at startup; without this the pod
+        # keeps serving a stale config (e.g. an old Jellyfin API token) after
+        # the ConfigMap changes.
+        checksum/config: {{ include (print $.Template.BasePath "/observability/prometheus-json-exporters/config-map.yaml") . | sha256sum }}
     spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.prometheusJsonExporter.label }}{{ .Values.k8s.names.containers.suffix }}

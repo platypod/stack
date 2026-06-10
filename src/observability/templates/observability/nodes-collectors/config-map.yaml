@@ -27,6 +27,18 @@ data:
           disk:
           filesystem:
           network:
+      # Per-pod / per-container resource usage straight from this node's kubelet
+      # (CPU, memory working set, network, filesystem). This is what powers the
+      # workloads dashboards; hostmetrics above only sees the node as a whole.
+      kubeletstats:
+        collection_interval: 30s
+        auth_type: serviceAccount
+        # Dial the node IP, not the node name: Talos node names are not
+        # resolvable from cluster DNS.
+        endpoint: https://${env:K8S_NODE_IP}:10250
+        # Talos kubelet serving certs are not signed for the IP we dial.
+        insecure_skip_verify: true
+        metric_groups: [node, pod, container]
       otlp:
         protocols:
           grpc:
@@ -59,6 +71,31 @@ data:
         - key: node-collector-receiver
           value: hostmetrics
           action: insert
+        # Mimir's OTLP ingestion only keeps datapoint attributes as labels
+        # (resource attributes land in target_info). Without this, series from
+        # different nodes collide into one indistinguishable timeline.
+        - key: node
+          value: ${env:K8S_NODE_NAME}
+          action: insert
+      attributes/kubeletstats:
+        actions:
+        - key: node-collector-receiver
+          value: kubeletstats
+          action: insert
+        - key: node
+          value: ${env:K8S_NODE_NAME}
+          action: insert
+      # Same Mimir constraint as above: kubeletstats carries pod /
+      # namespace / container identity as resource attributes, which would land
+      # in target_info on ingestion. Copy them onto each datapoint so they survive as
+      # labels (the only thing that makes per-pod metrics queryable).
+      transform/kubeletstats:
+        metric_statements:
+        - context: datapoint
+          statements:
+          - set(attributes["namespace"], resource.attributes["k8s.namespace.name"]) where resource.attributes["k8s.namespace.name"] != nil
+          - set(attributes["pod"], resource.attributes["k8s.pod.name"]) where resource.attributes["k8s.pod.name"] != nil
+          - set(attributes["container"], resource.attributes["k8s.container.name"]) where resource.attributes["k8s.container.name"] != nil
       attributes/otlp:
         actions:
         - key: node-collector-receiver
@@ -88,6 +125,10 @@ data:
         metrics/hostmetrics:
           receivers: [hostmetrics]
           processors: [attributes/hostmetrics, batch, memory_limiter, k8sattributes]
+          exporters: [otlp]
+        metrics/kubeletstats:
+          receivers: [kubeletstats]
+          processors: [transform/kubeletstats, attributes/kubeletstats, batch, memory_limiter]
           exporters: [otlp]
         metrics/otlp:
           receivers: [otlp]

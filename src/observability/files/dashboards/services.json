@@ -1,0 +1,76 @@
+{
+  "title": "Services & Ingress",
+  "uid": "services-ingress",
+  "tags": ["platform", "traefik", "authelia"],
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "type": "timeseries", "title": "Requests/s by service",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "sum by (service) (rate(traefik_service_requests_total[2m])) > 0", "legendFormat": "{{service}}" } ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries", "title": "HTTP status mix (entrypoints)",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "sum by (code) (rate(traefik_entrypoint_requests_total[2m])) > 0", "legendFormat": "{{code}}" } ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries", "title": "5xx errors/s by service",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "targets": [ { "refId": "A", "expr": "sum by (service) (rate(traefik_service_requests_total{code=~\"5..\"}[2m]))", "legendFormat": "{{service}}" } ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries", "title": "p95 latency by service",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "targets": [ { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le, service) (rate(traefik_service_request_duration_seconds_bucket[5m]))) > 0", "legendFormat": "{{service}}" } ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries", "title": "Bandwidth by service (responses)",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+      "targets": [ { "refId": "A", "expr": "sum by (service) (rate(traefik_service_responses_bytes_total[2m])) > 0", "legendFormat": "{{service}}" } ],
+      "fieldConfig": { "defaults": { "unit": "Bps" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries", "title": "Open connections per entrypoint",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 18 },
+      "targets": [ { "refId": "A", "expr": "sum by (entrypoint) (traefik_open_connections)", "legendFormat": "{{entrypoint}}" } ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "type": "stat", "title": "TLS cert — days to expiry",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 18 },
+      "targets": [ { "refId": "A", "expr": "min((traefik_tls_certs_not_after - time()) / 86400)" } ],
+      "fieldConfig": { "defaults": { "unit": "d", "thresholds": { "steps": [ { "color": "red", "value": null }, { "color": "yellow", "value": 14 }, { "color": "green", "value": 30 } ] } }, "overrides": [] }
+    },
+    {
+      "type": "timeseries", "title": "Authelia — auth & authz activity",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(authelia_authn_duration_count[5m]))", "legendFormat": "authn/s" },
+        { "refId": "B", "expr": "sum(rate(authelia_authz[5m]))", "legendFormat": "authz/s" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries", "title": "Authelia — requests by status",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 26 },
+      "targets": [ { "refId": "A", "expr": "sum by (code) (rate(authelia_request[5m]))", "legendFormat": "{{code}}" } ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    }
+  ]
+}

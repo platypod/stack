@@ -116,16 +116,27 @@ spec:
               elif "No hostname" in err or "not initialized" in err.lower() or "INVALID_URL" in err or "404" in err:
                   # First boot or broken Jellyfin IP — initialize with the connection
                   print(f"Initializing Jellyseerr with Jellyfin at {JF_HOST}:{JF_PORT}...")
-                  seerr("POST", "/api/v1/auth/jellyfin", {
-                      "username":   USERNAME,
-                      "password":   PASSWORD,
-                      "hostname":   JF_HOST,
-                      "port":       JF_PORT,
-                      "urlBase":    "",
-                      "useSsl":     False,
-                      "serverType": 2,   # MediaServerType.JELLYFIN
-                  })
-                  print("Jellyseerr initialized — admin user created.")
+                  try:
+                      seerr("POST", "/api/v1/auth/jellyfin", {
+                          "username":   USERNAME,
+                          "password":   PASSWORD,
+                          "hostname":   JF_HOST,
+                          "port":       JF_PORT,
+                          "urlBase":    "",
+                          "useSsl":     False,
+                          "serverType": 2,   # MediaServerType.JELLYFIN
+                      })
+                      print("Jellyseerr initialized — admin user created.")
+                  except RuntimeError as e2:
+                      # A persisted DB (NFS) with a saved hostname can still 404
+                      # the no-hostname login while Jellyfin is unreachable at
+                      # the saved address; once reachable again, log in without
+                      # hostname instead of crashing on "already configured".
+                      if "already configured" not in str(e2):
+                          raise
+                      resp = seerr("POST", "/api/v1/auth/jellyfin",
+                                   {"username": USERNAME, "password": PASSWORD})
+                      print(f"Re-logged in as '{resp.get('jellyfinUsername', '?')}' (persisted config).")
 
               else:
                   raise SystemExit(f"Unexpected auth error: {err}")

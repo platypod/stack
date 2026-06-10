@@ -1,0 +1,107 @@
+{
+  "title": "Cluster Overview",
+  "uid": "cluster-overview",
+  "tags": ["platform", "cluster"],
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "type": "stat", "title": "Nodes ready",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "sum(k8s_node_condition_ready)" } ],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "color": "red", "value": null }, { "color": "yellow", "value": 2 }, { "color": "green", "value": 3 } ] } }, "overrides": [] }
+    },
+    {
+      "type": "stat", "title": "Pods running",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "count(k8s_pod_phase == 2)" } ],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "color": "green", "value": null } ] } }, "overrides": [] }
+    },
+    {
+      "type": "stat", "title": "Pods pending / failed",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "targets": [
+        { "refId": "A", "expr": "count(k8s_pod_phase == 1) or vector(0)", "legendFormat": "pending" },
+        { "refId": "B", "expr": "count(k8s_pod_phase == 4) or vector(0)", "legendFormat": "failed" }
+      ],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } }, "overrides": [] }
+    },
+    {
+      "type": "stat", "title": "Deployments degraded",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "count((k8s_deployment_desired - k8s_deployment_available) != 0) or vector(0)" } ],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } }, "overrides": [] }
+    },
+    {
+      "type": "stat", "title": "Container restarts (total)",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "sum(k8s_container_restarts)" } ],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 1 } ] } }, "overrides": [] }
+    },
+    {
+      "type": "stat", "title": "Node pressure (mem+disk)",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "(sum(k8s_node_condition_memory_pressure) + sum(k8s_node_condition_disk_pressure)) or vector(0)" } ],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } }, "overrides": [] }
+    },
+    {
+      "type": "timeseries", "title": "CPU usage per node",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [ { "refId": "A", "expr": "100 * (1 - sum by (node) (rate(system_cpu_time{state=\"idle\"}[2m])) / sum by (node) (rate(system_cpu_time[2m])))", "legendFormat": "{{node}}" } ],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 }, "overrides": [] }
+    },
+    {
+      "type": "timeseries", "title": "Memory used per node",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [ { "refId": "A", "expr": "100 * sum by (node) (system_memory_usage{state=\"used\"}) / sum by (node) (system_memory_usage)", "legendFormat": "{{node}}" } ],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 }, "overrides": [] }
+    },
+    {
+      "type": "timeseries", "title": "Load average (1m) per node",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 12 },
+      "targets": [ { "refId": "A", "expr": "system_cpu_load_average_1m", "legendFormat": "{{node}}" } ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries", "title": "Network throughput per node",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 12 },
+      "targets": [ { "refId": "A", "expr": "sum by (node, direction) (rate(system_network_io[2m]))", "legendFormat": "{{node}} {{direction}}" } ],
+      "fieldConfig": { "defaults": { "unit": "Bps" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries", "title": "Disk I/O per node",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 12 },
+      "targets": [ { "refId": "A", "expr": "sum by (node, direction) (rate(system_disk_io[2m]))", "legendFormat": "{{node}} {{direction}}" } ],
+      "fieldConfig": { "defaults": { "unit": "Bps" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries", "title": "Filesystem used per node",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "targets": [ { "refId": "A", "expr": "100 * sum by (node) (system_filesystem_usage{state=\"used\"}) / (sum by (node) (system_filesystem_usage{state=\"used\"}) + sum by (node) (system_filesystem_usage{state=\"free\"}))", "legendFormat": "{{node}}" } ],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 }, "overrides": [] }
+    },
+    {
+      "type": "timeseries", "title": "Node CPU usage vs allocatable",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (node) (k8s_node_cpu_usage)", "legendFormat": "{{node}} used" },
+        { "refId": "B", "expr": "sum by (node) (k8s_node_allocatable_cpu)", "legendFormat": "{{node}} allocatable" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    }
+  ]
+}

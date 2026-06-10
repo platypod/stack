@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.configMaps.suffix }}
+
+data:
+  mimir.yaml: |
+    # Monolithic single-binary Mimir. All state on the PVC (filesystem backend);
+    # replication factor 1 everywhere — this is a single-replica homelab TSDB,
+    # not an HA cluster.
+    multitenancy_enabled: false
+
+    server:
+      http_listen_port: {{ .Values.observability.metrics.ports.http.targetPort }}
+      log_level: {{ .Values.observability.metrics.logging.level }}
+      log_format: {{ .Values.observability.metrics.logging.format }}
+
+    common:
+      storage:
+        backend: filesystem
+        filesystem:
+          dir: /storage
+
+    blocks_storage:
+      storage_prefix: blocks
+      tsdb:
+        dir: /storage/tsdb
+
+    compactor:
+      data_dir: /storage/compactor
+      sharding_ring:
+        kvstore:
+          store: memberlist
+
+    ingester:
+      ring:
+        replication_factor: 1
+        kvstore:
+          store: memberlist
+
+    store_gateway:
+      sharding_ring:
+        replication_factor: 1
+        kvstore:
+          store: memberlist
+
+    ruler_storage:
+      backend: filesystem
+      filesystem:
+        dir: /storage/ruler
+
+    limits:
+      compactor_blocks_retention_period: {{ .Values.observability.metrics.retention }}
+      # Single-tenant homelab: defaults (20k) are too tight once kubeletstats,
+      # k8s_cluster, traefik etc. all flow in.
+      max_global_series_per_user: 300000
+      ingestion_rate: 50000
+      ingestion_burst_size: 100000
+
+    usage_stats:
+      enabled: false

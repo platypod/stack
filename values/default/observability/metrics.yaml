@@ -1,18 +1,23 @@
 observability:
   metrics:
-    label: victoria-metrics
-    image: victoriametrics/victoria-metrics:v1.118.0
+    label: mimir
+    # Grafana Mimir, monolithic mode (-target=all), filesystem storage on the
+    # apps PVC. Replaced VictoriaMetrics 2026-06: Mimir ingests OTLP natively
+    # and normalizes OTel metric names (dots -> underscores), so dashboards
+    # query e.g. system_cpu_time, not {__name__="system.cpu.time"}.
+    image: grafana/mimir:2.17.11
     resources:
       requests:
         cpu: 100m
-        memory: 256Mi
-      limits:
         memory: 512Mi
+      limits:
+        memory: 1Gi
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
     ports:
       http:
         name: http
-        targetPort: 8428
+        targetPort: 8080
     logging:
       format: json
-      level: INFO
+      level: info
+    retention: 1y

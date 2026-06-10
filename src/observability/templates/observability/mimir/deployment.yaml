@@ -7,6 +7,10 @@ metadata:
   name: {{ $pod }}
 spec:
   replicas: 1
+  # Single replica with filesystem storage: never run two ingesters against the
+  # same TSDB dir.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: {{ $pod }}
@@ -14,6 +18,8 @@ spec:
     metadata:
       labels:
         app: {{ $pod }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/observability/mimir/config-map.yaml") . | sha256sum }}
     spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.containers.suffix }}
@@ -21,17 +27,21 @@ spec:
         resources:
           {{- toYaml .Values.observability.metrics.resources | nindent 10 }}
         args:
-        - "-storageDataPath=/storage"
-        - "-retentionPeriod=1y"
-        - "-loggerFormat={{ .Values.observability.metrics.logging.format }}"
-        - "-loggerLevel={{ .Values.observability.metrics.logging.level }}"
+        - "-config.file=/etc/mimir/mimir.yaml"
+        - "-target=all"
         ports:
         - containerPort: {{ .Values.observability.metrics.ports.http.targetPort }}
         volumeMounts:
+        - mountPath: /etc/mimir/mimir.yaml
+          name: conf
+          subPath: mimir.yaml
         - mountPath: /storage
           name: {{ $appVolume }}
-          subPath: victoria-metrics
+          subPath: mimir
       volumes:
+      - name: conf
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.configMaps.suffix }}
       - name: {{ $appVolume }}
         persistentVolumeClaim:
           claimName: {{ tpl .Values.observability.pvc . }}

@@ -17,6 +17,12 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/observability/nodes-collectors/config-map.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ tpl .Values.observability.otelCollector.collectors.label . }}{{ .Values.k8s.names.serviceAccounts.suffix }}
+      # Observe the control-plane node too — without this the DaemonSet only
+      # lands on workers and the cp's metrics/logs are a blind spot.
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
       securityContext:
         runAsUser: 0
         fsGroup: 0
@@ -30,6 +36,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        - name: K8S_NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         volumeMounts:
         - name: conf
           mountPath: /conf/collector.yaml

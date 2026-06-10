@@ -94,6 +94,22 @@ spec:
         - mountPath: {{ .Values.media.system.data.path }}
           name: {{ $mediaVolume }}
           subPath: downloads/transmission
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ tpl .Values.transmission.exporter.label . }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.transmission.exporter.image }}
+        resources:
+          {{- toYaml .Values.transmission.exporter.resources | nindent 10 }}
+        ports:
+        - name: {{ .Values.transmission.exporter.ports.http.name }}
+          containerPort: {{ .Values.transmission.exporter.ports.http.targetPort }}
+        env:
+        - name: TRANSMISSION_ADDR
+          value: "http://localhost:{{ .Values.transmission.ports.http.targetPort }}"
+        - name: TRANSMISSION_USERNAME
+          value: "{{ .Values.transmission.credentials.username }}"
+        - name: TRANSMISSION_PASSWORD
+          value: "{{ .Values.transmission.credentials.password }}"
+        - name: WEB_ADDR
+          value: ":{{ .Values.transmission.exporter.ports.http.targetPort }}"
       volumes:
       - name: {{ $mediaVolume }}
         persistentVolumeClaim:

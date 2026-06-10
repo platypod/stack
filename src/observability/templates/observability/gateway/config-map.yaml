@@ -6,15 +6,15 @@ data:
   collector.yaml: |
     receivers:
 
-      kubeletstats:
-        collection_interval: 10s
-        auth_type: 'serviceAccount'
-        endpoint: '${env:K8S_NODE_NAME}:10250'
-        insecure_skip_verify: true
-        metric_groups:
-          - node
-          - pod
-          - container
+      # Cluster-state metrics from the K8s API: pod phases, container restarts,
+      # deployment desired vs available, node conditions, resource quotas.
+      # Runs here (single replica) rather than on the DaemonSet because it
+      # watches the whole cluster — one instance must own it or counts double.
+      # Per-node/per-pod *usage* comes from kubeletstats on the node collectors.
+      k8s_cluster:
+        collection_interval: 30s
+        node_conditions_to_report: [Ready, MemoryPressure, DiskPressure]
+        allocatable_types_to_report: [cpu, memory]
 
       otlp:
         protocols:
@@ -91,6 +91,26 @@ data:
             static_configs:
             - targets:
               - '{{ .Values.k8s.names.services.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.transmission.exporter.ports.http.targetPort }}'
+      # Ingress-level service usage & availability: request rates, status codes,
+      # latency histograms and open connections per router/service.
+      prometheus/traefik:
+        config:
+          scrape_configs:
+          - job_name: 'traefik'
+            scrape_interval: 30s
+            static_configs:
+            - targets:
+              - '{{ .Values.k8s.names.services.prefix }}{{ .Values.traefik.label }}-metrics{{ .Values.k8s.names.services.suffix }}:{{ .Values.traefik.ports.dashboard.targetPort }}'
+      # Auth activity: who is authenticating, successes/failures, active session
+      # workload — the "users connected" signal.
+      prometheus/authelia:
+        config:
+          scrape_configs:
+          - job_name: 'authelia'
+            scrape_interval: 30s
+            static_configs:
+            - targets:
+              - '{{ .Values.k8s.names.services.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.authelia.ports.metrics.targetPort }}'
 
     processors:
       batch:
@@ -116,19 +136,30 @@ data:
         - key: gateway-receiver
           value: k8s_cluster
           action: insert
+      # Mimir's OTLP ingestion only keeps datapoint attributes as labels
+      # (resource attributes land in target_info); k8s_cluster carries all object identity (pod, node, deployment…)
+      # as resource attributes. Promote them or every series is anonymous.
+      transform/k8s_cluster:
+        metric_statements:
+        - context: datapoint
+          statements:
+          - set(attributes["namespace"], resource.attributes["k8s.namespace.name"]) where resource.attributes["k8s.namespace.name"] != nil
+          - set(attributes["pod"], resource.attributes["k8s.pod.name"]) where resource.attributes["k8s.pod.name"] != nil
+          - set(attributes["container"], resource.attributes["k8s.container.name"]) where resource.attributes["k8s.container.name"] != nil
+          - set(attributes["node"], resource.attributes["k8s.node.name"]) where resource.attributes["k8s.node.name"] != nil
+          - set(attributes["deployment"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
+          - set(attributes["daemonset"], resource.attributes["k8s.daemonset.name"]) where resource.attributes["k8s.daemonset.name"] != nil
+          - set(attributes["statefulset"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.statefulset.name"] != nil
       attributes/snmp:
         actions:
         - key: gateway-receiver
           value: snmp
           action: insert
-      attributes/add_labels_to_nas:
-        actions:
-          - key: instance
-            action: insert
-            value: nasypod
-          - key: job
-            action: insert
-            value: nas
+      # NOTE: do not try to override job/instance via datapoint attributes —
+      # Mimir derives those reserved labels from the OTel service.name /
+      # service.instance.id (i.e. the scrape job), and ignores datapoint-level
+      # overrides (VictoriaMetrics used to honor them). Dashboards filter on
+      # job="synology-disk-station" (the scrape job name) instead.
       attributes/reivi:
         actions:
           - key: reivi_label
@@ -144,10 +175,14 @@ data:
         verbosity: normal
         sampling_initial: 0
         sampling_thereafter: 0
-      otlphttp/victoriametrics:
+      otlphttp/mimir:
         compression: gzip
         encoding: proto
-        metrics_endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.metrics.ports.http.targetPort }}/opentelemetry/v1/metrics
+        # Mimir's native OTLP ingestion endpoint. Mimir normalizes incoming
+        # OTel metric names to Prometheus style (dots -> underscores), e.g.
+        # system.cpu.time becomes system_cpu_time. Dashboards must query the
+        # normalized names.
+        metrics_endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.metrics.ports.http.targetPort }}/otlp/v1/metrics
         tls:
           insecure: true
       otlphttp/loki:
@@ -171,29 +206,41 @@ data:
         metrics/otlp:
           receivers: [otlp]
           processors: [attributes/otlp, batch, memory_limiter]
-          exporters: [otlphttp/victoriametrics]
+          exporters: [otlphttp/mimir]
         {{- if .Values.observability.otelCollector.receivers.jellyfinCustom.enable }}
         metrics/jellyfinCustom:
           receivers: [prometheus/jellyfinCustom]
           processors: [attributes/prometheus, batch, memory_limiter]
-          exporters: [otlphttp/victoriametrics]
+          exporters: [otlphttp/mimir]
         {{- end }}
         {{- if .Values.observability.otelCollector.receivers.jellyfinNative.enable }}
         metrics/jellyfinNative:
           receivers: [prometheus/jellyfinNative]
           processors: [attributes/prometheus, batch, memory_limiter]
-          exporters: [otlphttp/victoriametrics]
+          exporters: [otlphttp/mimir]
         {{- end }}
         {{- if .Values.observability.otelCollector.receivers.synologySnmp.enable }}
         metrics/synologySnmp:
           receivers: [prometheus/synologySnmp]
-          processors: [attributes/snmp, attributes/add_labels_to_nas, batch, memory_limiter]
-          exporters: [otlphttp/victoriametrics]
+          processors: [attributes/snmp, batch, memory_limiter]
+          exporters: [otlphttp/mimir]
         {{- end }}
         metrics/transmission:
           receivers: [prometheus/transmission]
           processors: [attributes/prometheus, batch, memory_limiter]
-          exporters: [otlphttp/victoriametrics]
+          exporters: [otlphttp/mimir]
+        metrics/k8s_cluster:
+          receivers: [k8s_cluster]
+          processors: [transform/k8s_cluster, attributes/k8s_cluster, batch, memory_limiter]
+          exporters: [otlphttp/mimir]
+        metrics/traefik:
+          receivers: [prometheus/traefik]
+          processors: [attributes/prometheus, batch, memory_limiter]
+          exporters: [otlphttp/mimir]
+        metrics/authelia:
+          receivers: [prometheus/authelia]
+          processors: [attributes/prometheus, batch, memory_limiter]
+          exporters: [otlphttp/mimir]
 
         traces:
           receivers: [otlp]

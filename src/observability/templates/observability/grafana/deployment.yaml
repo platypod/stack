@@ -16,6 +16,7 @@ spec:
         app: {{ $pod }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/observability/grafana/config-map.yaml") . | sha256sum }}
+        checksum/dashboards: {{ include (print $.Template.BasePath "/observability/grafana/dashboards-config-map.yaml") . | sha256sum }}
     spec:
       {{- if .Values.traefik.loadBalancerIP }}
       # Resolve the Authelia hostname to the Traefik LoadBalancer internally so
@@ -54,10 +55,14 @@ spec:
           subPath: jellyfin.json
         - name: conf
           mountPath: /var/lib/grafana/dashboards/media/transmission.json
-          subPath: nas.json
+          subPath: transmission.json
         - name: conf
           mountPath: /var/lib/grafana/dashboards/infra/nas.json
-          subPath: transmission.json
+          subPath: nas.json
+        # Whole-directory mount: every JSON in the dashboards ConfigMap
+        # (chart files/dashboards/) lands in the Platform folder.
+        - name: dashboards
+          mountPath: /var/lib/grafana/dashboards/platform
         - mountPath: /var/lib/grafana
           name: {{ $appVolume }}
           subPath: grafana/data
@@ -94,3 +99,6 @@ spec:
       - name: conf
         configMap:
           name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.dashboard.label }}{{ .Values.k8s.names.configMaps.suffix }}
+      - name: dashboards
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.dashboard.label }}-dashboards{{ .Values.k8s.names.configMaps.suffix }}

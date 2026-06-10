@@ -71,6 +71,12 @@ data:
       type: file
       options:
         path: /var/lib/grafana/dashboards/infra
+    - name: 'Platform'
+      orgId: 1
+      folder: 'Platform'
+      type: file
+      options:
+        path: /var/lib/grafana/dashboards/platform
 
   datasources.yaml: |
     apiVersion: 1
@@ -89,11 +95,13 @@ data:
       url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.traces.ports.http.targetPort }}
       editable: false
 
-    - name: VictoriaMetrics
+    - name: Mimir
+      # uid stays "metrics" — every provisioned dashboard references it.
       uid: metrics
       type: prometheus
       access: proxy
-      url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.metrics.ports.http.targetPort }}
+      # Mimir serves its Prometheus-compatible query API under /prometheus.
+      url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.metrics.ports.http.targetPort }}/prometheus
       isDefault: true
       editable: false
 
@@ -226,12 +234,12 @@ data:
               },
               "disableTextWrap": false,
               "editorMode": "builder",
-              "expr": "{\"system.cpu.load_average.1m\", \"node-collector-receiver\"=\"hostmetrics\"}",
+              "expr": "system_cpu_load_average_1m{node_collector_receiver=\"hostmetrics\"}",
               "fullMetaSearch": false,
               "hide": false,
               "includeNullMetadata": true,
               "instant": false,
-              "legendFormat": "Host",
+              "legendFormat": "load {{ "{{node}}" }}",
               "range": true,
               "refId": "B",
               "useBackend": false
@@ -541,7 +549,7 @@ data:
               },
               "disableTextWrap": false,
               "editorMode": "builder",
-              "expr": "rate(ifHCOutOctets{job=\"nas\", ifName=\"eth0\"}[$__rate_interval]) * 8",
+              "expr": "rate(ifHCOutOctets{job=\"synology-disk-station\", ifName=\"eth0\"}[$__rate_interval]) * 8",
               "fullMetaSearch": false,
               "hide": false,
               "includeNullMetadata": true,
@@ -555,7 +563,7 @@ data:
               "disableTextWrap": false,
               "editorMode": "code",
               "exemplar": false,
-              "expr": "-rate(ifHCInOctets{job=\"nas\", ifName=\"eth0\"}[$__rate_interval]) * 8",
+              "expr": "-rate(ifHCInOctets{job=\"synology-disk-station\", ifName=\"eth0\"}[$__rate_interval]) * 8",
               "fullMetaSearch": false,
               "includeNullMetadata": true,
               "legendFormat": "Traffic in",

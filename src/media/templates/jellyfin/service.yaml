@@ -1,5 +1,5 @@
 {{- if .Values.jellyfin.enable }}
-{{- if .Values.jellyfin.inCluster }}
+{{- if or .Values.jellyfin.inCluster .Values.jellyfin.proxy.enable }}
 
 apiVersion: v1
 kind: Service
@@ -12,8 +12,33 @@ spec:
   - protocol: TCP
     name: {{ .Values.jellyfin.ports.http.name }}
     port: {{ .Values.jellyfin.ports.http.targetPort }}
+{{- if .Values.jellyfin.inCluster }}
   selector:
     app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.pods.suffix }}
+{{- end }}
+
+{{- if and (not .Values.jellyfin.inCluster) .Values.jellyfin.proxy.enable }}
+---
+# Proxy mode: Jellyfin runs outside the cluster (host-native on mini4 for GPU
+# transcode). A selector-less Service + manual Endpoints makes the external
+# instance reachable at the SAME in-cluster name (jellyfin:<port>) that
+# jellyseerr, homepage and the setup jobs use — they don't need to know
+# whether Jellyfin is a pod or a host process.
+apiVersion: v1
+kind: Endpoints
+
+metadata:
+  # Must match the Service name exactly for k8s to bind them.
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.services.suffix }}
+
+subsets:
+- addresses:
+  - ip: {{ .Values.jellyfin.proxy.host }}
+  ports:
+  - name: {{ .Values.jellyfin.ports.http.name }}
+    port: {{ .Values.jellyfin.proxy.port }}
+    protocol: TCP
+{{- end }}
 
 {{- end }}
 {{- end }}
