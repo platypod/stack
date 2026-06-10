@@ -3,15 +3,15 @@ dbeaver:
   credentials:
     username: dbeaverAdmin
     password: dbeaverPassword
-  database:
-    driver: PostgreSQL
-    url: "jdbc:postgresql://{{ .Values.k8s.names.services.prefix }}{{ .Values.database.label }}{{ .Values.k8s.names.services.suffix }}/{{ .Values.database.schemas.cloudBeaver.main }}"
-    schema: "{{ .Values.database.schemas.cloudBeaver.main }}"
-    credentials:
-      username: "{{ .Values.database.serviceCredentials.cloudBeaver.username }}"
-      password: "{{ .Values.database.serviceCredentials.cloudBeaver.password }}"
+  # CloudBeaver uses its embedded management database (persisted on the apps PVC);
+  # it is intentionally NOT backed by the shared PostgreSQL — see the deployment
+  # template for why (CloudBeaver's external-Postgres migration path self-conflicts).
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.dbeaver.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: dbeaver/cloudbeaver:latest
+  # Pinned (NOT :latest). CloudBeaver 26.1.0 ships a broken schema migration that
+  # recreates an existing table on first boot ("Error updating CB_CE schema version"
+  # / "relation already exists") — reproduced on both PostgreSQL and embedded H2.
+  # 25.3.x is the last stable line that initializes cleanly.
+  image: dbeaver/cloudbeaver:24.3.5
   label: dbeaver
   ports:
     http:

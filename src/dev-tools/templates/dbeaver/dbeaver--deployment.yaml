@@ -29,33 +29,31 @@ spec:
         ports:
         - name: {{ .Values.dbeaver.ports.http.name }}
           containerPort: {{ .Values.dbeaver.ports.http.targetPort }}
+        # CloudBeaver uses its built-in embedded database for management metadata
+        # (users, connections, settings), stored under the workspace dir which is
+        # persisted on the apps PVC. We deliberately do NOT point it at the shared
+        # PostgreSQL: the external-Postgres init path in CloudBeaver self-conflicts
+        # on a fresh schema (programmatic CB_SCHEMA_INFO vs. cb_schema_update_2.sql
+        # both creating it → "relation already exists" crashloop). Embedded storage
+        # is deterministic, dependency-free, and survives restarts via the PVC.
         env:
-        - name: CLOUDBEAVER_DB_DRIVER
-          value: "{{ .Values.dbeaver.database.driver }}"
-        - name: CLOUDBEAVER_DB_URL
-          value: "{{ tpl .Values.dbeaver.database.url . }}"
-        - name: CLOUDBEAVER_DB_SCHEMA
-          value: "{{ tpl .Values.dbeaver.database.schema . }}"
-        - name: CLOUDBEAVER_DB_USER
-          value: "{{ tpl .Values.dbeaver.database.credentials.username . }}"
-        - name: CLOUDBEAVER_DB_PASSWORD
-          value: "{{ tpl .Values.dbeaver.database.credentials.password . }}"
         - name: CB_ADMIN_NAME
           value: "{{ .Values.dbeaver.credentials.username }}"
         - name: CB_ADMIN_PASSWORD
           value: "{{ .Values.dbeaver.credentials.password }}"
+        # NOTE: we intentionally do NOT mount initial-data.conf. Its teams/permission
+        # structure is incompatible with this CloudBeaver version and throws a
+        # NullPointerException during schema init — which, because embedded H2 does
+        # not roll back the half-applied DDL, poisons the workspace and turns every
+        # subsequent boot into a "duplicate column"/"already exists" crashloop on a
+        # cold (empty-workspace) start. The admin user is provisioned via the
+        # CB_ADMIN_NAME/CB_ADMIN_PASSWORD env vars above, so this file is redundant.
         volumeMounts:
         - mountPath: /opt/cloudbeaver/workspace
           name: {{ $appVolume }}
           subPath: dbeaver
-        - mountPath: /opt/cloudbeaver/conf/initial-data.conf
-          name: {{ $configMap }}
-          subPath: initial-data.conf
       volumes:
       - name: {{ $appVolume }}
         persistentVolumeClaim:
           claimName: {{ tpl .Values.dbeaver.pvc . }}
-      - name: {{ $configMap }}
-        configMap:
-          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.dbeaver.label }}{{ .Values.k8s.names.configMaps.suffix }}
 {{- end }}

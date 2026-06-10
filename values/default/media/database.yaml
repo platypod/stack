@@ -12,9 +12,6 @@ database:
     mediarvester:
       username: mediarvesterUser
       password: mediarvesterPassword
-    cloudBeaver:
-      username: cloudBeaverUser
-      password: cloudBeaverPassword
   image: postgres:17
   label: transverse-db
   ports:
@@ -22,8 +19,6 @@ database:
       name: pgsql
       targetPort: 5432
   schemas:
-    cloudBeaver:
-      main: cloudBeaver
     jellyseerr:
       main: jellyseerr
     mediarvester:
