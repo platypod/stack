@@ -1,5 +1,5 @@
 bookstack:
-  enabled: true
+  enable: true
   appKey: base64:gJJbTsv2CTPeHrCOmu0crY65zypAC747jgMHvYEUlto=
   appDebug: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bookstack.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"

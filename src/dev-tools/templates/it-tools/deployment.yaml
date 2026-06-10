@@ -1,4 +1,4 @@
-{{- if .Values.itTools.enabled }}
+{{- if .Values.itTools.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.itTools.label .Values.k8s.names.pods.suffix }}
 
 apiVersion: apps/v1

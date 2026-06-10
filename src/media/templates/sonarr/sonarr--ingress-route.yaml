@@ -1,4 +1,4 @@
-{{- if .Values.sonarr.enabled }}
+{{- if .Values.sonarr.enable }}
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 

@@ -1,4 +1,4 @@
-{{- if .Values.prowlarr.enabled }}
+{{- if .Values.prowlarr.enable }}
 apiVersion: v1
 kind: Service
 

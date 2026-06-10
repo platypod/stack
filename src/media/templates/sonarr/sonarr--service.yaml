@@ -1,4 +1,4 @@
-{{- if .Values.sonarr.enabled }}
+{{- if .Values.sonarr.enable }}
 apiVersion: v1
 kind: Service
 

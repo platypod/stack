@@ -1,4 +1,4 @@
-{{- if .Values.mediarvester.enabled }}
+{{- if .Values.mediarvester.enable }}
 apiVersion: v1
 kind: Service
 

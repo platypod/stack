@@ -1,6 +1,6 @@
-{{- if .Values.storage.localStorage.isEnabled }}
+{{- if .Values.storage.localStorage.enable }}
 
-{{- if .Values.storage.nfs.isEnabled }}
+{{- if .Values.storage.nfs.enable }}
 {{- fail "Both storage.localStorage and storage.nfs are enabled. Please choose one."}}
 {{- end}}
 

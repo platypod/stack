@@ -1,5 +1,5 @@
 pokeclicker:
-  enabled: true
+  enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.pokeclicker.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: ghcr.io/platypod/pokeclicker:v0.10.25
   label: pokeclicker

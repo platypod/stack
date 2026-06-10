@@ -1,4 +1,4 @@
-{{- if .Values.rommapp.enabled }}
+{{- if .Values.rommapp.enable }}
 apiVersion: v1
 kind: ConfigMap
 

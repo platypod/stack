@@ -1,4 +1,4 @@
-{{- if .Values.wikijs.enabled }}
+{{- if .Values.wikijs.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix (tpl .Values.wikijs.database.label $) .Values.k8s.names.pods.suffix }}
 {{- $appVolume := "app-volume" }}
 

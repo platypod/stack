@@ -1,4 +1,4 @@
-{{- if .Values.jellyseerr.enabled }}
+{{- if .Values.jellyseerr.enable }}
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 

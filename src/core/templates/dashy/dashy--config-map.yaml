@@ -74,7 +74,7 @@ data:
             description: Monitoring dashboards
             statusCheck: true
             statusCheckUrl: http://{{ .Values.observability.dashboard.label }}:{{ .Values.observability.dashboard.ports.http.targetPort }}/api/health
-{{- if .Values.uptimeKuma.enabled }}
+{{- if .Values.uptimeKuma.enable }}
           - title: Uptime Kuma
             url: https://{{ tpl .Values.uptimeKuma.host . }}
             icon: hl-uptime-kuma
@@ -87,7 +87,7 @@ data:
         displayData:
           cols: 4
         items:
-{{- if .Values.jellyfin.enabled }}
+{{- if .Values.jellyfin.enable }}
           - title: Jellyfin
             url: https://{{ tpl .Values.jellyfin.host . }}
             icon: hl-jellyfin
@@ -95,7 +95,7 @@ data:
             statusCheck: true
             statusCheckUrl: http://{{ if .Values.jellyfin.proxy.enable }}{{ .Values.jellyfin.proxy.host }}:{{ .Values.jellyfin.proxy.port }}{{ else }}{{ .Values.jellyfin.label }}:{{ .Values.jellyfin.ports.http.targetPort }}{{ end }}/health
 {{- end }}
-{{- if .Values.jellyseerr.enabled }}
+{{- if .Values.jellyseerr.enable }}
           - title: Jellyseerr
             url: https://{{ tpl .Values.jellyseerr.host . }}
             icon: favicon
@@ -103,7 +103,7 @@ data:
             statusCheck: true
             statusCheckUrl: http://{{ .Values.jellyseerr.label }}:{{ .Values.jellyseerr.ports.http.targetPort }}/api/v1/status
 {{- end }}
-{{- if .Values.mediarvester.enabled }}
+{{- if .Values.mediarvester.enable }}
           - title: Mediarvester
             url: https://{{ tpl .Values.mediarvester.host . }}
             icon: favicon
@@ -111,7 +111,7 @@ data:
             statusCheck: true
             statusCheckUrl: http://{{ .Values.mediarvester.label }}:{{ .Values.mediarvester.ports.http.targetPort }}
 {{- end }}
-{{- if .Values.transmission.enabled }}
+{{- if .Values.transmission.enable }}
           - title: Transmission
             url: https://{{ tpl .Values.transmission.host . }}
             icon: hl-transmission
@@ -119,7 +119,7 @@ data:
             statusCheck: true
             statusCheckUrl: http://{{ .Values.transmission.label }}:{{ .Values.transmission.ports.http.targetPort }}/transmission/rpc
 {{- end }}
-{{- if .Values.deluge.enabled }}
+{{- if .Values.deluge.enable }}
           - title: Deluge
             url: https://{{ tpl .Values.deluge.host . }}
             icon: hl-deluge
@@ -127,7 +127,7 @@ data:
             statusCheck: true
             statusCheckUrl: http://{{ .Values.deluge.label }}:{{ .Values.deluge.ports.http.targetPort }}
 {{- end }}
-{{- if .Values.qbittorrent.enabled }}
+{{- if .Values.qbittorrent.enable }}
           - title: QBitTorrent
             url: https://{{ tpl .Values.qbittorrent.host . }}
             icon: hl-qbittorrent
@@ -140,7 +140,7 @@ data:
         displayData:
           cols: 4
         items:
-{{- if .Values.prowlarr.enabled }}
+{{- if .Values.prowlarr.enable }}
           - title: Prowlarr
             url: https://{{ tpl .Values.prowlarr.host . }}
             icon: hl-prowlarr
@@ -148,7 +148,7 @@ data:
             statusCheck: true
             statusCheckUrl: http://{{ .Values.prowlarr.label }}:{{ .Values.prowlarr.ports.http.targetPort }}/ping
 {{- end }}
-{{- if .Values.radarr.enabled }}
+{{- if .Values.radarr.enable }}
           - title: Radarr
             url: https://{{ tpl .Values.radarr.host . }}
             icon: hl-radarr
@@ -156,7 +156,7 @@ data:
             statusCheck: true
             statusCheckUrl: http://{{ .Values.radarr.label }}:{{ .Values.radarr.ports.http.targetPort }}/ping
 {{- end }}
-{{- if .Values.sonarr.enabled }}
+{{- if .Values.sonarr.enable }}
           - title: Sonarr
             url: https://{{ tpl .Values.sonarr.host . }}
             icon: hl-sonarr
@@ -164,7 +164,7 @@ data:
             statusCheck: true
             statusCheckUrl: http://{{ .Values.sonarr.label }}:{{ .Values.sonarr.ports.http.targetPort }}/ping
 {{- end }}
-{{- if .Values.readarr.enabled }}
+{{- if .Values.readarr.enable }}
           - title: Readarr
             url: https://{{ tpl .Values.readarr.host . }}
             icon: hl-readarr
@@ -172,7 +172,7 @@ data:
             statusCheck: true
             statusCheckUrl: http://{{ .Values.readarr.label }}:{{ .Values.readarr.ports.http.targetPort }}/ping
 {{- end }}
-{{- if .Values.bazarr.enabled }}
+{{- if .Values.bazarr.enable }}
           - title: Bazarr
             url: https://{{ tpl .Values.bazarr.host . }}
             icon: hl-bazarr
@@ -180,7 +180,7 @@ data:
             statusCheck: true
             statusCheckUrl: http://{{ .Values.bazarr.label }}:{{ .Values.bazarr.ports.http.targetPort }}/ping
 {{- end }}
-{{- if .Values.flaresolverr.enabled }}
+{{- if .Values.flaresolverr.enable }}
           - title: FlareSolverr
             url: https://{{ tpl .Values.flaresolverr.host . }}
             icon: favicon
@@ -188,7 +188,7 @@ data:
             statusCheck: true
             statusCheckUrl: http://{{ .Values.flaresolverr.label }}:{{ .Values.flaresolverr.ports.http.targetPort }}/health
 {{- end }}
-{{- if .Values.reclaimerr.enabled }}
+{{- if .Values.reclaimerr.enable }}
           - title: Reclaimerr
             url: https://{{ tpl .Values.reclaimerr.host . }}
             icon: favicon
@@ -201,7 +201,7 @@ data:
         displayData:
           cols: 3
         items:
-{{- if .Values.bookstack.enabled }}
+{{- if .Values.bookstack.enable }}
           - title: Bookstack
             url: https://{{ tpl .Values.bookstack.host . }}
             icon: hl-bookstack
@@ -209,7 +209,7 @@ data:
             statusCheck: true
             statusCheckUrl: http://{{ .Values.bookstack.label }}:{{ .Values.bookstack.ports.http.targetPort }}
 {{- end }}
-{{- if .Values.wikijs.enabled }}
+{{- if .Values.wikijs.enable }}
           - title: Wiki.js
             url: https://{{ tpl .Values.wikijs.host . }}
             icon: hl-wikijs
@@ -217,7 +217,7 @@ data:
             statusCheck: true
             statusCheckUrl: http://{{ .Values.wikijs.label }}:{{ .Values.wikijs.ports.http.targetPort }}
 {{- end }}
-{{- if .Values.outline.enabled }}
+{{- if .Values.outline.enable }}
           - title: Outline
             url: https://{{ tpl .Values.outline.host . }}
             icon: favicon
@@ -226,7 +226,7 @@ data:
             statusCheckUrl: http://{{ .Values.outline.label }}:{{ .Values.outline.ports.http.targetPort }}
 {{- end }}
 
-{{- if .Values.vaultwarden.enabled }}
+{{- if .Values.vaultwarden.enable }}
           - title: Vaultwarden
             url: https://{{ tpl .Values.vaultwarden.host . }}
             icon: hl-vaultwarden
@@ -239,7 +239,7 @@ data:
         displayData:
           cols: 4
         items:
-{{- if .Values.itTools.enabled }}
+{{- if .Values.itTools.enable }}
           - title: IT-Tools
             url: https://{{ tpl .Values.itTools.host . }}
             icon: favicon
@@ -247,7 +247,7 @@ data:
             statusCheck: true
             statusCheckUrl: http://{{ .Values.itTools.label }}:{{ .Values.itTools.ports.http.targetPort }}
 {{- end }}
-{{- if .Values.cyberChef.enabled }}
+{{- if .Values.cyberChef.enable }}
           - title: CyberChef
             url: https://{{ tpl .Values.cyberChef.host . }}
             icon: favicon
@@ -255,7 +255,7 @@ data:
             statusCheck: true
             statusCheckUrl: http://{{ .Values.cyberChef.label }}:{{ .Values.cyberChef.ports.http.targetPort }}
 {{- end }}
-{{- if .Values.dbeaver.enabled }}
+{{- if .Values.dbeaver.enable }}
           - title: DBeaver
             url: https://{{ tpl .Values.dbeaver.host . }}
             icon: favicon
@@ -268,7 +268,7 @@ data:
         displayData:
           cols: 2
         items:
-{{- if .Values.rommapp.enabled }}
+{{- if .Values.rommapp.enable }}
           - title: RommApp
             url: https://{{ tpl .Values.rommapp.host . }}
             icon: favicon
@@ -276,7 +276,7 @@ data:
             statusCheck: true
             statusCheckUrl: http://{{ .Values.rommapp.label }}:{{ .Values.rommapp.ports.http.targetPort }}
 {{- end }}
-{{- if .Values.pokeclicker.enabled }}
+{{- if .Values.pokeclicker.enable }}
           - title: Pokeclicker
             url: https://{{ tpl .Values.pokeclicker.host . }}
             icon: favicon

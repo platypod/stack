@@ -1,5 +1,5 @@
 prowlarr:
-  enabled: true
+  enable: true
   apiKey: 1b229188fe9e4488a2333c2135b1a052
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.prowlarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: linuxserver/prowlarr:latest

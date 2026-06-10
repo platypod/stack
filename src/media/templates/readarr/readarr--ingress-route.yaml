@@ -1,4 +1,4 @@
-{{- if .Values.readarr.enabled }}
+{{- if .Values.readarr.enable }}
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 

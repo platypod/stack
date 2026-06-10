@@ -1,4 +1,4 @@
-{{- if .Values.deluge.enabled }}
+{{- if .Values.deluge.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.deluge.label .Values.k8s.names.pods.suffix }}
 {{- $configMap := "config-map" }}
 {{- $appVolume := "app-volume" }}

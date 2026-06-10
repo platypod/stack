@@ -1,4 +1,4 @@
-{{- if .Values.uptimeKuma.enabled }}
+{{- if .Values.uptimeKuma.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.uptimeKuma.label .Values.k8s.names.pods.suffix }}
 {{- $appVolume := "app-volume" }}
 

@@ -1,4 +1,4 @@
-{{- if .Values.wikijs.enabled }}
+{{- if .Values.wikijs.enable }}
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 

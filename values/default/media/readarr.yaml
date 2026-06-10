@@ -1,5 +1,5 @@
 readarr:
-  enabled: true
+  enable: true
   apiKey: 1b229188fe9e4488a2333c2135b1a054
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.readarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: ghcr.io/pennydreadful/bookshelf:hardcover-v0.4.20.129

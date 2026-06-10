@@ -1,5 +1,5 @@
 jellyseerr:
-  enabled: true
+  enable: true
   apiKey: MTczNjUwNTY0MTMwNmRmY2EzNWZhLWNjNzYtNDA1ZC05MDE4LTVkYTc1NWNjN2E0Yg==
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: ghcr.io/seerr-team/seerr:v3.1.0

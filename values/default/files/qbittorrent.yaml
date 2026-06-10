@@ -1,5 +1,5 @@
 qbittorrent:
-  enabled: true
+  enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.qbittorrent.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: linuxserver/qbittorrent:latest
   label: qbittorrent

@@ -1,6 +1,6 @@
 jellyfin:
-  enabled: true
-  enable: true          # legacy flag used by service/ingress-route/observability templates
+  enable: true          # whether Jellyfin exists at all (homepage tile, ingress route, metrics)
+  inCluster: true       # run the in-cluster Jellyfin pod; false = proxy to an external instance (see proxy.enable)
   apiKey: ""            # set per-env after first deploy (generate in Jellyfin admin → API Keys)
   baseUrl: ""           # URL base path if Jellyfin is served under a subpath (usually empty)
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"

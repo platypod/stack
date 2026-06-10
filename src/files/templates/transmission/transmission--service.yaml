@@ -1,4 +1,4 @@
-{{- if .Values.transmission.enabled }}
+{{- if .Values.transmission.enable }}
 apiVersion: v1
 kind: Service
 

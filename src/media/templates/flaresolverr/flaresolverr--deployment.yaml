@@ -1,4 +1,4 @@
-{{- if .Values.flaresolverr.enabled }}
+{{- if .Values.flaresolverr.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.flaresolverr.label .Values.k8s.names.pods.suffix }}
 
 apiVersion: apps/v1
@@ -35,7 +35,7 @@ spec:
         - name: LOG_HTML
           value: "{{ .Values.flaresolverr.log.html }}"
         - name: PROMETHEUS_ENABLED
-          value: "{{ .Values.flaresolverr.prometheus.enabled }}"
+          value: "{{ .Values.flaresolverr.prometheus.enable }}"
         - name: PROMETHEUS_PORT
           value: "{{ .Values.flaresolverr.prometheus.port }}"
 {{- end }}

@@ -1,4 +1,4 @@
-{{- if .Values.rommapp.enabled }}
+{{- if .Values.rommapp.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.rommapp.label .Values.k8s.names.pods.suffix }}
 {{- $appVolume := "app-volume" }}
 {{- $configMap := "config-map" }}

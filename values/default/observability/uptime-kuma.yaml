@@ -1,5 +1,5 @@
 uptimeKuma:
-  enabled: true
+  enable: true
   label: uptime-kuma
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.uptimeKuma.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: louislam/uptime-kuma:1

@@ -1,4 +1,4 @@
-{{- if .Values.transmission.enabled }}
+{{- if .Values.transmission.enable }}
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 

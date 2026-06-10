@@ -1,4 +1,4 @@
-{{- if .Values.mediarvester.enabled }}
+{{- if .Values.mediarvester.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.mediarvester.label .Values.k8s.names.pods.suffix }}
 {{- $mediaVolume := "media-volume" }}
 {{- $appVolume := "app-volume" }}

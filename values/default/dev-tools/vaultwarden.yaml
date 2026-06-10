@@ -1,5 +1,5 @@
 vaultwarden:
-  enabled: true
+  enable: true
   label: vaultwarden
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.vaultwarden.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: vaultwarden/server:latest

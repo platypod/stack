@@ -1,4 +1,4 @@
-{{- if .Values.bookstack.enabled }}
+{{- if .Values.bookstack.enable }}
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 

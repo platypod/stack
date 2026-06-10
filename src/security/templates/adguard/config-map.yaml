@@ -1,4 +1,4 @@
-{{- if .Values.adguard.enabled }}
+{{- if .Values.adguard.enable }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

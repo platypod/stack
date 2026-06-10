@@ -1,4 +1,4 @@
-{{- if .Values.bookstack.enabled }}
+{{- if .Values.bookstack.enable }}
 {{- /*
   Align BookStack's built-in admin role display name with the Authelia `admins`
   group so OIDC group->role sync maps `admins` members to full admin. BookStack

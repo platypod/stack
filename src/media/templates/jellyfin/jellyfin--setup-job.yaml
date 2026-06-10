@@ -1,4 +1,4 @@
-{{- if and .Values.jellyfin.enabled .Values.jellyfin.enable }}
+{{- if and .Values.jellyfin.enable .Values.jellyfin.inCluster }}
 {{- /*
   Jellyfin first-boot setup Job.
 

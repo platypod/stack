@@ -51,7 +51,7 @@ data:
           description: YouTube without ads.
   services.yaml: |
     - Media-User:
-{{- if .Values.jellyfin.enabled }}
+{{- if .Values.jellyfin.enable }}
       - Jellyfin:
           icon: jellyfin.png
           href: https://{{ tpl .Values.jellyfin.host . }}
@@ -66,7 +66,7 @@ data:
             showEpisodeNumber: true
             expandOneStreamToTwoRows: false
 {{- end }}
-{{- if .Values.jellyseerr.enabled }}
+{{- if .Values.jellyseerr.enable }}
       - JellySeerr:
           icon: jellyseerr.png
           href: https://{{ tpl .Values.jellyseerr.host . }}
@@ -76,13 +76,13 @@ data:
             url: http://{{ .Values.jellyseerr.label }}:{{ .Values.jellyseerr.ports.http.targetPort }}
             key: {{ .Values.jellyseerr.apiKey }}
 {{- end }}
-{{- if .Values.mediarvester.enabled }}
+{{- if .Values.mediarvester.enable }}
       - Mediarvester:
           icon: mdi-download-circle
           href: https://{{ tpl .Values.mediarvester.host . }}
           description: Multi-platform media downloader (YouTube, Instagram, X, …).
 {{- end }}
-{{- if .Values.transmission.enabled }}
+{{- if .Values.transmission.enable }}
       - Transmission:
           icon: transmission.png
           href: https://{{ tpl .Values.transmission.host . }}
@@ -94,7 +94,7 @@ data:
             password: {{ .Values.transmission.credentials.password }}
             rpcUrl: /transmission/
 {{- end }}
-{{- if .Values.deluge.enabled }}
+{{- if .Values.deluge.enable }}
       - Deluge:
           icon: deluge.png
           href: https://{{ tpl .Values.deluge.host . }}
@@ -105,7 +105,7 @@ data:
             password: {{ .Values.deluge.credentials.password }}
             enableLeechProgress: true
 {{- end }}
-{{- if .Values.qbittorrent.enabled }}
+{{- if .Values.qbittorrent.enable }}
       - QBitTorrent:
           icon: qbittorrent.png
           href: https://{{ tpl .Values.qbittorrent.host . }}
@@ -125,7 +125,7 @@ data:
           widget:
             type: traefik
             url: http://{{ .Values.traefik.dashboardLabel }}:{{ .Values.traefik.ports.dashboard.targetPort }}
-{{- if .Values.adguard.enabled }}
+{{- if .Values.adguard.enable }}
       - AdGuard:
           icon: adguard-home.png
           href: https://{{ tpl .Values.adguard.host . }}
@@ -148,7 +148,7 @@ data:
           icon: lldap.png
           href: https://{{ tpl .Values.lldap.host . }}
           description: Lightweight LDAP user & group management.
-{{- if .Values.uptimeKuma.enabled }}
+{{- if .Values.uptimeKuma.enable }}
       - Uptime Kuma:
           icon: uptime-kuma.png
           href: https://{{ tpl .Values.uptimeKuma.host . }}
@@ -159,69 +159,69 @@ data:
             slug: all
 {{- end }}
     - Dev Tools:
-{{- if .Values.bookstack.enabled }}
+{{- if .Values.bookstack.enable }}
       - Bookstack:
           icon: bookstack.png
           href: https://{{ tpl .Values.bookstack.host . }}
           description: Simple wiki and documentation platform.
 {{- end }}
-{{- if .Values.wikijs.enabled }}
+{{- if .Values.wikijs.enable }}
       - Wiki.js:
           icon: wikijs.png
           href: https://{{ tpl .Values.wikijs.host . }}
           description: Powerful wiki with modern editor and Git sync.
 {{- end }}
-{{- if .Values.outline.enabled }}
+{{- if .Values.outline.enable }}
       - Outline:
           icon: outline.png
           href: https://{{ tpl .Values.outline.host . }}
           description: Team wiki and knowledge base.
 {{- end }}
-{{- if .Values.itTools.enabled }}
+{{- if .Values.itTools.enable }}
       - IT-Tools:
           icon: it-tools.png
           href: https://{{ tpl .Values.itTools.host . }}
           description: Useful tools for developers.
 {{- end }}
-{{- if .Values.cyberChef.enabled }}
+{{- if .Values.cyberChef.enable }}
       - CyberChef:
           icon: cyberchef.png
           href: https://{{ tpl .Values.cyberChef.host . }}
           description: Cyber operations from a browser.
 {{- end }}
-{{- if .Values.dbeaver.enabled }}
+{{- if .Values.dbeaver.enable }}
       - DBeaver:
           icon: mdi-database-search
           href: https://{{ tpl .Values.dbeaver.host . }}
           description: Database web interface.
 {{- end }}
-{{- if .Values.whoami.enabled }}
+{{- if .Values.whoami.enable }}
       - Who am I?:
           icon: mdi-server-network
           href: https://{{ tpl .Values.whoami.host . }}
           description: Prints OS info and HTTP request details.
 {{- end }}
-{{- if .Values.vaultwarden.enabled }}
+{{- if .Values.vaultwarden.enable }}
       - Vaultwarden:
           icon: vaultwarden.png
           href: https://{{ tpl .Values.vaultwarden.host . }}
           description: Self-hosted Bitwarden-compatible password manager.
 {{- end }}
     - Games:
-{{- if .Values.rommapp.enabled }}
+{{- if .Values.rommapp.enable }}
       - RommApp:
           icon: romm.png
           href: https://{{ tpl .Values.rommapp.host . }}
           description: Console ROM manager and emulator frontend.
 {{- end }}
-{{- if .Values.pokeclicker.enabled }}
+{{- if .Values.pokeclicker.enable }}
       - Pokeclicker:
           icon: mdi-pokeball
           href: https://{{ tpl .Values.pokeclicker.host . }}
           description: Pokémon idle clicker game.
 {{- end }}
     - Media-Maintainer:
-{{- if .Values.prowlarr.enabled }}
+{{- if .Values.prowlarr.enable }}
       - Prowlarr:
           icon: prowlarr.png
           href: https://{{ tpl .Values.prowlarr.host . }}
@@ -231,7 +231,7 @@ data:
             url: http://{{ .Values.prowlarr.label }}:{{ .Values.prowlarr.ports.http.targetPort }}
             key: {{ .Values.prowlarr.apiKey }}
 {{- end }}
-{{- if .Values.radarr.enabled }}
+{{- if .Values.radarr.enable }}
       - Radarr:
           icon: radarr.png
           href: https://{{ tpl .Values.radarr.host . }}
@@ -241,7 +241,7 @@ data:
             url: http://{{ .Values.radarr.label }}:{{ .Values.radarr.ports.http.targetPort }}
             key: {{ .Values.radarr.apiKey }}
 {{- end }}
-{{- if .Values.sonarr.enabled }}
+{{- if .Values.sonarr.enable }}
       - Sonarr:
           icon: sonarr.png
           href: https://{{ tpl .Values.sonarr.host . }}
@@ -251,7 +251,7 @@ data:
             url: http://{{ .Values.sonarr.label }}:{{ .Values.sonarr.ports.http.targetPort }}
             key: {{ .Values.sonarr.apiKey }}
 {{- end }}
-{{- if .Values.readarr.enabled }}
+{{- if .Values.readarr.enable }}
       - Readarr:
           icon: readarr.png
           href: https://{{ tpl .Values.readarr.host . }}
@@ -261,7 +261,7 @@ data:
             url: http://{{ .Values.readarr.label }}:{{ .Values.readarr.ports.http.targetPort }}
             key: {{ .Values.readarr.apiKey }}
 {{- end }}
-{{- if .Values.bazarr.enabled }}
+{{- if .Values.bazarr.enable }}
       - Bazarr:
           icon: bazarr.png
           href: https://{{ tpl .Values.bazarr.host . }}
@@ -271,13 +271,13 @@ data:
             url: http://{{ .Values.bazarr.label }}:{{ .Values.bazarr.ports.http.targetPort }}
             key: {{ .Values.bazarr.apiKey }}
 {{- end }}
-{{- if .Values.flaresolverr.enabled }}
+{{- if .Values.flaresolverr.enable }}
       - FlareSolverr:
           icon: flaresolverr.png
           href: https://{{ tpl .Values.flaresolverr.host . }}
           description: CloudFlare bypass proxy.
 {{- end }}
-{{- if .Values.reclaimerr.enabled }}
+{{- if .Values.reclaimerr.enable }}
       - Reclaimerr:
           icon: mdi-delete-sweep
           href: https://{{ tpl .Values.reclaimerr.host . }}

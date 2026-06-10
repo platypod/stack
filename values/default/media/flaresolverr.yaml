@@ -1,5 +1,5 @@
 flaresolverr:
-  enabled: true
+  enable: true
   captchaSolver: none
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.flaresolverr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: flaresolverr/flaresolverr:latest
@@ -12,7 +12,7 @@ flaresolverr:
       name: flaresolvr-http
       targetPort: 8191
   prometheus:
-    enabled: false
+    enable: false
     path: /metrics
     port: 8192
   replicasNb: 1

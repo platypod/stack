@@ -1,4 +1,4 @@
-{{- if .Values.jellyseerr.enabled }}
+{{- if .Values.jellyseerr.enable }}
 {{- /*
   Jellyseerr first-boot setup Job.
 

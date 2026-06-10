@@ -1,4 +1,4 @@
-{{- if .Values.uptimeKuma.enabled }}
+{{- if .Values.uptimeKuma.enable }}
 apiVersion: v1
 kind: Service
 

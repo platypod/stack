@@ -1,4 +1,4 @@
-{{- if .Values.wikijs.enabled }}
+{{- if .Values.wikijs.enable }}
 {{- /*
   Seed Wiki.js's Authelia OIDC strategy into its DB after the app has booted.
 

@@ -1,4 +1,4 @@
-{{- if .Values.deluge.enabled }}
+{{- if .Values.deluge.enable }}
 apiVersion: v1
 kind: ConfigMap
 

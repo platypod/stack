@@ -1,4 +1,4 @@
-{{- if .Values.readarr.enabled }}
+{{- if .Values.readarr.enable }}
 apiVersion: v1
 kind: Service
 

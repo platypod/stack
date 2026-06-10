@@ -1,4 +1,4 @@
-{{- if .Values.vaultwarden.enabled }}
+{{- if .Values.vaultwarden.enable }}
 apiVersion: v1
 kind: Service
 

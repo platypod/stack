@@ -1,4 +1,4 @@
-{{- if .Values.whoami.enabled }}
+{{- if .Values.whoami.enable }}
 apiVersion: v1
 kind: Service
 

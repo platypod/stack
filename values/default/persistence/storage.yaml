@@ -4,7 +4,7 @@ storage:
     media: media
 
   localStorage:
-    isEnabled: true
+    enable: true
     default:
       rootPath: ./volumes/
       capacityStorage: 1Gi
@@ -24,7 +24,7 @@ storage:
         volumeSelector: apps
 
   nfs:
-    isEnabled: false
+    enable: false
     default:
       server: server
       share: share

@@ -1,4 +1,4 @@
-{{- if .Values.cyberChef.enabled }}
+{{- if .Values.cyberChef.enable }}
 apiVersion: v1
 kind: Service
 

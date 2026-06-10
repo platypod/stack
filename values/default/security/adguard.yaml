@@ -1,5 +1,5 @@
 adguard:
-  enabled: true
+  enable: true
   loadBalancerIP: ""  # override per-env (e.g. dev: 192.168.122.201)
   adminHost: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.adguard.label }}-admin{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   credentials:

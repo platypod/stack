@@ -1,5 +1,5 @@
-{{- if .Values.jellyfin.enabled }}
 {{- if .Values.jellyfin.enable }}
+{{- if .Values.jellyfin.inCluster }}
 
 apiVersion: v1
 kind: Service

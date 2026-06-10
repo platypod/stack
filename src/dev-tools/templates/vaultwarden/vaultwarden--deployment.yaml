@@ -1,4 +1,4 @@
-{{- if .Values.vaultwarden.enabled }}
+{{- if .Values.vaultwarden.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.vaultwarden.label .Values.k8s.names.pods.suffix }}
 {{- $appVolume := "app-volume" }}
 

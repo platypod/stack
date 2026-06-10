@@ -1,5 +1,5 @@
 rommapp:
-  enabled: true
+  enable: true
   credentials:
     username: rommappUser
     password: rommappPassword

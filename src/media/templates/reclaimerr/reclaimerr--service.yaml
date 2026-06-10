@@ -1,4 +1,4 @@
-{{- if .Values.reclaimerr.enabled }}
+{{- if .Values.reclaimerr.enable }}
 apiVersion: v1
 kind: Service
 

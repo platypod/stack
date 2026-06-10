@@ -1,4 +1,4 @@
-{{- if .Values.dbeaver.enabled }}
+{{- if .Values.dbeaver.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.dbeaver.label .Values.k8s.names.pods.suffix }}
 {{- $appVolume := "app-volume" }}
 {{- $configMap := "config-map" }}

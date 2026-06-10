@@ -1,4 +1,4 @@
-{{- if .Values.qbittorrent.enabled }}
+{{- if .Values.qbittorrent.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.qbittorrent.label .Values.k8s.names.pods.suffix }}
 {{- $configMap := "config-map" }}
 {{- $appVolume := "app-volume" }}

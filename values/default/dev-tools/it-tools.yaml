@@ -1,5 +1,5 @@
 itTools:
-  enabled: true
+  enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.itTools.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: corentinth/it-tools:latest
   label: it-tools

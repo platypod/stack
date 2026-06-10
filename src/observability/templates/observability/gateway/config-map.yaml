@@ -36,7 +36,7 @@ data:
               {{- if .Values.jellyfin.proxy.enable }}
               - http://{{ .Values.jellyfin.proxy.host }}:{{ .Values.jellyfin.proxy.port }}/Sessions
               {{- end }}
-              {{- if .Values.jellyfin.enable }}
+              {{- if .Values.jellyfin.inCluster }}
               - https://{{ tpl .Values.jellyfin.host . }}/Sessions
               {{- end }}
             relabel_configs:
@@ -55,7 +55,7 @@ data:
             scrape_interval: 30s
             static_configs:
             - targets:
-              {{- if .Values.jellyfin.enable }}
+              {{- if .Values.jellyfin.inCluster }}
               - {{ tpl .Values.jellyfin.host . }}
               {{- end }}
               {{- if .Values.jellyfin.proxy.enable }}

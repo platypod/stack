@@ -1,5 +1,5 @@
 outline:
-  enabled: true
+  enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.outline.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: outlinewiki/outline:latest
   label: outline

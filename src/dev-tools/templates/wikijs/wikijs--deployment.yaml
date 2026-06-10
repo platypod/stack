@@ -1,4 +1,4 @@
-{{- if .Values.wikijs.enabled }}
+{{- if .Values.wikijs.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.wikijs.label .Values.k8s.names.pods.suffix }}
 
 apiVersion: apps/v1

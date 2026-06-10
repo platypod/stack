@@ -1,5 +1,5 @@
 deluge:
-  enabled: true
+  enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.deluge.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: lscr.io/linuxserver/deluge:latest
   label: deluge

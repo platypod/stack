@@ -1,4 +1,4 @@
-{{- if .Values.wikijs.enabled }}
+{{- if .Values.wikijs.enable }}
 apiVersion: v1
 kind: Service
 

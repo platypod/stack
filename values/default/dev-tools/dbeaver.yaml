@@ -1,5 +1,5 @@
 dbeaver:
-  enabled: true
+  enable: true
   credentials:
     username: dbeaverAdmin
     password: dbeaverPassword

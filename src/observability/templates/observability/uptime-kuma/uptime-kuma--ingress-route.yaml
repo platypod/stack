@@ -1,4 +1,4 @@
-{{- if .Values.uptimeKuma.enabled }}
+{{- if .Values.uptimeKuma.enable }}
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 

@@ -1,4 +1,4 @@
-{{- if .Values.sonarr.enabled }}
+{{- if .Values.sonarr.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.sonarr.label .Values.k8s.names.pods.suffix }}
 {{- $configMap := "config-map" }}
 {{- $appVolume := "app-volume" }}

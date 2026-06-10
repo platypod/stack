@@ -1,4 +1,4 @@
-{{- if .Values.outline.enabled }}
+{{- if .Values.outline.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix (tpl .Values.outline.database.label .) .Values.k8s.names.pods.suffix }}
 
 apiVersion: apps/v1

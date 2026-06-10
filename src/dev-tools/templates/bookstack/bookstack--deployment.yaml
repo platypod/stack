@@ -1,4 +1,4 @@
-{{- if .Values.bookstack.enabled }}
+{{- if .Values.bookstack.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.bookstack.label .Values.k8s.names.pods.suffix }}
 
 apiVersion: apps/v1

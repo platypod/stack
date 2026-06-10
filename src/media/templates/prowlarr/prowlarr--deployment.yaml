@@ -1,4 +1,4 @@
-{{- if .Values.prowlarr.enabled }}
+{{- if .Values.prowlarr.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.prowlarr.label .Values.k8s.names.pods.suffix }}
 {{- $configMap := "config-map" }}
 
