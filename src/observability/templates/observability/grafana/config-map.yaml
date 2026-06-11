@@ -306,7 +306,7 @@ data:
             "showValue": "auto",
             "tooltip": {
               "hideZeros": false,
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -5739,7 +5739,7 @@ data:
                   "showLegend": true
                 },
                 "tooltip": {
-                  "mode": "single",
+                  "mode": "multi",
                   "sort": "none"
                 }
               },
