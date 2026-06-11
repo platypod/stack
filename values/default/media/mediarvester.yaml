@@ -1,7 +1,7 @@
 mediarvester:
   enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.mediarvester.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: ghcr.io/platypod/mediarvester:v0.5.0
+  image: ghcr.io/platypod/mediarvester:v1.0.0
   label: mediarvester
   ports:
     http:
@@ -18,7 +18,7 @@ mediarvester:
   logLevel: INFO
   storage:
     mediaPvc: "{{ .Values.storage.defaultVolumes.media }}"
-    mediaSubPath: mediarvester
+    mediaSubPath: replays
     appsPvc: "{{ .Values.storage.defaultVolumes.apps }}"
     cookiesSubPath: mediarvester/cookies
   replicasNb: 1
