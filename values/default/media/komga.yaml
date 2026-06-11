@@ -1,0 +1,31 @@
+komga:
+  enable: true
+  # OIDC login via Authelia. Empty clientId disables the integration (the
+  # Authelia client block and Komga's oauth2 config are both gated on it).
+  # Set real values per-env; hash with: authelia crypto hash generate pbkdf2
+  oidc:
+    clientId: ""
+    clientSecret:
+      plain: ""
+      hashed: ""
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.komga.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: gotson/komga:1.24.4
+  label: komga
+  ports:
+    http:
+      name: komga-http
+      targetPort: 25600
+  pvc:
+    app: "{{ .Values.storage.defaultVolumes.apps }}"
+    media: "{{ .Values.storage.defaultVolumes.media }}"
+  # Library root inside the media share; create/point Komga libraries under
+  # this path from its admin UI (Server settings -> Libraries).
+  librarySubPath: books
+  replicasNb: 1
+  resources:
+    requests:
+      cpu: 100m
+      # JVM app — leaner requests starve it at startup.
+      memory: 512Mi
+    limits:
+      memory: 1Gi

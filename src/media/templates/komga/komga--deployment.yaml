@@ -1,0 +1,100 @@
+{{- if .Values.komga.enable }}
+{{- $appVolume := "app-volume" }}
+{{- $mediaVolume := "media-volume" }}
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.komga.label .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.komga.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      # gotson/komga is not a linuxserver image (no PUID/PGID env); run the
+      # whole pod as the media user so /config and the library on NFS get the
+      # same ownership as the *arr apps.
+      # NEVER set fsGroup on pods mounting the NFS PVCs: csi-driver-nfs declares
+      # fsGroupPolicy=File, so kubelet recursively chowns the WHOLE share on
+      # every pod start — on the 18TB media volume that wedges the node's
+      # kubelet for hours, knocks sibling pods into Unknown, and mass-modifies
+      # file ownership on the NAS. runAsUser/runAsGroup is sufficient: the
+      # media files already belong to the media uid/gid.
+      securityContext:
+        runAsUser: {{ .Values.media.system.userId }}
+        runAsGroup: {{ .Values.media.system.groupId }}
+      {{- if and .Values.komga.oidc.clientId .Values.traefik.loadBalancerIP }}
+      # OIDC discovery: Komga must fetch the Authelia issuer metadata at its
+      # PUBLIC https URL, which is NXDOMAIN in-cluster. Resolve it to the
+      # Traefik LoadBalancer (same trick as Grafana) so the back-channel works.
+      hostAliases:
+      - ip: {{ .Values.traefik.loadBalancerIP }}
+        hostnames:
+        - {{ tpl .Values.authelia.host . }}
+      {{- end }}
+      initContainers:
+      # The /config subPath dir is created root-owned; chown ONLY that dir
+      # (same pattern as jellyseerr — never the whole volume).
+      - name: init-permissions
+        image: busybox
+        securityContext:
+          runAsUser: 0
+        command: ['sh', '-c', 'mkdir -p /data/komga/config && chown -R {{ .Values.media.system.userId }}:{{ .Values.media.system.groupId }} /data/komga']
+        volumeMounts:
+        - name: {{ $appVolume }}
+          mountPath: /data
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.komga.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.komga.image }}
+        resources:
+          {{- toYaml .Values.komga.resources | nindent 10 }}
+        ports:
+        - name: {{ .Values.komga.ports.http.name }}
+          containerPort: {{ .Values.komga.ports.http.targetPort }}
+        env:
+        - name: SERVER_PORT
+          value: "{{ .Values.komga.ports.http.targetPort }}"
+        # Komga hard-refuses to start with its SQLite DBs on a remote filesystem
+        # (/config lives on the apps NFS PVC). We accept the same SQLite-on-NFS
+        # trade-off as the *arr apps; single replica, single writer.
+        # SPRING_APPLICATION_JSON because the relaxed env binding for the
+        # "tasks-db" property segment does not resolve reliably. Also carries
+        # the OIDC (Authelia) client registration when oidc.clientId is set:
+        # oauth2-account-creation auto-creates a Komga USER account on first
+        # OIDC login (matched by email thereafter).
+        - name: SPRING_APPLICATION_JSON
+          value: >-
+            {"komga":{"database":{"check-local-filesystem":false},"tasks-db":{"check-local-filesystem":false}
+            {{- if .Values.komga.oidc.clientId -}}
+            ,"oauth2-account-creation":true},
+            "spring":{"security":{"oauth2":{"client":{
+            "registration":{"authelia":{"client-id":"{{ .Values.komga.oidc.clientId }}","client-secret":"{{ .Values.komga.oidc.clientSecret.plain }}","client-name":"Authelia","scope":"openid,profile,email","authorization-grant-type":"authorization_code","redirect-uri":"{baseUrl}/login/oauth2/code/authelia"}},
+            "provider":{"authelia":{"issuer-uri":"https://{{ tpl .Values.authelia.host . }}","user-name-attribute":"preferred_username"}}
+            }}}}}
+            {{- else -}}
+            }}
+            {{- end }}
+        volumeMounts:
+        - mountPath: /config
+          name: {{ $appVolume }}
+          subPath: komga/config
+        - mountPath: {{ .Values.media.system.data.path }}
+          name: {{ $mediaVolume }}
+      volumes:
+      - name: {{ $mediaVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.komga.pvc.media . }}
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.komga.pvc.app . }}
+{{- end }}

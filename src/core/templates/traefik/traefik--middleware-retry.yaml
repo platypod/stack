@@ -1,0 +1,18 @@
+# Applied globally to the HTTPS entrypoint (see --entryPoints...http.middlewares
+# in the deployment). Retries an upstream connection that fails to establish —
+# absorbs the transient "Bad Gateway" blips caused by brief VM/bridge network
+# flaps instead of surfacing them to the browser. Retry only re-dials when no
+# response has been started, so it is safe for non-idempotent requests.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+
+metadata:
+  name: {{ .Values.k8s.names.middlewares.prefix }}retry{{ .Values.k8s.names.middlewares.suffix }}
+  labels:
+    chartVersion: {{ .Chart.Version }}
+    env: {{ .Values.project.env }}
+
+spec:
+  retry:
+    attempts: 3
+    initialInterval: 250ms

@@ -231,6 +231,12 @@ data:
             url: http://{{ .Values.prowlarr.label }}:{{ .Values.prowlarr.ports.http.targetPort }}
             key: {{ .Values.prowlarr.apiKey }}
 {{- end }}
+{{- if .Values.komga.enable }}
+      - Komga:
+          icon: komga.png
+          href: https://{{ tpl .Values.komga.host . }}
+          description: Comics, manga and ebook library.
+{{- end }}
 {{- if .Values.radarr.enable }}
       - Radarr:
           icon: radarr.png

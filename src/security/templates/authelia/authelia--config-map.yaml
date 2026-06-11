@@ -41,6 +41,26 @@ data:
             - 'preferred_username'
         ## See: https://www.authelia.com/c/oidc
         clients:
+        {{- if .Values.komga.oidc.clientId }}
+        - audience:
+          - 'https://{{ tpl .Values.komga.host . }}'
+          authorization_policy: 'one_factor'
+          claims_policy: 'platypod'
+          client_id: '{{ .Values.komga.oidc.clientId }}'
+          client_name: 'Komga'
+          client_secret: '{{ .Values.komga.oidc.clientSecret.hashed }}'
+          public: false
+          redirect_uris:
+          # Spring Security's default OAuth2 callback path for the
+          # "authelia" client registration (see the komga deployment).
+          - 'https://{{ tpl .Values.komga.host . }}/login/oauth2/code/authelia'
+          scopes:
+          - 'openid'
+          - 'profile'
+          - 'email'
+          token_endpoint_auth_method: 'client_secret_basic'
+          userinfo_signed_response_alg: 'none'
+        {{- end }}
         - audience:
           - 'https://{{ tpl .Values.bookstack.host . }}'
           authorization_policy: 'one_factor'

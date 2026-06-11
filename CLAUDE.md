@@ -172,6 +172,14 @@ A YAML comment like `# reference {{MY_VAR}}` will cause a template parse error
 (`function "MY_VAR" not defined`). Escape literal braces in comments using a
 string literal: `{{ "{{MY_VAR}}" }}`, or simply avoid `{{ }}` in comments.
 
+**NEVER set pod-level `fsGroup` on pods mounting the NFS PVCs.**  
+csi-driver-nfs declares `fsGroupPolicy: File`, so the kubelet recursively
+chowns/chmods the ENTIRE share on every pod start. On the 18 TB media volume
+this wedges the node's kubelet for hours, knocks sibling pods into `Unknown`
+(surfacing as 502 Bad Gateway on unrelated services), and mass-modifies file
+ownership on the NAS. Use `runAsUser`/`runAsGroup` plus an init container that
+chowns ONLY the service's own subPath dir (see jellyseerr/komga deployments).
+
 **The linuxserver Transmission image always overwrites RPC whitelist settings.**  
 The linuxserver init script hardcodes `rpc-whitelist: "127.0.0.1,::1"` and
 `rpc-host-whitelist: ""` (empty = block all hosts) on every container start,

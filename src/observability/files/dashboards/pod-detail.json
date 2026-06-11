@@ -1,0 +1,138 @@
+{
+  "title": "Pod Detail",
+  "uid": "pod-detail",
+  "tags": ["platform", "pods"],
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-3h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "namespace",
+        "label": "Namespace",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "metrics" },
+        "query": "label_values(k8s_pod_phase, namespace)",
+        "refresh": 2,
+        "sort": 1,
+        "current": { "text": "prd-platypod", "value": "prd-platypod" }
+      },
+      {
+        "name": "pod",
+        "label": "Pod",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "metrics" },
+        "query": "label_values(k8s_pod_phase{namespace=\"$namespace\"}, pod)",
+        "refresh": 2,
+        "sort": 1,
+        "current": {}
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat", "title": "Phase",
+      "description": "1=Pending 2=Running 3=Succeeded 4=Failed 5=Unknown",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "k8s_pod_phase{namespace=\"$namespace\", pod=\"$pod\"}" } ],
+      "fieldConfig": { "defaults": { "mappings": [ { "type": "value", "options": { "1": { "text": "Pending", "color": "yellow" }, "2": { "text": "Running", "color": "green" }, "3": { "text": "Succeeded", "color": "blue" }, "4": { "text": "Failed", "color": "red" }, "5": { "text": "Unknown", "color": "orange" } } } ], "thresholds": { "steps": [ { "color": "text", "value": null } ] } }, "overrides": [] }
+    },
+    {
+      "type": "stat", "title": "Containers ready",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "targets": [
+        { "refId": "A", "expr": "sum(k8s_container_ready{namespace=\"$namespace\", pod=\"$pod\"})", "legendFormat": "ready" },
+        { "refId": "B", "expr": "count(k8s_container_ready{namespace=\"$namespace\", pod=\"$pod\"})", "legendFormat": "total" }
+      ],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "color": "green", "value": null } ] } }, "overrides": [] }
+    },
+    {
+      "type": "stat", "title": "Restarts",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "sum(k8s_container_restarts{namespace=\"$namespace\", pod=\"$pod\"}) or vector(0)" } ],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 } ] } }, "overrides": [] }
+    },
+    {
+      "type": "stat", "title": "CPU now (cores)",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "sum(k8s_pod_cpu_usage{namespace=\"$namespace\", pod=\"$pod\"})" } ],
+      "fieldConfig": { "defaults": { "decimals": 3, "thresholds": { "steps": [ { "color": "green", "value": null } ] } }, "overrides": [] }
+    },
+    {
+      "type": "stat", "title": "Memory now (working set)",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "sum(k8s_pod_memory_working_set{namespace=\"$namespace\", pod=\"$pod\"})" } ],
+      "fieldConfig": { "defaults": { "unit": "bytes", "thresholds": { "steps": [ { "color": "green", "value": null } ] } }, "overrides": [] }
+    },
+    {
+      "type": "stat", "title": "Node",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "sum by (node) (k8s_pod_cpu_usage{namespace=\"$namespace\", pod=\"$pod\"})", "legendFormat": "{{node}}" } ],
+      "options": { "textMode": "name", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "color": "text", "value": null } ] } }, "overrides": [] }
+    },
+    {
+      "type": "timeseries", "title": "CPU by container (vs request/limit)",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (container) (container_cpu_usage{namespace=\"$namespace\", pod=\"$pod\"})", "legendFormat": "{{container}}" },
+        { "refId": "B", "expr": "sum(k8s_container_cpu_request{namespace=\"$namespace\", pod=\"$pod\"})", "legendFormat": "request" },
+        { "refId": "C", "expr": "sum(k8s_container_cpu_limit{namespace=\"$namespace\", pod=\"$pod\"})", "legendFormat": "limit" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 3, "custom": { "fillOpacity": 10 } }, "overrides": [ { "matcher": { "id": "byRegexp", "options": "request|limit" }, "properties": [ { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 10] } }, { "id": "custom.fillOpacity", "value": 0 } ] } ] }
+    },
+    {
+      "type": "timeseries", "title": "Memory by container (vs request/limit)",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (container) (container_memory_working_set{namespace=\"$namespace\", pod=\"$pod\"})", "legendFormat": "{{container}}" },
+        { "refId": "B", "expr": "sum(k8s_container_memory_request{namespace=\"$namespace\", pod=\"$pod\"})", "legendFormat": "request" },
+        { "refId": "C", "expr": "sum(k8s_container_memory_limit{namespace=\"$namespace\", pod=\"$pod\"})", "legendFormat": "limit" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "fillOpacity": 10 } }, "overrides": [ { "matcher": { "id": "byRegexp", "options": "request|limit" }, "properties": [ { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 10] } }, { "id": "custom.fillOpacity", "value": 0 } ] } ] }
+    },
+    {
+      "type": "timeseries", "title": "Network I/O",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 13 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (direction) (rate(k8s_pod_network_io{namespace=\"$namespace\", pod=\"$pod\"}[2m]))", "legendFormat": "{{direction}}" },
+        { "refId": "B", "expr": "sum(rate(k8s_pod_network_errors{namespace=\"$namespace\", pod=\"$pod\"}[2m]))", "legendFormat": "errors/s" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "Bps" }, "overrides": [ { "matcher": { "id": "byName", "options": "errors/s" }, "properties": [ { "id": "unit", "value": "short" }, { "id": "custom.axisPlacement", "value": "right" } ] } ] }
+    },
+    {
+      "type": "timeseries", "title": "Filesystem",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 13 },
+      "targets": [
+        { "refId": "A", "expr": "sum(k8s_pod_filesystem_usage{namespace=\"$namespace\", pod=\"$pod\"})", "legendFormat": "used" },
+        { "refId": "B", "expr": "sum(k8s_pod_filesystem_available{namespace=\"$namespace\", pod=\"$pod\"})", "legendFormat": "available" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries", "title": "Restarts by container",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 13 },
+      "targets": [ { "refId": "A", "expr": "sum by (container) (k8s_container_restarts{namespace=\"$namespace\", pod=\"$pod\"})", "legendFormat": "{{container}}" } ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "fillOpacity": 15 } }, "overrides": [] }
+    },
+    {
+      "type": "logs", "title": "Logs",
+      "description": "Pod identity lives in the log_file_path structured metadata (.../<namespace>_<pod>_<uid>/<container>/N.log) — Loki streams aren't labeled per pod.",
+      "datasource": { "type": "loki", "uid": "logs" },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 21 },
+      "targets": [ { "refId": "A", "expr": "{service_name=~\".+\"} | log_file_path=~\".*/${namespace}_${pod}_.*\"" } ],
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending", "enableLogDetails": true }
+    }
+  ]
+}
