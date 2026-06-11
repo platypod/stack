@@ -218,6 +218,12 @@ data:
       # (e.g. mediarvester installed on the home screen) can authenticate silently without
       # being interrupted by a login prompt mid-share. Set to -1 to disable the option entirely.
       remember_me: 30d
+      # Redis-backed sessions: survive Authelia pod restarts (deploys, node
+      # blips, lldap startup-check crashes). Without this the provider is
+      # in-memory and every restart logs all users out, remember_me included.
+      redis:
+        host: '{{ .Values.k8s.names.services.prefix }}{{ tpl .Values.authelia.redis.label . }}{{ .Values.k8s.names.services.suffix }}'
+        port: {{ .Values.authelia.redis.ports.http.targetPort }}
       cookies:
       - domain: {{ .Values.traefik.domain }}
         authelia_url: https://{{ tpl .Values.authelia.host . }}

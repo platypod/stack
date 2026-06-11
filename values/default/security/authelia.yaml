@@ -113,6 +113,19 @@ authelia:
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.vaultwarden.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  redis:
+    image: redis:7-alpine
+    label: "{{ .Values.authelia.label }}-redis"
+    ports:
+      http:
+        name: redis
+        targetPort: 6379
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 64Mi
   secrets:
     encryptionKey: verySecretMuchSecureNeverGonnaBeGuessedWoah
     jwt: verySecretMuchSecureNeverGonnaBeGuessedWoooow
