@@ -31,7 +31,7 @@ uptimeKuma:
     - { name: "Traefik",      url: "http://traefik-dashboard:9999" }
     - { name: "Authelia",     url: "http://authelia:9091" }
     - { name: "LLDAP",        url: "http://lldap:17170" }
-    - { name: "AdGuard",      url: "http://adguard:3000" }
+    - { name: "AdGuard",      url: "http://adguard:80" }
     - { name: "Grafana",      url: "http://grafana:3000" }
     - { name: "Mimir",        url: "http://mimir:8080/ready" }
     - { name: "Loki",         url: "http://loki:3100/ready" }

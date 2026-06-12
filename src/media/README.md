@@ -42,6 +42,15 @@ Feeds Kavita: downloads land as **CBZ** in the media share's `manga` subfolder
 - `AUTH_MODE=none` — gated solely by Authelia forward-auth.
 - Reuses the shared **Flaresolverr** to bypass Cloudflare.
 
+**Extension sources.** Suwayomi ships with no sources (the original Tachiyomi
+repo was taken down), so you must add a third-party *extension repository*. The
+`suwayomi-setup` Job (post-install/upgrade hook, weight 25) seeds the repos in
+`suwayomi.extensionRepos` (default: keiyoushi) via Suwayomi's GraphQL API — the
+same field as the WebUI's Settings → Browse → Extension Repositories. Requires
+Suwayomi **≥ v1.0.0**; the extension-repo system did not exist in v0.7.x (the
+image is pinned to v2.x). After the repo loads, enable a language on the
+Extensions page and install the sources you want.
+
 ## Setup Jobs
 
 Several services bootstrap via post-install/post-upgrade hook Jobs (idempotent,

@@ -1,0 +1,85 @@
+{{- if and .Values.suwayomi.enable .Values.suwayomi.extensionRepos }}
+{{- /*
+  Suwayomi first-boot setup Job.
+
+  Suwayomi ships with NO extension sources (the original Tachiyomi repo was taken
+  down). Sources come from third-party "extension repositories", which are a
+  server setting stored in Suwayomi's DB and configured via its GraphQL API (the
+  WebUI's Settings → Browse → Extension Repositories writes the same field).
+
+  This Job sets .Values.suwayomi.extensionRepos and refreshes the extension list.
+  Idempotent — setSettings just overwrites the list with the desired value.
+
+  NOTE: requires Suwayomi >= v1.0.0 (the extensionRepos setting did not exist in
+  v0.7.x). See values/default/media/suwayomi.yaml for the pinned image.
+*/ -}}
+{{- $svc := print .Values.k8s.names.services.prefix .Values.suwayomi.label .Values.k8s.names.services.suffix }}
+apiVersion: batch/v1
+kind: Job
+
+metadata:
+  name: suwayomi-setup
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "25"
+    "helm.sh/hook-delete-policy": before-hook-creation
+
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: suwayomi-setup
+        image: python:3-alpine
+        env:
+        - name: SUWAYOMI_URL
+          value: "http://{{ $svc }}:{{ .Values.suwayomi.ports.http.targetPort }}"
+        - name: EXTENSION_REPOS
+          value: {{ .Values.suwayomi.extensionRepos | toJson | quote }}
+        command:
+        - python3
+        - -c
+        - |
+          import json, os, time, urllib.request, urllib.error
+
+          BASE  = os.environ["SUWAYOMI_URL"]
+          REPOS = json.loads(os.environ["EXTENSION_REPOS"])
+
+          def gql(query, variables=None):
+              body = json.dumps({"query": query, "variables": variables or {}}).encode()
+              req = urllib.request.Request(f"{BASE}/api/graphql", data=body,
+                                           method="POST",
+                                           headers={"Content-Type": "application/json"})
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  return json.loads(r.read().decode())
+
+          # 1. wait for the GraphQL API
+          for i in range(60):
+              try:
+                  gql("{aboutServer{version}}"); print(f"  [{i}] Suwayomi is up."); break
+              except Exception as e:
+                  print(f"  [{i}] not ready: {e}"); time.sleep(5)
+          else:
+              raise SystemExit("Suwayomi never became ready")
+
+          # 2. set the extension repositories
+          res = gql(
+              "mutation($u:[String!]!){setSettings(input:{settings:{extensionRepos:$u}})"
+              "{settings{extensionRepos}}}",
+              {"u": REPOS},
+          )
+          if res.get("errors"):
+              raise SystemExit(f"setSettings failed: {res['errors']}")
+          current = res["data"]["setSettings"]["settings"]["extensionRepos"]
+          print(f"Extension repos set: {current}")
+
+          # 3. refresh the extension list (best-effort)
+          try:
+              gql("mutation{fetchExtensions(input:{}){extensions{pkgName}}}")
+              n = gql("{extensions{nodes{pkgName}}}")["data"]["extensions"]["nodes"]
+              print(f"  fetched {len(n)} extensions.")
+          except Exception as e:
+              print(f"  extension fetch skipped: {e}")
+          print("Suwayomi setup complete.")
+{{- end }}

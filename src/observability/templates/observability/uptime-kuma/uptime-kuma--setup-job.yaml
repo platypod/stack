@@ -78,20 +78,53 @@ spec:
           api.login(USER, PASS)
           print("Logged in.")
 
-          # 2. diff + add missing monitors (matched by name)
-          existing = {m["name"] for m in api.get_monitors()}
-          added = 0
+          # 2. reconcile monitors (matched by name): add missing, fix drifted URLs
+          existing = {m["name"]: m for m in api.get_monitors()}
+          added = updated = 0
           for mon in WANT:
-              if mon["name"] in existing:
-                  continue
-              try:
-                  api.add_monitor(type=MonitorType.HTTP, name=mon["name"],
-                                  url=mon["url"], accepted_statuscodes=ACCEPT,
-                                  interval=60, maxretries=2)
-                  print(f"  + {mon['name']} -> {mon['url']}"); added += 1
-              except Exception as e:
-                  print(f"  ! {mon['name']} failed: {str(e)[:100]}")
+              cur = existing.get(mon["name"])
+              if cur is None:
+                  try:
+                      api.add_monitor(type=MonitorType.HTTP, name=mon["name"],
+                                      url=mon["url"], accepted_statuscodes=ACCEPT,
+                                      interval=60, maxretries=2)
+                      print(f"  + {mon['name']} -> {mon['url']}"); added += 1
+                  except Exception as e:
+                      print(f"  ! {mon['name']} add failed: {str(e)[:100]}")
+              elif cur.get("url") != mon["url"]:
+                  try:
+                      api.edit_monitor(cur["id"], url=mon["url"])
+                      print(f"  ~ {mon['name']} url {cur.get('url')} -> {mon['url']}"); updated += 1
+                  except Exception as e:
+                      print(f"  ! {mon['name']} edit failed: {str(e)[:100]}")
+
+          # 3. publish a status page (slug "all") listing every monitor — this is
+          #    what the Homepage `uptimekuma` widget reads (it has no auth; it
+          #    fetches /api/status-page/all). Slug MUST match the Homepage tile's
+          #    `slug:` in src/core/.../homepage--config-map.yaml.
+          SLUG = "all"
+          monitors = api.get_monitors()
+          try:
+              slugs = {p["slug"] for p in api.get_status_pages()}
+              if SLUG not in slugs:
+                  api.add_status_page(SLUG, "Platypod")
+                  print(f"  status page '{SLUG}' created.")
+              api.save_status_page(
+                  SLUG,
+                  title="Platypod",
+                  published=True,
+                  showTags=False,
+                  publicGroupList=[{
+                      "name": "Services",
+                      "weight": 1,
+                      "monitorList": [{"id": m["id"]} for m in monitors],
+                  }],
+              )
+              print(f"  status page '{SLUG}' published with {len(monitors)} monitors.")
+          except Exception as e:
+              print(f"  ! status page setup failed: {str(e)[:160]}")
+
           api.disconnect()
-          print(f"Uptime-Kuma seed complete: {added} added, {len(existing)} pre-existing.")
+          print(f"Uptime-Kuma seed complete: {added} added, {updated} updated, {len(existing)} pre-existing.")
           PY
 {{- end }}

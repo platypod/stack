@@ -4,11 +4,16 @@ suwayomi:
   # auth/OIDC (AUTH_MODE=none) — sits behind Authelia forwardauth like the *arrs.
   enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.suwayomi.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: ghcr.io/suwayomi/tachidesk:v0.7.0-r1431
+  image: ghcr.io/suwayomi/suwayomi-server:v2.2.2100
   label: suwayomi
   # Media subpath where Suwayomi writes downloads and Kavita reads its manga
   # library — the "link" between the two.
   mangaSubPath: manga
+  # Extension source repositories, seeded into Suwayomi by the suwayomi-setup Job
+  # (Suwayomi ships none since the original Tachiyomi repo was taken down). The
+  # WebUI equivalent is Settings → Browse → Extension Repositories.
+  extensionRepos:
+  - https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json
   ports:
     http:
       name: suwayomi-http
