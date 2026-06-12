@@ -23,7 +23,9 @@ vaultwarden:
   signupsAllowed: false
   invitationsAllowed: true
   logLevel: warn
-  pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  # SQLite DB → dedicated local volume (NFS can't host SQLite WAL). See the
+  # persistence localConfig volume.
+  pvc: "{{ .Values.storage.defaultVolumes.config }}"
   replicasNb: 1
   resources:
     requests:

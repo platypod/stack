@@ -1,0 +1,56 @@
+{{- /*
+  Nightly backup of the local config volume (SQLite app DBs) to the NFS apps
+  share. The live DBs live on local node disk (NFS can't host SQLite WAL); this
+  copies them back to the backed-up Synology so a node-disk loss costs at most
+  ~1 day. Runs on the local-storage node (the config PVC is RWO there).
+*/ -}}
+{{- if and .Values.storage.localConfig.enable .Values.storage.localConfig.backup.enable }}
+{{- $b := .Values.storage.localConfig.backup }}
+apiVersion: batch/v1
+kind: CronJob
+
+metadata:
+  name: config-backup
+
+spec:
+  schedule: {{ $b.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: config-backup
+            image: {{ $b.image }}
+            securityContext:
+              runAsUser: 0
+            command:
+            - sh
+            - -c
+            - |
+              set -e
+              DEST=/backup/_config-backups
+              mkdir -p "$DEST"
+              TS=$(date +%Y%m%d-%H%M%S)
+              tar czf "$DEST/config-$TS.tgz" -C /config .
+              echo "wrote $DEST/config-$TS.tgz ($(du -h "$DEST/config-$TS.tgz" | cut -f1))"
+              find "$DEST" -name 'config-*.tgz' -mtime +{{ $b.retentionDays }} -delete 2>/dev/null || true
+              echo "kept:"; ls -1t "$DEST" | head -5
+            volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: backup
+              mountPath: /backup
+          volumes:
+          - name: config
+            persistentVolumeClaim:
+              claimName: {{ tpl .Values.storage.defaultVolumes.config . }}
+          - name: backup
+            persistentVolumeClaim:
+              claimName: {{ tpl .Values.storage.defaultVolumes.apps . }}
+{{- end }}

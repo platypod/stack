@@ -60,6 +60,16 @@ template:
 `# ref {{MY_VAR}}` fails to parse. Escape as `{{ "{{MY_VAR}}" }}` or avoid braces
 in comments.
 
+**SQLite app config goes on the local `config` volume, NOT NFS.** SQLite WAL is
+unsupported over NFS (the `-shm` mmap can't work), causing lag, "database is
+locked" → 404s/popups, and crashes. On prod, app config DBs live on a dedicated
+local hostPath volume (`storage.localConfig`, pinned to the local-storage node),
+backed up nightly to NFS by the `config-backup` CronJob. Point a SQLite app's
+config PVC at `{{ .Values.storage.defaultVolumes.config }}` (resolves to the local
+`config` volume on prod, `dev-apps` on dev). Apps on an external DB (the *arrs use
+Postgres `transverse-db`) don't need this. See [services.md](services.md) and the
+[`sqlite-on-nfs`](operations.md) note.
+
 **NEVER set pod-level `fsGroup` on pods mounting the NFS PVCs.** csi-driver-nfs
 uses `fsGroupPolicy: File`, so the kubelet recursively chowns the ENTIRE share on
 every pod start — on the 18 TB media volume this wedges the kubelet for hours,

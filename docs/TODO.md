@@ -69,5 +69,7 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
 - OIDC expansion: RomM, Reclaimerr, Vaultwarden, Kavita (2026-06).
 - Kavita + Suwayomi deployed; Komga disabled (`enable: false`).
 - Service version bumps + pinning (no `latest`), except CloudBeaver.
+- SQLite app DBs moved off NFS to a local `config` volume (Kavita/Vaultwarden/
+  Uptime-Kuma/Bazarr) — fixes WAL-on-NFS lag/locks/crashes; nightly backup to NFS.
 - Uptime-Kuma monitors seeded via hook Job (pinned to 1.23.x — 2.x dropped the
   Socket.io API).

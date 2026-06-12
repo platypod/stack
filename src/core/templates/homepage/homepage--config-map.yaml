@@ -245,7 +245,7 @@ data:
 {{- end }}
 {{- if .Values.suwayomi.enable }}
       - Suwayomi:
-          icon: tachidesk.png
+          icon: suwayomi.png
           href: https://{{ tpl .Values.suwayomi.host . }}
           description: Manga downloader (feeds Kavita).
 {{- end }}

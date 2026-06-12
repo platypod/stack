@@ -9,7 +9,8 @@ uptimeKuma:
     http:
       name: uk-http
       targetPort: 3001
-  pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  # SQLite DB → dedicated local volume (NFS can't host SQLite WAL).
+  pvc: "{{ .Values.storage.defaultVolumes.config }}"
   replicasNb: 1
   resources:
     requests:

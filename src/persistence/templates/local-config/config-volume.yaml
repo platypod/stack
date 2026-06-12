@@ -1,0 +1,70 @@
+{{- /*
+  Dedicated LOCAL (non-NFS) volume for SQLite app config dirs.
+
+  SQLite WAL mode is unsupported over NFS (the -shm shared-memory file can't be
+  mmap'd reliably), which causes lock contention, "database is locked" errors and
+  crashes for the DB-backed apps (Kavita, *arrs, Vaultwarden, Uptime-Kuma, …).
+  This volume keeps those config dirs on local node disk instead, pinned to the
+  local-storage node via the PV's nodeAffinity.
+
+  Unlike storage.localStorage, this is designed to COEXIST with storage.nfs
+  (NFS still serves the large `apps`/`media` volumes) — so it has its own flag
+  and is NOT subject to the localStorage/nfs either-or guard.
+*/ -}}
+{{- if .Values.storage.localConfig.enable }}
+{{- $c := .Values.storage.localConfig }}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-storage
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+
+metadata:
+  name: {{ .Values.k8s.names.persistentVolumes.prefix }}{{ $c.name }}{{ .Values.k8s.names.persistentVolumes.suffix }}
+  labels:
+    {{- toYaml $c.labels | nindent 4 }}
+spec:
+  capacity:
+    storage: {{ $c.capacityStorage }}
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  # hostPath (not `local:`) with DirectoryOrCreate so the node directory is
+  # auto-created on first mount — local PVs require the path to pre-exist, and
+  # the namespace's baseline PodSecurity forbids a hostPath pod to mkdir it.
+  # Pods consume this via the PVC, so PSA never sees a hostPath in the pod spec.
+  # nodeAffinity still pins it to the local-storage node.
+  hostPath:
+    path: {{ $c.rootPath }}{{ $c.name }}/
+    type: DirectoryOrCreate
+  nodeAffinity:
+    {{- tpl (toYaml $c.nodeAffinity) $ | nindent 4 }}
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+
+metadata:
+  name: {{ .Values.k8s.names.persistentVolumeClaims.prefix }}{{ $c.name }}{{ .Values.k8s.names.persistentVolumeClaims.suffix }}
+spec:
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: local-storage
+  resources:
+    requests:
+      storage: {{ $c.capacityStorage }}
+  selector:
+    matchLabels:
+      {{- toYaml $c.labels | nindent 6 }}
+{{- end }}

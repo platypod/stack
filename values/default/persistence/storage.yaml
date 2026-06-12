@@ -2,6 +2,34 @@ storage:
   defaultVolumes:
     apps: apps
     media: media
+    # PVC name for SQLite app config dirs. Defaults to the apps volume (fine on
+    # dev, where everything is already local). On prod it is overridden to the
+    # dedicated local `config` volume below (NFS can't host SQLite WAL).
+    config: apps
+
+  # Dedicated LOCAL (non-NFS) volume for SQLite app config dirs. Coexists with
+  # storage.nfs (unlike storage.localStorage). Enabled on prod only.
+  localConfig:
+    enable: false
+    rootPath: /var/local/platypod/volumes/
+    capacityStorage: 5Gi
+    name: config
+    labels:
+      volumeSelector: config
+    nodeAffinity:
+      required:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: platypod.io/local-storage
+            operator: In
+            values: ["true"]
+    # Nightly backup of the local config volume to the NFS apps share (durability:
+    # the live SQLite is local/fast, the backup lands on the backed-up Synology).
+    backup:
+      enable: true
+      schedule: "0 3 * * *"
+      retentionDays: 14
+      image: busybox:1
 
   localStorage:
     enable: true

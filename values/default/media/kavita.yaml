@@ -1,5 +1,11 @@
 kavita:
-  enable: true
+  # Disabled: Kavita (.NET 9) SIGILLs (exit 132) intermittently on the Apple
+  # Virtualization / Talos ARM guest — no container-level workaround eliminated
+  # it (W^X, HWIntrinsic, ReadyToRun, OpenSSL armcap all only reduced frequency).
+  # The .NET-6 *arrs and JVM Komga are unaffected. Reverted to Komga. Kept
+  # configured (OIDC, local config volume) to revisit after a version bump or a
+  # vfkit CPU-feature fix.
+  enable: false
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.kavita.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: jvmilazz0/kavita:0.9.0.2
   label: kavita
@@ -23,7 +29,8 @@ kavita:
       name: kavita-http
       targetPort: 5000
   pvc:
-    app: "{{ .Values.storage.defaultVolumes.apps }}"
+    # config/SQLite → dedicated local volume (NFS can't host SQLite WAL).
+    app: "{{ .Values.storage.defaultVolumes.config }}"
     media: "{{ .Values.storage.defaultVolumes.media }}"
   replicasNb: 1
   resources:

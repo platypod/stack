@@ -1,5 +1,5 @@
 komga:
-  enable: false
+  enable: true
   # OIDC login via Authelia. Empty clientId disables the integration (the
   # Authelia client block and Komga's oauth2 config are both gated on it).
   # Set real values per-env; hash with: authelia crypto hash generate pbkdf2
@@ -16,7 +16,8 @@ komga:
       name: komga-http
       targetPort: 25600
   pvc:
-    app: "{{ .Values.storage.defaultVolumes.apps }}"
+    # config/SQLite → dedicated local volume (NFS can't host SQLite WAL).
+    app: "{{ .Values.storage.defaultVolumes.config }}"
     media: "{{ .Values.storage.defaultVolumes.media }}"
   # Library root inside the media share; create/point Komga libraries under
   # this path from its admin UI (Server settings -> Libraries).

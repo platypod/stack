@@ -58,6 +58,20 @@ spec:
         # Kavita's external URL — used to build the OIDC redirect_uri (/signin-oidc).
         - name: PUBLIC_URL
           value: "https://{{ tpl .Values.kavita.host . }}"
+        # Kavita (.NET 9) crashes with SIGILL (exit 132) on virtualized ARM64
+        # (Apple Virtualization / Talos): the guest CPU advertises ARMv8.x
+        # features the hypervisor mishandles, so the JIT emits instructions that
+        # fault. Force baseline codegen — disable hardware intrinsics and the
+        # tiered/W^X JIT paths. (The older-.NET *arr apps don't hit this.)
+        # Disable hardware intrinsics in the JIT AND ReadyToRun (so the
+        # precompiled framework assemblies are re-JIT'd under that rule too —
+        # otherwise their AOT'd ARM intrinsics still fault). Plus W^X off.
+        - name: DOTNET_EnableHWIntrinsic
+          value: "0"
+        - name: DOTNET_ReadyToRun
+          value: "0"
+        - name: DOTNET_EnableWriteXorExecute
+          value: "0"
         volumeMounts:
         - mountPath: /kavita/config
           name: {{ $appVolume }}

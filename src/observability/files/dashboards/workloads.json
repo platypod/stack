@@ -246,6 +246,108 @@
           "sort": "desc"
         }
       }
+    },
+    {
+      "type": "table",
+      "title": "Resources — requests / limits / usage (per container)",
+      "description": "Per-container CPU (cores) and memory (working set) usage alongside its configured requests and limits.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "metrics"
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (namespace, pod, container) (container_cpu_usage{node=~\"$node\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (namespace, pod, container) (k8s_container_cpu_request{node=~\"$node\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "C",
+          "expr": "sum by (namespace, pod, container) (k8s_container_cpu_limit{node=~\"$node\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "D",
+          "expr": "sum by (namespace, pod, container) (container_memory_working_set{node=~\"$node\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "E",
+          "expr": "sum by (namespace, pod, container) (k8s_container_memory_request{node=~\"$node\"})",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "F",
+          "expr": "sum by (namespace, pod, container) (k8s_container_memory_limit{node=~\"$node\"})",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value #A": "CPU usage",
+              "Value #B": "CPU req",
+              "Value #C": "CPU limit",
+              "Value #D": "Mem usage",
+              "Value #E": "Mem req",
+              "Value #F": "Mem limit"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "CPU.*" },
+            "properties": [
+              { "id": "unit", "value": "none" },
+              { "id": "decimals", "value": 3 }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "Mem.*" },
+            "properties": [
+              { "id": "unit", "value": "bytes" }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Mem usage",
+            "desc": true
+          }
+        ]
+      }
     }
   ],
   "templating": {

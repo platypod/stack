@@ -9,7 +9,8 @@ bazarr:
       name: bazarr-http
       targetPort: 6767
   pvc:
-    app: "{{ .Values.storage.defaultVolumes.apps }}"
+    # config/SQLite → dedicated local volume (NFS can't host SQLite WAL).
+    app: "{{ .Values.storage.defaultVolumes.config }}"
     media: "{{ .Values.storage.defaultVolumes.media }}"
   replicasNb: 1
   resources:
