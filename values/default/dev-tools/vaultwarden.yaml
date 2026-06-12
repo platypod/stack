@@ -1,8 +1,16 @@
 vaultwarden:
+  # OIDC login via Authelia. Empty clientId disables the integration entirely
+  # (Authelia client block and app-side config are both gated on it).
+  # Set real values per-env; hash: authelia crypto hash generate pbkdf2
+  oidc:
+    clientId: ""
+    clientSecret:
+      plain: ""
+      hashed: ""
   enable: true
   label: vaultwarden
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.vaultwarden.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: vaultwarden/server:latest
+  image: vaultwarden/server:1.36.0
   ports:
     http:
       name: vw-http

@@ -5,7 +5,7 @@ homepage:
     registry: ghcr.io/
     namespace: gethomepage/
     repository: homepage
-    tag: v0.10.4
+    tag: v1.13.2
   ports:
     http:
       name: homepage-http

@@ -1,7 +1,7 @@
 observability:
   dashboard:
     label: grafana
-    image: grafana/grafana-oss:12.0.1
+    image: grafana/grafana-oss:13.0.2
     resources:
       requests:
         cpu: 100m

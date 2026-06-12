@@ -19,6 +19,14 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
+      {{- if and .Values.reclaimerr.oidc.clientId .Values.traefik.loadBalancerIP }}
+      # OIDC discovery back-channel: resolve the public Authelia host to the
+      # Traefik LB in-cluster (same trick as Grafana/Komga/RomM).
+      hostAliases:
+      - ip: {{ .Values.traefik.loadBalancerIP }}
+        hostnames:
+        - {{ tpl .Values.authelia.host . }}
+      {{- end }}
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.reclaimerr.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.reclaimerr.image }}

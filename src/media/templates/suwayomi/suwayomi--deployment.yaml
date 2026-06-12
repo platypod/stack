@@ -1,0 +1,83 @@
+{{- if .Values.suwayomi.enable }}
+{{- $appVolume := "app-volume" }}
+{{- $mediaVolume := "media-volume" }}
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.suwayomi.label .Values.k8s.names.pods.suffix }}
+{{- $dataDir := "/home/suwayomi/.local/share/Tachidesk" }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.suwayomi.replicasNb }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      # Suwayomi's bundled JAR lives in the suwayomi user's home at mode 0750, so
+      # the image only works as its native uid 1000 (custom uids can't read it).
+      # Downloads therefore land as 1000:1000 — world-readable (0644/0755), so
+      # Kavita (running as the media user) still serves them. NEVER fsGroup on the
+      # NFS PVCs (recursive chown of the whole 18TB share) — see CLAUDE.md.
+      initContainers:
+      # Data dir (DB/config) + manga download dir are root-owned on first mount;
+      # chown to suwayomi's uid so it can write, never the whole volume.
+      - name: init-permissions
+        image: busybox
+        securityContext:
+          runAsUser: 0
+        command: ['sh', '-c', 'mkdir -p /data/suwayomi /manga && chown -R 1000:1000 /data/suwayomi /manga']
+        volumeMounts:
+        - name: {{ $appVolume }}
+          mountPath: /data
+        - name: {{ $mediaVolume }}
+          mountPath: /manga
+          subPath: {{ .Values.suwayomi.mangaSubPath }}
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.suwayomi.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.suwayomi.image }}
+        resources:
+          {{- toYaml .Values.suwayomi.resources | nindent 10 }}
+        ports:
+        - name: {{ .Values.suwayomi.ports.http.name }}
+          containerPort: {{ .Values.suwayomi.ports.http.targetPort }}
+        env:
+        - name: BIND_PORT
+          value: "{{ .Values.suwayomi.ports.http.targetPort }}"
+        # No native auth — Authelia forwardauth gates the ingress.
+        - name: AUTH_MODE
+          value: "none"
+        # CBZ so Kavita reads the downloaded chapters as a comic library.
+        - name: DOWNLOAD_AS_CBZ
+          value: "true"
+        # Reuse the shared Flaresolverr (media module) to bypass Cloudflare.
+        - name: FLARESOLVERR_ENABLED
+          value: "true"
+        - name: FLARESOLVERR_URL
+          value: "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.flaresolverr.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.flaresolverr.ports.http.targetPort }}"
+        volumeMounts:
+        - mountPath: {{ $dataDir }}
+          name: {{ $appVolume }}
+          subPath: suwayomi
+        # Downloads land in the shared media `manga` folder Kavita serves.
+        - mountPath: {{ $dataDir }}/downloads
+          name: {{ $mediaVolume }}
+          subPath: {{ .Values.suwayomi.mangaSubPath }}
+      volumes:
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.suwayomi.pvc.app . }}
+      - name: {{ $mediaVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.suwayomi.pvc.media . }}
+{{- end }}

@@ -22,6 +22,14 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
+      {{- if and .Values.vaultwarden.oidc.clientId .Values.traefik.loadBalancerIP }}
+      # OIDC discovery back-channel: resolve the public Authelia host to the
+      # Traefik LB in-cluster (same trick as Grafana/Komga/RomM).
+      hostAliases:
+      - ip: {{ .Values.traefik.loadBalancerIP }}
+        hostnames:
+        - {{ tpl .Values.authelia.host . }}
+      {{- end }}
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.vaultwarden.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.vaultwarden.image }}
@@ -37,6 +45,23 @@ spec:
           value: "https://{{ tpl .Values.vaultwarden.host . }}"
         - name: ADMIN_TOKEN
           value: "{{ .Values.vaultwarden.credentials.adminToken }}"
+        {{- if .Values.vaultwarden.oidc.clientId }}
+        # SSO via Authelia OIDC (vaultwarden wiki + authelia client guide).
+        # NOTE BY DESIGN: SSO replaces the login identity only — the vault
+        # master password remains and is never controlled by the IdP.
+        - name: SSO_ENABLED
+          value: "true"
+        - name: SSO_AUTHORITY
+          value: "https://{{ tpl .Values.authelia.host . }}"
+        - name: SSO_CLIENT_ID
+          value: "{{ .Values.vaultwarden.oidc.clientId }}"
+        - name: SSO_CLIENT_SECRET
+          value: "{{ .Values.vaultwarden.oidc.clientSecret.plain }}"
+        - name: SSO_SCOPES
+          value: "email profile offline_access"
+        - name: SSO_PKCE
+          value: "true"
+        {{- end }}
         - name: WEBSOCKET_ENABLED
           value: "true"
         - name: SIGNUPS_ALLOWED

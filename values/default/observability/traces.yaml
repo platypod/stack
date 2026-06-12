@@ -1,7 +1,10 @@
 observability:
   traces:
     label: tempo
-    image: grafana/tempo:2.7.2
+    # Pinned to the 2.x line: Tempo 3.0 is an architectural rework (compactor/
+    # ingester blocks removed, Kafka-backed metrics-generator) requiring a real
+    # config migration — not a drop-in bump. Revisit deliberately.
+    image: grafana/tempo:2.10.6
     resources:
       requests:
         cpu: 100m

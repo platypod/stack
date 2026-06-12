@@ -1,0 +1,34 @@
+kavita:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.kavita.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: jvmilazz0/kavita:0.9.0.2
+  label: kavita
+  # First-boot admin auto-created by the kavita-setup Job (Kavita has no fixed
+  # admin name — the first registered user is admin).
+  credentials:
+    username: admin
+    password: kavita-admin
+    email: nico.pittion@gmail.com
+  # OIDC via Authelia. Kavita stores OIDC in its DB (not env), so the setup Job
+  # pushes it through the settings API. Empty clientId disables the whole thing
+  # (Authelia client + setup-Job OIDC step are both gated on it). Callback is the
+  # ASP.NET default /signin-oidc.
+  oidc:
+    clientId: ""
+    clientSecret:
+      plain: ""
+      hashed: ""
+  ports:
+    http:
+      name: kavita-http
+      targetPort: 5000
+  pvc:
+    app: "{{ .Values.storage.defaultVolumes.apps }}"
+    media: "{{ .Values.storage.defaultVolumes.media }}"
+  replicasNb: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 768Mi

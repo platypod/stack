@@ -1,6 +1,6 @@
 observability:
   otelCollector:
-    image: otel/opentelemetry-collector-contrib:0.133.0
+    image: otel/opentelemetry-collector-contrib:0.154.0
     label: opentelemetry-collector
     logging:
       level: debug

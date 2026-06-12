@@ -11,7 +11,7 @@
          Success → already set up, exit 0.
          Failure → unexpected state, exit 1.
     3. If StartupWizardCompleted=false:
-         POST /Startup/Complete  → creates "root" user (empty password)
+         POST /Startup/User + /Startup/Complete → creates the admin user
          Auth as root, rename to configured username, set configured password.
          POST /Auth/Keys?app=Homepage → generate API key.
          Create/patch K8s Secret "jellyfin-apikey" with the key so Homepage can
@@ -167,53 +167,15 @@ spec:
 
           print("Running startup wizard...")
 
-          # Complete wizard — Jellyfin creates a 'root' user with an empty password.
+          # Jellyfin 10.11+: the implicit empty-password 'root' user no longer
+          # exists. Configure the wizard user explicitly, then complete:
+          #   GET /Startup/User  (initialises wizard state)
+          #   POST /Startup/User {Name, Password}
+          #   POST /Startup/Complete
+          jf("GET", "/Startup/User")
+          jf("POST", "/Startup/User", {"Name": USERNAME, "Password": PASSWORD})
           jf("POST", "/Startup/Complete")
-          print("Wizard completed.")
-
-          # Auth as root (empty password)
-          auth = jf("POST", "/Users/AuthenticateByName", {"Username": "root", "Pw": ""})
-          token   = auth["AccessToken"]
-          user_id = auth["User"]["Id"]
-          print(f"Authenticated as root (id={user_id[:8]}...)")
-
-          # Rename root → configured username and set password.
-          jf("POST", f"/Users/{user_id}", {
-              "Name": USERNAME,
-              "Configuration": {
-                  "PlayDefaultAudioTrack": True, "SubtitleLanguagePreference": "",
-                  "DisplayMissingEpisodes": False, "GroupedFolders": [],
-                  "SubtitleMode": "Default", "DisplayCollectionsView": False,
-                  "EnableLocalPassword": False, "OrderedViews": [],
-                  "LatestItemsExcludes": [], "MyMediaExcludes": [],
-                  "HidePlayedInLatest": True, "RememberAudioSelections": True,
-                  "RememberSubtitleSelections": True, "EnableNextEpisodeAutoPlay": True,
-                  "CastReceiverId": "",
-              },
-              "Policy": {
-                  "IsAdministrator": True, "IsHidden": True,
-                  "EnableCollectionManagement": False, "EnableMediaPlayback": True,
-                  "EnableAudioPlaybackTranscoding": True, "EnableVideoPlaybackTranscoding": True,
-                  "EnablePlaybackRemuxing": True, "ForceRemoteSourceTranscoding": False,
-                  "EnableContentDeletion": False, "EnableContentDownloading": False,
-                  "EnableSyncTranscoding": True, "EnableMediaConversion": True,
-                  "EnabledDevices": [], "EnableAllDevices": True,
-                  "EnabledChannels": [], "EnableAllChannels": True,
-                  "EnabledFolders": [], "EnableAllFolders": True,
-                  "InvalidLoginAttemptCount": 0, "LoginAttemptsBeforeLockout": -1,
-                  "MaxActiveSessions": 0, "EnablePublicSharing": True,
-                  "BlockedMediaFolders": [], "BlockedChannels": [],
-                  "RemoteClientBitrateLimit": 0,
-                  "AuthenticationProviderId": "Jellyfin.Server.Implementations.Users.DefaultAuthenticationProvider",
-                  "PasswordResetProviderId": "Jellyfin.Server.Implementations.Users.DefaultPasswordResetProvider",
-                  "SyncPlayAccess": "CreateAndJoinGroups",
-              },
-          }, token=token)
-          print(f"Renamed root → '{USERNAME}'.")
-
-          jf("POST", f"/Users/{user_id}/Password",
-             {"CurrentPw": "", "NewPw": PASSWORD}, token=token)
-          print("Password set.")
+          print(f"Wizard completed with user '{USERNAME}'.")
 
           # Re-auth with the new credentials
           auth2 = jf("POST", "/Users/AuthenticateByName", {"Username": USERNAME, "Pw": PASSWORD})

@@ -5,7 +5,7 @@ traefik:
     registry: docker.io/
     namespace: ""
     repository: traefik
-    tag: v3.1
+    tag: v3.7.5
   label: traefik
   dashboardLabel: traefik-dashboard
   logging:

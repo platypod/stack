@@ -1,7 +1,7 @@
 wikijs:
   enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.wikijs.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: ghcr.io/requarks/wiki:2
+  image: ghcr.io/requarks/wiki:2.5.314
   label: wikijs
   database:
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.wikijs.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"

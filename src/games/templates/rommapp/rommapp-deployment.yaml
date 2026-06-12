@@ -21,6 +21,15 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
+      {{- if and .Values.rommapp.oidc.clientId .Values.traefik.loadBalancerIP }}
+      # OIDC discovery: RomM fetches the Authelia issuer metadata at its PUBLIC
+      # https URL, NXDOMAIN in-cluster — resolve it to the Traefik LB (same
+      # trick as Grafana/Komga).
+      hostAliases:
+      - ip: {{ .Values.traefik.loadBalancerIP }}
+        hostnames:
+        - {{ tpl .Values.authelia.host . }}
+      {{- end }}
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.rommapp.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.rommapp.image }}
@@ -38,6 +47,23 @@ spec:
           value: "{{ .Values.rommapp.credentials.username }}"
         - name: DB_PASSWD
           value: "{{ .Values.rommapp.credentials.password }}"
+        {{- if .Values.rommapp.oidc.clientId }}
+        # OIDC via Authelia (per docs.romm.app OIDC-Setup-With-Authelia).
+        # Users are matched by email — the RomM account email must equal the
+        # Authelia user's email.
+        - name: OIDC_ENABLED
+          value: "true"
+        - name: OIDC_PROVIDER
+          value: "authelia"
+        - name: OIDC_CLIENT_ID
+          value: "{{ .Values.rommapp.oidc.clientId }}"
+        - name: OIDC_CLIENT_SECRET
+          value: "{{ .Values.rommapp.oidc.clientSecret.plain }}"
+        - name: OIDC_REDIRECT_URI
+          value: "https://{{ tpl .Values.rommapp.host . }}/api/oauth/openid"
+        - name: OIDC_SERVER_APPLICATION_URL
+          value: "https://{{ tpl .Values.authelia.host . }}"
+        {{- end }}
         - name: ROMM_AUTH_SECRET_KEY
           value: "{{ .Values.rommapp.secretKey }}"
         - name: IGDB_CLIENT_ID

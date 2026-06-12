@@ -27,6 +27,12 @@ spec:
         image: {{ .Values.homepage.image.registry }}{{ .Values.homepage.image.namespace }}{{ .Values.homepage.image.repository }}:{{ .Values.homepage.image.tag }}
         resources:
           {{- toYaml .Values.homepage.resources | nindent 10 }}
+        # Homepage v0.9.13+ validates the incoming Host header; without this it
+        # rejects every request with "Host validation failed". Must match the
+        # public hostname Traefik forwards (no port on :443).
+        env:
+        - name: HOMEPAGE_ALLOWED_HOSTS
+          value: "{{ tpl .Values.homepage.host . }}"
         # Jellyfin generates a random API key on first start; the jellyfin-setup Job
         # writes it here so Homepage can reference it as HOMEPAGE_VAR_JELLYFIN_API_KEY.
         # optional=true lets Homepage start before the Job has run.

@@ -1,8 +1,44 @@
 reclaimerr:
+  # OIDC login via Authelia. Empty clientId disables the integration entirely
+  # (Authelia client block and app-side config are both gated on it).
+  # Set real values per-env; hash: authelia crypto hash generate pbkdf2
+  oidc:
+    clientId: ""
+    clientSecret:
+      plain: ""
+      hashed: ""
+  # email set on the admin account by the setup Job; MUST match the Authelia
+  # user's email — reclaimerr links OIDC logins strictly by email (no auto-create).
+  adminEmail: ""
   enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.reclaimerr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: ghcr.io/jessielw/reclaimerr:latest
   label: reclaimerr
+  credentials:
+    # Admin account auto-created on first boot by the reclaimerr-setup Job.
+    # reclaimerr fixes the username to "admin"; only the password is ours.
+    # Override per-env. Min 3 / max 64 chars.
+    password: reclaimerr-admin
+  # Connections auto-wired by the setup Job via POST /api/settings/save/service
+  # (idempotent upsert; reclaimerr runs a live connection test before saving).
+  # reclaimerr supports radarr, sonarr, jellyfin, emby, plex, seerr, tautulli —
+  # NOTE: NOT readarr. baseUrl/apiKey are tpl'd, so they can reference other svcs.
+  services:
+  - serviceType: radarr
+    baseUrl: "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.radarr.ports.http.targetPort }}"
+    apiKey: "{{ .Values.radarr.apiKey }}"
+  - serviceType: sonarr
+    baseUrl: "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.sonarr.ports.http.targetPort }}"
+    apiKey: "{{ .Values.sonarr.apiKey }}"
+  - serviceType: seerr
+    baseUrl: "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.jellyseerr.ports.http.targetPort }}"
+    apiKey: "{{ .Values.jellyseerr.apiKey }}"
+  - serviceType: jellyfin
+    baseUrl: "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.jellyfin.ports.http.targetPort }}"
+    apiKey: "{{ .Values.jellyfin.apiKey }}"
+    # Media servers (jellyfin/emby/plex) need exactly one "main" — the watch-state
+    # source reclaimerr reclaims against.
+    isMain: true
   ports:
     http:
       name: http

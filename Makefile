@@ -4,7 +4,14 @@ MODULE ?=
 # Always point at the kubeconfig written by infra-as-code/k8s-in-vms,
 # ignoring any KUBECONFIG already set in the shell (e.g. OrbStack).
 # Command-line override still works: make deploy KUBECONFIG=/other/path
-export KUBECONFIG := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/../infra/k8s-in-vms/.generated/$(ENV)/kubeconfig
+#
+# Services use env names dev/prd, but infra writes its kubeconfigs under
+# dev/prod — and prod is only reachable through the SSH tunnel, so it needs the
+# `kubeconfig-tunnel` file. Map service env -> infra kubeconfig path explicitly.
+GENERATED   := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/../infra/k8s-in-vms/.generated
+KUBECONFIG_dev := $(GENERATED)/dev/kubeconfig
+KUBECONFIG_prd := $(GENERATED)/prod/kubeconfig-tunnel
+export KUBECONFIG := $(KUBECONFIG_$(ENV))
 
 HELMFILE = helmfile --environment $(ENV)
 SELECTOR = $(if $(MODULE),--selector name=$(ENV)--platypod--$(MODULE),)

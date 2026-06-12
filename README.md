@@ -64,6 +64,7 @@
         <li><a href="#usage">Usage</a></li>
       </ul>
     </li>
+    <li><a href="docs/README.md">Documentation</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
@@ -312,8 +313,8 @@ talosctl -n 192.168.122.102 cp ./some-file /var/local/platypod/volumes/apps/some
   - [x] **OtelCollector** -> *collector*
   - [x] **Loki** -> *logs*
   - [x] **Tempo** -> *traces*
-  - [x] **VictoriaMetrics** -> *metrics*
-  - [ ] **Mimir** -> *metrics* (en remplacement de VictoriaMetrics)
+  - [x] **Mimir** -> *metrics* (en remplacement de VictoriaMetrics)
+  - [x] **Uptime-Kuma** -> *uptime-monitoring*
   - [x] **Grafana** -> *dashboards*
 - Dev
   - [x] **Bookstack** -> *documentation-space*
@@ -329,7 +330,7 @@ talosctl -n 192.168.122.102 cp ./some-file /var/local/platypod/volumes/apps/some
 - Download
   - [x] **Transmission** -> *torrent*
   - [x] **QBitTorrent** -> *torrent*
-  - [ ] **Deluge** -> *torrent*
+  - [x] **Deluge** -> *torrent*
   - [ ] **SABnzbd** -> *usenet-download*
 - Media
   - [x] **Jellyfin** -> *streaming*
@@ -339,6 +340,8 @@ talosctl -n 192.168.122.102 cp ./some-file /var/local/platypod/volumes/apps/some
   - [x] **Readarr** -> *books*
   - [x] **Bazarr** -> *subtitles*
   - [x] **Jellyseerr** -> *requester*
+  - [x] **Kavita** -> *comic/book/manga-reader* (remplace Komga)
+  - [x] **Suwayomi** -> *manga-downloader* (alimente Kavita)
   - [ ] **Tdarr** -> *hardware-transcoding*
   - [x] **Flaresolverr** -> *cloudflare*
   - [ ] **Invidious** -> *youtube*
@@ -352,7 +355,7 @@ talosctl -n 192.168.122.102 cp ./some-file /var/local/platypod/volumes/apps/some
   - [ ] **HomeBridge** -> *homekit*
 - To think about
   - [ ] Global 404 page?
-  - [ ] Write documentations for each service specificities
+  - [x] Write documentations for each service specificities -> see [`docs/`](docs/README.md) and per-module `src/<module>/README.md`
 
 See the [open issues](https://github.com/Pittinic/platypod/issues) for a full list of proposed features (and known issues).
 

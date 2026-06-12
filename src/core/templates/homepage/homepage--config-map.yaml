@@ -82,17 +82,17 @@ data:
           href: https://{{ tpl .Values.mediarvester.host . }}
           description: Multi-platform media downloader (YouTube, Instagram, X, …).
 {{- end }}
-{{- if .Values.transmission.enable }}
-      - Transmission:
-          icon: transmission.png
-          href: https://{{ tpl .Values.transmission.host . }}
-          description: Torrenting client.
-          widget:
-            type: transmission
-            url: http://{{ .Values.transmission.label }}:{{ .Values.transmission.ports.http.targetPort }}
-            username: {{ .Values.transmission.credentials.username }}
-            password: {{ .Values.transmission.credentials.password }}
-            rpcUrl: /transmission/
+{{- if .Values.komga.enable }}
+      - Komga:
+          icon: komga.png
+          href: https://{{ tpl .Values.komga.host . }}
+          description: Comics, manga and ebook library.
+{{- end }}
+{{- if .Values.kavita.enable }}
+      - Kavita:
+          icon: kavita.png
+          href: https://{{ tpl .Values.kavita.host . }}
+          description: Manga, comics and ebook reader.
 {{- end }}
 {{- if .Values.deluge.enable }}
       - Deluge:
@@ -231,11 +231,23 @@ data:
             url: http://{{ .Values.prowlarr.label }}:{{ .Values.prowlarr.ports.http.targetPort }}
             key: {{ .Values.prowlarr.apiKey }}
 {{- end }}
-{{- if .Values.komga.enable }}
-      - Komga:
-          icon: komga.png
-          href: https://{{ tpl .Values.komga.host . }}
-          description: Comics, manga and ebook library.
+{{- if .Values.transmission.enable }}
+      - Transmission:
+          icon: transmission.png
+          href: https://{{ tpl .Values.transmission.host . }}
+          description: Torrenting client.
+          widget:
+            type: transmission
+            url: http://{{ .Values.transmission.label }}:{{ .Values.transmission.ports.http.targetPort }}
+            username: {{ .Values.transmission.credentials.username }}
+            password: {{ .Values.transmission.credentials.password }}
+            rpcUrl: /transmission/
+{{- end }}
+{{- if .Values.suwayomi.enable }}
+      - Suwayomi:
+          icon: tachidesk.png
+          href: https://{{ tpl .Values.suwayomi.host . }}
+          description: Manga downloader (feeds Kavita).
 {{- end }}
 {{- if .Values.radarr.enable }}
       - Radarr:

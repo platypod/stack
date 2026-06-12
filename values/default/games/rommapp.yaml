@@ -1,4 +1,12 @@
 rommapp:
+  # OIDC login via Authelia. Empty clientId disables the integration entirely
+  # (Authelia client block and app-side config are both gated on it).
+  # Set real values per-env; hash: authelia crypto hash generate pbkdf2
+  oidc:
+    clientId: ""
+    clientSecret:
+      plain: ""
+      hashed: ""
   enable: true
   credentials:
     username: rommappUser
@@ -26,7 +34,7 @@ rommapp:
   igdb:
     clientId:  # https://docs.romm.app/latest/Getting-Started/Generate-API-Keys/#igdb
     clientSecret:  # https://docs.romm.app/latest/Getting-Started/Generate-API-Keys/#igdb
-  image: rommapp/romm:4.0-slim
+  image: rommapp/romm:4.8.1-slim
   label: rommapp
   mobyGamesApiKey: # https://docs.romm.app/latest/Getting-Started/Generate-API-Keys/#mobygames
   ports:

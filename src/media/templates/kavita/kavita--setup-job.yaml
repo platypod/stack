@@ -1,0 +1,134 @@
+{{- if .Values.kavita.enable }}
+{{- /*
+  Kavita first-boot setup Job.
+
+  Kavita stores its OIDC config in the DB (not env), so we push it via the
+  settings API after creating the admin.
+
+  Flow (idempotent — safe on every deploy):
+    1. Wait for Kavita API.
+    2. Register the first user (= admin). No-op once an admin exists.
+    3. Log in -> JWT.
+    4. If oidc.clientId: GET /api/settings, set OidcConfig, POST it back
+       (GET-modify-POST preserves every other server setting). Best-effort &
+       retried; failures DON'T fail the release — next deploy re-applies.
+*/ -}}
+{{- $svc := print .Values.k8s.names.services.prefix .Values.kavita.label .Values.k8s.names.services.suffix }}
+apiVersion: batch/v1
+kind: Job
+
+metadata:
+  name: kavita-setup
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "15"
+    "helm.sh/hook-delete-policy": before-hook-creation
+
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: kavita-setup
+        image: python:3-alpine
+        env:
+        - name: KAVITA_URL
+          value: "http://{{ $svc }}:{{ .Values.kavita.ports.http.targetPort }}"
+        - name: ADMIN_USER
+          value: "{{ .Values.kavita.credentials.username }}"
+        - name: ADMIN_PASS
+          value: "{{ .Values.kavita.credentials.password }}"
+        - name: ADMIN_EMAIL
+          value: "{{ .Values.kavita.credentials.email }}"
+        {{- if .Values.kavita.oidc.clientId }}
+        - name: OIDC_AUTHORITY
+          value: "https://{{ tpl .Values.authelia.host . }}"
+        - name: OIDC_CLIENT_ID
+          value: "{{ .Values.kavita.oidc.clientId }}"
+        - name: OIDC_CLIENT_SECRET
+          value: "{{ .Values.kavita.oidc.clientSecret.plain }}"
+        {{- end }}
+        command:
+        - python3
+        - -c
+        - |
+          import json, os, time, urllib.request, urllib.error
+
+          BASE  = os.environ["KAVITA_URL"]
+          USER  = os.environ["ADMIN_USER"]
+          PASS  = os.environ["ADMIN_PASS"]
+          EMAIL = os.environ["ADMIN_EMAIL"]
+
+          def call(method, path, body=None, token=None):
+              data = json.dumps(body).encode() if body is not None else None
+              h = {"Content-Type": "application/json"}
+              if token:
+                  h["Authorization"] = f"Bearer {token}"
+              req = urllib.request.Request(f"{BASE}{path}", data=data, method=method, headers=h)
+              def parse(raw):
+                  try:    return json.loads(raw) if raw else None
+                  except Exception: return raw
+              try:
+                  with urllib.request.urlopen(req, timeout=20) as r:
+                      return r.status, parse(r.read().decode())
+              except urllib.error.HTTPError as e:
+                  return e.code, parse(e.read().decode())
+
+          # 1. wait
+          for i in range(60):
+              try:
+                  s, _ = call("GET", "/api/health")
+                  if s == 200:
+                      print(f"  [{i}] Kavita is up."); break
+              except Exception as e:
+                  print(f"  [{i}] not ready: {e}")
+              time.sleep(5)
+          else:
+              raise SystemExit("Kavita never became ready")
+
+          # 2. register first admin (no-op if one exists)
+          s, b = call("POST", "/api/account/register",
+                      {"username": USER, "password": PASS, "email": EMAIL})
+          if s in (200, 204):
+              print("Admin account created.")
+          else:
+              print(f"Admin register skipped [{s}] (likely already exists).")
+
+          # 3. login
+          s, b = call("POST", "/api/account/login", {"username": USER, "password": PASS})
+          if s != 200 or not isinstance(b, dict) or "token" not in b:
+              raise SystemExit(f"login failed [{s}]: {b}")
+          token = b["token"]
+          print("Logged in as admin.")
+
+          # 4. OIDC (GET-modify-POST the whole settings object)
+          authority = os.environ.get("OIDC_AUTHORITY")
+          if authority:
+              for attempt in range(3):
+                  s, settings = call("GET", "/api/settings", token=token)
+                  if s != 200 or not isinstance(settings, dict):
+                      print(f"  settings GET failed [{s}]: {settings}"); time.sleep(10); continue
+                  settings["oidcConfig"] = {
+                      **(settings.get("oidcConfig") or {}),
+                      "authority": authority,
+                      "clientId": os.environ["OIDC_CLIENT_ID"],
+                      "secret": os.environ["OIDC_CLIENT_SECRET"],
+                      "provisionAccounts": True,
+                      "requireVerifiedEmail": False,
+                      "syncUserSettings": False,
+                      # Owner (matching the admin email) is linked to the existing
+                      # Admin account; every other SSO user is provisioned with just
+                      # the baseline Login role (read-only). Grant libraries to them
+                      # from the admin UI as needed.
+                      "defaultRoles": ["Login"],
+                  }
+                  s, b = call("POST", "/api/settings", settings, token=token)
+                  if s == 200:
+                      print(f"  OIDC configured (authority: {authority})"); break
+                  print(f"  OIDC attempt {attempt+1} failed [{s}]: {str(b)[:160]}")
+                  time.sleep(10)
+              else:
+                  print("  WARN: OIDC config failed (will retry on next deploy)")
+          print("Kavita setup complete.")
+{{- end }}

@@ -1,0 +1,76 @@
+{{- if .Values.kavita.enable }}
+{{- $appVolume := "app-volume" }}
+{{- $mediaVolume := "media-volume" }}
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.kavita.label .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.kavita.replicasNb }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      # Media user so /kavita/config and the library on NFS share ownership with
+      # the *arrs. NEVER fsGroup on the NFS PVCs (recursive chown) — see CLAUDE.md.
+      securityContext:
+        runAsUser: {{ .Values.media.system.userId }}
+        runAsGroup: {{ .Values.media.system.groupId }}
+      {{- if and .Values.kavita.oidc.clientId .Values.traefik.loadBalancerIP }}
+      # OIDC discovery: Kavita fetches the Authelia issuer metadata at its PUBLIC
+      # https URL (NXDOMAIN in-cluster) — resolve it to the Traefik LB, same trick
+      # as Grafana/Komga/RomM.
+      hostAliases:
+      - ip: {{ .Values.traefik.loadBalancerIP }}
+        hostnames:
+        - {{ tpl .Values.authelia.host . }}
+      {{- end }}
+      initContainers:
+      - name: init-permissions
+        image: busybox
+        securityContext:
+          runAsUser: 0
+        command: ['sh', '-c', 'mkdir -p /data/kavita/config && chown -R {{ .Values.media.system.userId }}:{{ .Values.media.system.groupId }} /data/kavita']
+        volumeMounts:
+        - name: {{ $appVolume }}
+          mountPath: /data
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.kavita.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.kavita.image }}
+        resources:
+          {{- toYaml .Values.kavita.resources | nindent 10 }}
+        ports:
+        - name: {{ .Values.kavita.ports.http.name }}
+          containerPort: {{ .Values.kavita.ports.http.targetPort }}
+        env:
+        # Kavita's external URL — used to build the OIDC redirect_uri (/signin-oidc).
+        - name: PUBLIC_URL
+          value: "https://{{ tpl .Values.kavita.host . }}"
+        volumeMounts:
+        - mountPath: /kavita/config
+          name: {{ $appVolume }}
+          subPath: kavita/config
+        # Whole media share mounted; point Kavita libraries at the desired
+        # sub-folders ({{ .Values.media.system.data.path }}/books, /manga …) in the UI.
+        - mountPath: {{ .Values.media.system.data.path }}
+          name: {{ $mediaVolume }}
+      volumes:
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.kavita.pvc.app . }}
+      - name: {{ $mediaVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.kavita.pvc.media . }}
+{{- end }}

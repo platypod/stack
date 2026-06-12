@@ -1,0 +1,23 @@
+# platypod — stack documentation
+
+Documentation for the **service stack** (the workloads deployed onto the cluster).
+For cluster provisioning see [`infra/k8s-in-vms`](../../infra/k8s-in-vms/CLAUDE.md).
+
+| Doc | Contents |
+|-----|----------|
+| [services.md](services.md) | Catalog of every service, by module, with its auth model |
+| [authentication.md](authentication.md) | Authelia forward-auth + OIDC, who uses what, access groups |
+| [TODO.md](TODO.md) | Consolidated backlog (soon / later / done) |
+
+Per-module deep-dives live in each module's `README.md`:
+[core](../src/core/README.md) ·
+[security](../src/security/README.md) ·
+[dev-tools](../src/dev-tools/README.md) ·
+[media](../src/media/README.md) ·
+[files](../src/files/README.md) ·
+[games](../src/games/README.md) ·
+[observability](../src/observability/README.md) ·
+[persistence](../src/persistence/README.md)
+
+The operational reference (chart structure, value conventions, dev/prod
+differences, how to add a service) is in [`../CLAUDE.md`](../CLAUDE.md).

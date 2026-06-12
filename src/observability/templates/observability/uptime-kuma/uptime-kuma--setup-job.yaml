@@ -1,0 +1,97 @@
+{{- if .Values.uptimeKuma.enable }}
+{{- /*
+  Uptime-Kuma first-boot + monitor seed Job.
+
+  Uptime-Kuma has no REST API — it speaks Socket.io, so we drive it with the
+  `uptime-kuma-api` library (supports the 1.23.x line; NOT 2.x, which dropped the
+  Socket.io API — that's why the image is pinned to 1.23.x).
+
+  Flow (idempotent — safe on every deploy):
+    1. Wait for the Socket.io endpoint.
+    2. setup() the admin on a virgin instance; otherwise log in.
+    3. Diff desired monitors (.Values.uptimeKuma.monitors) against existing ones
+       (matched by name) and add only the missing ones.
+
+  Monitors are in-cluster HTTP checks (ClusterIP), so they bypass Authelia and
+  report real app health rather than a 302 to the login page.
+*/ -}}
+{{- $svc := print .Values.k8s.names.services.prefix .Values.uptimeKuma.label .Values.k8s.names.services.suffix }}
+apiVersion: batch/v1
+kind: Job
+
+metadata:
+  name: uptime-kuma-setup
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "20"
+    "helm.sh/hook-delete-policy": before-hook-creation
+
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: uptime-kuma-setup
+        image: python:3.12-slim
+        env:
+        - name: UK_URL
+          value: "http://{{ $svc }}:{{ .Values.uptimeKuma.ports.http.targetPort }}"
+        - name: UK_USER
+          value: "{{ .Values.uptimeKuma.credentials.username }}"
+        - name: UK_PASS
+          value: "{{ .Values.uptimeKuma.credentials.password }}"
+        - name: UK_MONITORS
+          value: {{ tpl (.Values.uptimeKuma.monitors | toJson) . | quote }}
+        command:
+        - sh
+        - -c
+        - |
+          pip install --quiet --disable-pip-version-check uptime-kuma-api==1.2.1 || exit 1
+          python3 - <<'PY'
+          import json, os, time
+          from uptime_kuma_api import UptimeKumaApi, MonitorType
+
+          URL  = os.environ["UK_URL"]
+          USER = os.environ["UK_USER"]
+          PASS = os.environ["UK_PASS"]
+          WANT = json.loads(os.environ["UK_MONITORS"])
+          # Auth-gated apps answer 302/401/403 from inside the cluster — still "up".
+          ACCEPT = ["200-299", "300-399", "401", "403"]
+
+          api = None
+          for i in range(60):
+              try:
+                  api = UptimeKumaApi(URL, timeout=10)
+                  print(f"  [{i}] connected to Uptime-Kuma."); break
+              except Exception as e:
+                  print(f"  [{i}] not ready: {e}"); time.sleep(5)
+          else:
+              raise SystemExit("Uptime-Kuma never became reachable")
+
+          # 1. setup admin (virgin instance) or log in
+          try:
+              api.setup(USER, PASS)
+              print("Admin account created.")
+          except Exception as e:
+              print(f"setup skipped ({str(e)[:80]}) — logging in.")
+          api.login(USER, PASS)
+          print("Logged in.")
+
+          # 2. diff + add missing monitors (matched by name)
+          existing = {m["name"] for m in api.get_monitors()}
+          added = 0
+          for mon in WANT:
+              if mon["name"] in existing:
+                  continue
+              try:
+                  api.add_monitor(type=MonitorType.HTTP, name=mon["name"],
+                                  url=mon["url"], accepted_statuscodes=ACCEPT,
+                                  interval=60, maxretries=2)
+                  print(f"  + {mon['name']} -> {mon['url']}"); added += 1
+              except Exception as e:
+                  print(f"  ! {mon['name']} failed: {str(e)[:100]}")
+          api.disconnect()
+          print(f"Uptime-Kuma seed complete: {added} added, {len(existing)} pre-existing.")
+          PY
+{{- end }}

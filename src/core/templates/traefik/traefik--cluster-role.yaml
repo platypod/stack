@@ -11,6 +11,9 @@ rules:
       - services
       - secrets
       - nodes
+      # Traefik >= 3.2 watches ConfigMaps (kubernetesCRD provider); without
+      # this the watch is forbidden and the provider loads ZERO IngressRoutes.
+      - configmaps
     verbs:
       - get
       - list

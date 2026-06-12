@@ -1,0 +1,152 @@
+{{- if .Values.reclaimerr.enable }}
+{{- /*
+  Reclaimerr first-boot setup Job.
+
+  Hook-weight 30 (> jellyfin 10, jellyseerr 20) so those are settled first;
+  reclaimerr connection-tests jellyfin/seerr when wiring them.
+
+  Flow (idempotent — safe on every deploy):
+    1. Wait for reclaimerr API (GET /api/setup/status).
+    2. If needs_setup: POST /api/setup -> create the fixed "admin" account.
+    3. Login (POST /api/auth/login) -> capture the access_token cookie.
+    4. For each .Values.reclaimerr.services entry: POST /api/settings/save/service
+       (reclaimerr runs a live connection test, 400 on failure). Best-effort with
+       a few retries per service so an arr still booting doesn't lose its wiring;
+       partial failures are logged but DO NOT fail the job/release — the next
+       deploy re-runs and upserts the stragglers.
+*/ -}}
+{{- $svc := print .Values.k8s.names.services.prefix .Values.reclaimerr.label .Values.k8s.names.services.suffix }}
+apiVersion: batch/v1
+kind: Job
+
+metadata:
+  name: reclaimerr-setup
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "30"
+    "helm.sh/hook-delete-policy": before-hook-creation
+
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: reclaimerr-setup
+        image: python:3-alpine
+        env:
+        - name: RECLAIMERR_URL
+          value: "http://{{ $svc }}:{{ .Values.reclaimerr.ports.http.targetPort }}"
+        - name: ADMIN_PASSWORD
+          value: "{{ .Values.reclaimerr.credentials.password }}"
+        - name: ADMIN_EMAIL
+          value: "{{ .Values.reclaimerr.adminEmail }}"
+        - name: OIDC_JSON
+          {{- if .Values.reclaimerr.oidc.clientId }}
+          value: '{"enabled": true, "issuer_url": "https://{{ tpl .Values.authelia.host . }}", "client_id": "{{ .Values.reclaimerr.oidc.clientId }}", "client_secret": "{{ .Values.reclaimerr.oidc.clientSecret.plain }}", "scopes": "openid profile email", "email_claim": "email", "token_endpoint_auth_method": "client_secret_basic", "redirect_uri_override": "https://{{ tpl .Values.reclaimerr.host . }}/api/auth/oidc/callback"}'
+          {{- else }}
+          value: ""
+          {{- end }}
+        - name: SERVICES_JSON
+          value: |-
+            [
+            {{- range $i, $s := .Values.reclaimerr.services }}
+              {{- if $i }},{{ end }}
+              {"service_type": "{{ $s.serviceType }}", "base_url": "{{ tpl $s.baseUrl $ }}", "api_key": "{{ tpl $s.apiKey $ }}", "enabled": true, "is_main": {{ $s.isMain | default false }}}
+            {{- end }}
+            ]
+        command:
+        - python3
+        - -c
+        - |
+          import json, os, time, urllib.request, urllib.error, http.cookiejar
+
+          BASE     = os.environ["RECLAIMERR_URL"]
+          PASSWORD = os.environ["ADMIN_PASSWORD"]
+          SERVICES = json.loads(os.environ["SERVICES_JSON"])
+
+          jar = http.cookiejar.CookieJar()
+          opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+
+          def call(method, path, body=None):
+              data = json.dumps(body).encode() if body is not None else None
+              req = urllib.request.Request(
+                  f"{BASE}{path}", data=data, method=method,
+                  headers={"Content-Type": "application/json"})
+              try:
+                  with opener.open(req, timeout=20) as r:
+                      return r.status, r.read().decode()
+              except urllib.error.HTTPError as e:
+                  return e.code, e.read().decode()
+
+          # 1. wait for the API
+          body = None
+          for i in range(60):
+              try:
+                  s, body = call("GET", "/api/setup/status")
+                  if s == 200:
+                      print(f"  [{i}] reclaimerr is up.")
+                      break
+              except Exception as e:
+                  print(f"  [{i}] not ready: {e}")
+              time.sleep(5)
+          else:
+              raise SystemExit("reclaimerr never became ready")
+
+          # 2. create admin (only if pending)
+          if json.loads(body).get("needs_setup"):
+              s, b = call("POST", "/api/setup",
+                          {"password": PASSWORD, "confirm_password": PASSWORD})
+              if s not in (200, 201):
+                  raise SystemExit(f"admin setup failed [{s}]: {b}")
+              print("Admin account created.")
+          else:
+              print("Admin account already exists.")
+
+          # 3. login -> cookie
+          s, b = call("POST", "/api/auth/login",
+                      {"username": "admin", "password": PASSWORD})
+          if s != 200:
+              raise SystemExit(f"login failed [{s}]: {b}")
+          print("Logged in as admin.")
+
+          # 4. wire services (best-effort, retried, idempotent upsert)
+          ok = 0
+          for svc in SERVICES:
+              st = svc["service_type"]
+              for attempt in range(3):
+                  s, b = call("POST", "/api/settings/save/service", svc)
+                  if s == 200:
+                      print(f"  wired {st} -> {svc['base_url']}")
+                      ok += 1
+                      break
+                  print(f"  [{st}] attempt {attempt+1} failed [{s}]: {b[:160]}")
+                  time.sleep(10)
+              else:
+                  print(f"  WARN: could not wire {st} (will retry on next deploy)")
+
+          print(f"reclaimerr setup complete — {ok}/{len(SERVICES)} services wired.")
+
+          # 5. admin email (reclaimerr links OIDC logins strictly by email)
+          email = os.environ.get("ADMIN_EMAIL", "").strip()
+          if email:
+              s, b = call("POST", "/api/account/me",
+                          {"display_name": "Admin", "email": email})
+              print(f"  admin email -> {email} [{s}]" if s == 200
+                    else f"  WARN: admin email update failed [{s}]: {b[:120]}")
+
+          # 6. OIDC settings (idempotent upsert; reclaimerr validates the issuer)
+          oidc_raw = os.environ.get("OIDC_JSON", "").strip()
+          if oidc_raw:
+              oidc = json.loads(oidc_raw)
+              for attempt in range(3):
+                  s, b = call("PUT", "/api/settings/oidc", oidc)
+                  if s == 200:
+                      print("  OIDC configured (issuer:", oidc["issuer_url"] + ")")
+                      break
+                  print(f"  OIDC attempt {attempt+1} failed [{s}]: {b[:160]}")
+                  time.sleep(10)
+              else:
+                  print("  WARN: OIDC config failed (will retry on next deploy)")
+          # exit 0 even on partial wiring so the release succeeds; re-run heals it.
+{{- end }}

@@ -41,7 +41,99 @@ data:
             - 'preferred_username'
         ## See: https://www.authelia.com/c/oidc
         clients:
-        {{- if .Values.komga.oidc.clientId }}
+        {{- if .Values.rommapp.oidc.clientId }}
+        - audience:
+          - 'https://{{ tpl .Values.rommapp.host . }}'
+          authorization_policy: 'one_factor'
+          claims_policy: 'platypod'
+          client_id: '{{ .Values.rommapp.oidc.clientId }}'
+          client_name: 'RomM'
+          client_secret: '{{ .Values.rommapp.oidc.clientSecret.hashed }}'
+          public: false
+          redirect_uris:
+          - 'https://{{ tpl .Values.rommapp.host . }}/api/oauth/openid'
+          scopes:
+          - 'openid'
+          - 'profile'
+          - 'email'
+          token_endpoint_auth_method: 'client_secret_basic'
+          userinfo_signed_response_alg: 'none'
+        {{- end }}
+        {{- if .Values.reclaimerr.oidc.clientId }}
+        - audience:
+          - 'https://{{ tpl .Values.reclaimerr.host . }}'
+          authorization_policy: 'one_factor'
+          claims_policy: 'platypod'
+          client_id: '{{ .Values.reclaimerr.oidc.clientId }}'
+          client_name: 'Reclaimerr'
+          client_secret: '{{ .Values.reclaimerr.oidc.clientSecret.hashed }}'
+          public: false
+          redirect_uris:
+          - 'https://{{ tpl .Values.reclaimerr.host . }}/api/auth/oidc/callback'
+          scopes:
+          - 'openid'
+          - 'profile'
+          - 'email'
+          token_endpoint_auth_method: 'client_secret_basic'
+          userinfo_signed_response_alg: 'none'
+        {{- end }}
+        {{- if .Values.vaultwarden.oidc.clientId }}
+        - audience:
+          - 'https://{{ tpl .Values.vaultwarden.host . }}'
+          authorization_policy: 'one_factor'
+          claims_policy: 'platypod'
+          client_id: '{{ .Values.vaultwarden.oidc.clientId }}'
+          client_name: 'Vaultwarden'
+          client_secret: '{{ .Values.vaultwarden.oidc.clientSecret.hashed }}'
+          public: false
+          redirect_uris:
+          - 'https://{{ tpl .Values.vaultwarden.host . }}/identity/connect/oidc-signin'
+          # explicit response_types so the offline_access scope (refresh tokens)
+          # is valid — silences the Authelia deprecation warning that becomes an
+          # error in future versions.
+          response_types:
+          - 'code'
+          scopes:
+          - 'openid'
+          - 'profile'
+          - 'email'
+          # refresh tokens so the web vault can extend sessions
+          - 'offline_access'
+          grant_types:
+          - 'authorization_code'
+          - 'refresh_token'
+          token_endpoint_auth_method: 'client_secret_basic'
+          userinfo_signed_response_alg: 'none'
+        {{- end }}
+        {{- if .Values.kavita.oidc.clientId }}
+        - audience:
+          - 'https://{{ tpl .Values.kavita.host . }}'
+          authorization_policy: 'one_factor'
+          claims_policy: 'platypod'
+          client_id: '{{ .Values.kavita.oidc.clientId }}'
+          client_name: 'Kavita'
+          client_secret: '{{ .Values.kavita.oidc.clientSecret.hashed }}'
+          public: false
+          redirect_uris:
+          # ASP.NET Core OIDC default callback path.
+          - 'https://{{ tpl .Values.kavita.host . }}/signin-oidc'
+          response_types:
+          - 'code'
+          scopes:
+          - 'openid'
+          - 'profile'
+          - 'email'
+          # Kavita's ASP.NET Core OIDC handler requests a refresh token.
+          - 'offline_access'
+          grant_types:
+          - 'authorization_code'
+          - 'refresh_token'
+          # Kavita's ASP.NET Core OIDC handler sends the secret in the token
+          # request body (client_secret_post), not the Authorization header.
+          token_endpoint_auth_method: 'client_secret_post'
+          userinfo_signed_response_alg: 'none'
+        {{- end }}
+        {{- if and .Values.komga.enable .Values.komga.oidc.clientId }}
         - audience:
           - 'https://{{ tpl .Values.komga.host . }}'
           authorization_policy: 'one_factor'
@@ -185,6 +277,10 @@ data:
             {{- range .domain }}
             - {{ tpl . $ }}
             {{- end }}
+          {{- if .resources }}
+          resources:
+            {{- toYaml .resources | nindent 12 }}
+          {{- end }}
         {{- end }}
 
     telemetry:

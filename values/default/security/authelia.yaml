@@ -22,7 +22,7 @@ authelia:
         targetPort: 5432
     replicasNb: 1
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: authelia/authelia:4
+  image: authelia/authelia:4.39.20
   log:
     level: info
     format: text
@@ -52,6 +52,15 @@ authelia:
       networks:
       - "{{ .Values.k8s.clusterCIDR }}"
 
+    # PWA manifest is fetched as a credentialed CORS request; if Authelia answers
+    # with a 302 to its own (cross-origin) login, the browser blocks it on CORS.
+    # Bypassing the manifest path lets it be served same-origin (it's harmless).
+    - policy: bypass
+      domain:
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.kavita.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      resources:
+      - '^/site\.webmanifest$'
+
     - policy: one_factor
       domain:
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.dashy.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
@@ -72,6 +81,8 @@ authelia:
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.mediarvester.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.reclaimerr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.komga.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.kavita.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.suwayomi.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
 
     - subject:
       - group:download
