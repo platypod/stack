@@ -168,7 +168,7 @@ To get a copy up and running, follow these steps.
 
 ### Prerequisites
 
-1. A running Kubernetes cluster. This project uses [Talos Linux](https://www.talos.dev/) VMs provisioned via Terraform — see [`infra/k8s-in-vms/`](../infra/k8s-in-vms/) for the full setup.
+1. A running Kubernetes cluster. This project uses [Talos Linux](https://www.talos.dev/) VMs provisioned via Terraform — see [`infra/`](../infra/README.md) for the full setup.
 2. Install the required tools (helm, helmfile, kubectl, helm-diff):
     ```bash
     make install-deps
@@ -234,7 +234,7 @@ Please mind the storage provisionning: default features are offered and detailed
 ```bash
 make setup-dev
 ```
-This runs in order: mkcert CA trust + wildcard TLS secret, Traefik CRDs, core module deploy, dnsmasq configuration. Requires a running dev cluster (`make apply ENV=dev` in `infra/k8s-in-vms/`).
+This runs in order: mkcert CA trust + wildcard TLS secret, Traefik CRDs, core module deploy, dnsmasq configuration. Requires a running dev cluster (`make apply ENV=dev` in `infra/`).
 
 **Deploy the full stack:**
 ```bash
@@ -279,7 +279,7 @@ kubectl get ingressroutes --namespace <namespace>
 Talos nodes have no SSH. Use `talosctl` to browse and transfer files on the worker node:
 
 ```bash
-export TALOSCONFIG=../infra/k8s-in-vms/.generated/dev/talosconfig
+export TALOSCONFIG=../infra/.generated/dev/talosconfig
 
 # Browse
 talosctl -n 192.168.122.102 ls /var/local/platypod/volumes/

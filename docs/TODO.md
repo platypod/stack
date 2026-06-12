@@ -1,7 +1,7 @@
 # TODO
 
 Consolidated backlog for the service stack. Cluster/infra TODOs live under
-[`infra/k8s-in-vms`](../../infra/k8s-in-vms/).
+[`infra/`](../../infra/).
 
 ## Soon
 
