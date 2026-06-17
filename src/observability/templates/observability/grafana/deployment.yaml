@@ -56,11 +56,9 @@ spec:
         - name: conf
           mountPath: /var/lib/grafana/dashboards/media/transmission.json
           subPath: transmission.json
-        - name: conf
-          mountPath: /var/lib/grafana/dashboards/infra/nas.json
-          subPath: nas.json
         # Whole-directory mount: every JSON in the dashboards ConfigMap
-        # (chart files/dashboards/) lands in the Platform folder.
+        # (chart files/dashboards/, incl. the Synology NAS dashboard) lands in
+        # the Platform folder.
         - name: dashboards
           mountPath: /var/lib/grafana/dashboards/platform
         - mountPath: /var/lib/grafana

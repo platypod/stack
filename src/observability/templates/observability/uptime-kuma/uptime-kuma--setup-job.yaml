@@ -78,10 +78,17 @@ spec:
           api.login(USER, PASS)
           print("Logged in.")
 
-          # 2. reconcile monitors (matched by name): add missing, fix drifted URLs
+          # 2. reconcile monitors (matched by name). Only ENABLED services are
+          #    desired; a monitor's tpl'd `enable` flag gates it (absent = always-on
+          #    = enabled). Managed-but-disabled monitors are pruned.
+          def enabled(m):
+              return str(m.get("enable", "true")).strip().lower() not in ("false", "")
+          managed = {m["name"] for m in WANT}
+          desired = [m for m in WANT if enabled(m)]
+          desired_names = {m["name"] for m in desired}
           existing = {m["name"]: m for m in api.get_monitors()}
-          added = updated = 0
-          for mon in WANT:
+          added = updated = pruned = 0
+          for mon in desired:
               cur = existing.get(mon["name"])
               if cur is None:
                   try:
@@ -97,6 +104,15 @@ spec:
                       print(f"  ~ {mon['name']} url {cur.get('url')} -> {mon['url']}"); updated += 1
                   except Exception as e:
                       print(f"  ! {mon['name']} edit failed: {str(e)[:100]}")
+          # prune monitors the stack manages but that are now disabled — never
+          # touches enabled monitors or user-created ones (names outside `managed`)
+          for name in managed - desired_names:
+              cur = existing.get(name)
+              if cur:
+                  try:
+                      api.delete_monitor(cur["id"]); print(f"  - pruned {name}"); pruned += 1
+                  except Exception as e:
+                      print(f"  ! {name} prune failed: {str(e)[:100]}")
 
           # 3. publish a status page (slug "all") listing every monitor — this is
           #    what the Homepage `uptimekuma` widget reads (it has no auth; it
@@ -125,6 +141,6 @@ spec:
               print(f"  ! status page setup failed: {str(e)[:160]}")
 
           api.disconnect()
-          print(f"Uptime-Kuma seed complete: {added} added, {updated} updated, {len(existing)} pre-existing.")
+          print(f"Uptime-Kuma seed complete: {added} added, {updated} updated, {pruned} pruned.")
           PY
 {{- end }}
