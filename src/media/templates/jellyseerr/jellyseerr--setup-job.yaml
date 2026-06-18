@@ -53,11 +53,26 @@ spec:
           value: "{{ .Values.jellyfin.credentials.username }}"
         - name: ADMIN_PASSWORD
           value: "{{ .Values.jellyfin.credentials.password }}"
+        # Jellyseerr's own Postgres DB — used as the authoritative fallback to
+        # grant ADMIN when the API path can't (the configured account is an
+        # imported user, not the Seerr owner, so it can't self-promote).
+        - name: DB_HOST
+          value: "{{ .Values.k8s.names.services.prefix }}{{ .Values.database.label }}{{ .Values.k8s.names.services.suffix }}"
+        - name: DB_PORT
+          value: "{{ .Values.database.ports.http.targetPort }}"
+        - name: DB_NAME
+          value: "{{ .Values.database.schemas.jellyseerr.main }}"
+        - name: DB_USER
+          value: "{{ .Values.database.serviceCredentials.jellyseerr.username }}"
+        - name: PGPASSWORD
+          value: "{{ .Values.database.serviceCredentials.jellyseerr.password }}"
         command:
-        - python3
+        - sh
         - -c
         - |
-          import json, os, time, urllib.request, urllib.error, http.cookiejar
+          apk add --no-cache postgresql-client >/dev/null 2>&1
+          exec python3 - <<'PYEOF'
+          import json, os, time, subprocess, urllib.request, urllib.error, http.cookiejar
 
           BASE         = os.environ["SEERR_URL"]
           JF_HOST      = os.environ["JELLYFIN_HOST"]
@@ -157,6 +172,38 @@ spec:
           except Exception as e:
               print(f"Warning: could not update Jellyfin settings: {e}")
 
+          # ── ensure the admin account actually has ADMIN permission ─────────────
+
+          # Jellyseerr does NOT inherit admin from Jellyfin: a user's role is its
+          # own `permissions` bitfield in Seerr's DB. ADMIN = 2 (bit 1) — a
+          # superset that implies every other permission.
+          #
+          # The configured account is an *imported* user, not the Seerr owner, so
+          # the API can't promote it (a non-admin can neither grant itself ADMIN
+          # nor read the user list to find the owner). We therefore write the bit
+          # straight into Seerr's own Postgres DB, which we hold credentials for.
+          # Authoritative and idempotent: OR-ing in bit 1 is a no-op if set.
+          ADMIN = 2
+          dsn = (f"host={os.environ['DB_HOST']} port={os.environ['DB_PORT']} "
+                 f"dbname={os.environ['DB_NAME']} user={os.environ['DB_USER']}")
+          uname = USERNAME.replace("'", "''")   # SQL-escape single quotes
+          sql = ('UPDATE "user" SET permissions = permissions | %d '
+                 "WHERE lower(\"jellyfinUsername\") = lower('%s') "
+                 'RETURNING id, "jellyfinUsername", permissions;') % (ADMIN, uname)
+          try:
+              out = subprocess.run(
+                  ["psql", dsn, "-c", sql],
+                  capture_output=True, text=True, timeout=30)
+              if out.returncode != 0:
+                  print(f"Warning: could not grant ADMIN via DB: {out.stderr.strip()}")
+              elif "UPDATE 0" in out.stdout:
+                  print(f"Warning: no Seerr user matched jellyfinUsername='{USERNAME}'.")
+              else:
+                  print(f"Ensured ADMIN for '{USERNAME}':\n{out.stdout.strip()}")
+          except Exception as e:
+              print(f"Warning: could not ensure admin permission: {e}")
+
           print("Jellyseerr setup complete.")
+          PYEOF
 
 {{- end }}

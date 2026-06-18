@@ -1,0 +1,15 @@
+# Claude dashboards (native telemetry + custom transcript indicators) live under
+# files/dashboards/claude/ and are bundled here as a whole directory, mounted into
+# its own Grafana folder ("Claude") via a dedicated provider. Add a JSON file in
+# that subdir and it ships automatically.
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.dashboard.label }}-dashboards-claude{{ .Values.k8s.names.configMaps.suffix }}
+
+data:
+{{- range $path, $_ := .Files.Glob "files/dashboards/claude/*.json" }}
+  {{ base $path }}: |
+{{ $.Files.Get $path | indent 4 }}
+{{- end }}

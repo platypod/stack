@@ -30,7 +30,6 @@ uptimeKuma:
   # disabled services are pruned, not monitored. Always-on infra omits `enable`.
   monitors:
     - { name: "Homepage",     url: "http://homepage:3000" }
-    - { name: "Dashy",        url: "http://dashy:8080" }
     - { name: "Traefik",      url: "http://traefik-dashboard:9999" }
     - { name: "Authelia",     url: "http://authelia:9091" }
     - { name: "LLDAP",        url: "http://lldap:17170" }

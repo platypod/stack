@@ -96,6 +96,11 @@ build:         ## Build and push a custom image  (IMAGE=pokeclicker VERSION=v0.1
 # Utilities
 # ---------------------------------------------------------------------------
 
+.PHONY: ship-transcripts
+ship-transcripts: ## Ship Claude Code transcripts to Loki — full content, redacts stack/values secrets. Run again to tail. ARGS="--dry-run|--limit N|--reset|--projects=GLOB"
+	@test -x bin/.venv/bin/python || { echo "bootstrapping bin/.venv…"; python3 -m venv bin/.venv && bin/.venv/bin/pip install -q --disable-pip-version-check opentelemetry-sdk opentelemetry-exporter-otlp-proto-grpc; }
+	@bin/.venv/bin/python bin/ship-transcripts $(ARGS)
+
 .PHONY: help
 help:          ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) \

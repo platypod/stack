@@ -33,6 +33,22 @@ data:
 
     limits_config:
       metric_aggregation_enabled: true
+      # Accept back-dated samples so historical Claude Code transcripts (weeks/
+      # months old, shipped by stack/bin/ship-transcripts) ingest instead of being
+      # dropped by the default 1-week reject_old_samples_max_age. Personal,
+      # single-tenant cluster — the usual out-of-order/replay concerns don't apply.
+      reject_old_samples: false
+      # Allow querying the full transcript history (default caps range at ~30d).
+      max_query_length: 0
+      # Promote a couple of low-cardinality transcript attributes to indexed
+      # labels so Grafana `label_values()` can drive named dropdowns (session
+      # picker, project filter). Everything else stays structured metadata.
+      otlp_config:
+        log_attributes:
+        - action: index_label
+          attributes:
+            - session_title
+            - project
 
     schema_config:
       configs:

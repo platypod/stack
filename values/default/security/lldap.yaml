@@ -68,6 +68,15 @@ lldap:
         displayName: guesto
         password: guest-password
         groups: []
+      # Non-interactive service account for OTLP/gRPC telemetry ingestion
+      # (Claude Code). Authenticates via Authorization: Basic against the
+      # otel-collector-grpc ingress; no group memberships, scoped by the
+      # Authelia access_control rule on that host alone.
+      - id: otel-telemetry
+        email: otel-telemetry@platypod.local
+        displayName: OTEL Telemetry
+        password: otel-telemetry-secret
+        groups: []
   replicasNb: 1
   resources:
     requests:

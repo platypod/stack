@@ -1,0 +1,299 @@
+#!/usr/bin/env python3
+"""Ship Claude Code session transcripts to Loki via the existing OTLP gateway.
+
+Reads the per-project JSONL transcripts under ~/.claude/projects/, redacts the
+literal secret values harvested from stack/values/**/*.yaml, and emits one OTLP
+log record per content-bearing line to the cluster's OTLP/gRPC gateway — reusing
+the endpoint + Basic-auth header already configured in ~/.claude/settings.json
+(the same path Claude Code's own telemetry uses). No daemon: run it on demand
+(see `make ship-transcripts`). Byte offsets are tracked per file so re-runs only
+ship new lines; the first run backfills everything.
+
+Logs land in Loki as {service_name="claude-code-transcripts"}. The full (redacted)
+JSONL line is the log body; session_id / session_title / type / uuid / parent_uuid
+/ tool_name / tool_use_id / project / git_branch ride along as attributes.
+"""
+from __future__ import annotations
+import argparse, glob, json, os, re, socket, sys, time
+from pathlib import Path
+
+HOME = Path.home()
+PROJECTS_DIR = HOME / ".claude" / "projects"
+SETTINGS = HOME / ".claude" / "settings.json"
+STATE = HOME / ".claude" / ".platypod-transcript-shipper.json"
+REPO_VALUES = Path(__file__).resolve().parent.parent / "values"
+
+# Line types worth shipping (these carry message content). Others (queue-operation,
+# mode, last-prompt, ai-title) are skipped — ai-title is consumed for naming only.
+CONTENT_TYPES = {"user", "assistant", "system"}
+
+# Keys whose values are secrets to redact (matched case-insensitively as a substring
+# of the YAML key). Harvested literally from stack/values so we redact exact strings.
+SECRET_KEY_RE = re.compile(
+    r"(?i)(password|passwd|secret|token|apikey|api_key|jwt|hmac|"
+    r"encryptionkey|client_secret|clientsecret|accesskey|privatekey)"
+)
+# Generic shapes harvesting can't cover (pasted creds, key blocks).
+GENERIC_REDACTIONS = [
+    re.compile(r"(?i)(authorization\s*[:=]\s*(?:basic|bearer)\s+)[A-Za-z0-9._\-+/=]+"),
+    re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]+?-----END [A-Z ]*PRIVATE KEY-----"),
+]
+REDACTED = "«redacted»"
+
+
+def harvest_secrets(values_dir: Path) -> list[str]:
+    """Collect literal secret values from stack/values/**/*.yaml."""
+    secrets: set[str] = set()
+    kv = re.compile(r"^\s*([\w.\-]+)\s*:\s*(.+?)\s*(?:#.*)?$")
+    for path in values_dir.rglob("*.yaml"):
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for line in text.splitlines():
+            m = kv.match(line)
+            if not m:
+                continue
+            key, val = m.group(1), m.group(2).strip().strip('"').strip("'")
+            if not SECRET_KEY_RE.search(key):
+                continue
+            # skip templated refs, placeholders, empties, booleans, too-short
+            if (not val or len(val) < 6 or val.startswith("{{") or
+                    val.startswith("<") or val.lower() in ("true", "false", "null")):
+                continue
+            secrets.add(val)
+    # longest first so substrings don't leave fragments behind
+    return sorted(secrets, key=len, reverse=True)
+
+
+def redact(text: str, secrets: list[str]) -> str:
+    for s in secrets:
+        if s in text:
+            text = text.replace(s, REDACTED)
+    for rx in GENERIC_REDACTIONS:
+        text = rx.sub(lambda m: (m.group(1) if m.lastindex else "") + REDACTED, text)
+    return text
+
+
+def load_settings() -> tuple[str, dict]:
+    """Return (grpc_endpoint, headers) from ~/.claude/settings.json OTLP env."""
+    env = json.loads(SETTINGS.read_text()).get("env", {})
+    ep = env.get("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip()
+    if not ep:
+        sys.exit("No OTEL_EXPORTER_OTLP_ENDPOINT in ~/.claude/settings.json")
+    headers = {}
+    raw = env.get("OTEL_EXPORTER_OTLP_HEADERS", "")
+    for part in raw.split(","):
+        if "=" in part:
+            k, v = part.split("=", 1)
+            headers[k.strip().lower()] = v.strip()  # gRPC metadata keys must be lowercase
+    return ep, headers
+
+
+def load_state() -> dict:
+    try:
+        return json.loads(STATE.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def save_state(state: dict) -> None:
+    STATE.write_text(json.dumps(state, indent=0))
+
+
+def session_titles(path: Path) -> dict[str, str]:
+    """Latest ai-title per sessionId in a file → the session's display name."""
+    titles: dict[str, str] = {}
+    try:
+        for line in path.open(encoding="utf-8", errors="replace"):
+            if '"ai-title"' not in line:
+                continue
+            try:
+                o = json.loads(line)
+            except ValueError:
+                continue
+            if o.get("type") == "ai-title" and o.get("aiTitle"):
+                titles[o.get("sessionId", "")] = o["aiTitle"]
+    except OSError:
+        pass
+    return titles
+
+
+def tool_fields(msg: dict) -> dict:
+    """Pull tool_name / tool_use_id from the first tool block, for linking."""
+    out = {}
+    content = msg.get("content")
+    if isinstance(content, list):
+        for blk in content:
+            if not isinstance(blk, dict):
+                continue
+            if blk.get("type") == "tool_use":
+                out["tool_name"] = str(blk.get("name", ""))
+                out["tool_use_id"] = str(blk.get("id", ""))
+                break
+            if blk.get("type") == "tool_result":
+                out["tool_use_id"] = str(blk.get("tool_use_id", ""))
+                break
+    return out
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Ship Claude Code transcripts to Loki.")
+    ap.add_argument("--projects", default="*",
+                    help="glob over project dir names under ~/.claude/projects (default: all)")
+    ap.add_argument("--limit", type=int, default=0,
+                    help="cap records shipped this run (0 = no cap; for testing)")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="parse + redact + count, but do not send or advance offsets")
+    ap.add_argument("--reset", action="store_true",
+                    help="ignore saved offsets (re-ship everything)")
+    args = ap.parse_args()
+
+    secrets = harvest_secrets(REPO_VALUES)
+    print(f"redaction: harvested {len(secrets)} secret literals from {REPO_VALUES}")
+
+    files = sorted(glob.glob(str(PROJECTS_DIR / args.projects / "*.jsonl")))
+    if not files:
+        print("no transcripts matched")
+        return 0
+
+    state = {} if args.reset else load_state()
+    host = socket.gethostname()
+
+    exporter = batch = provider = None
+    if not args.dry_run:
+        from opentelemetry.sdk._logs import LoggerProvider
+        from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
+        from opentelemetry._logs import SeverityNumber
+        endpoint, headers = load_settings()
+        endpoint = re.sub(r"^https?://", "", endpoint)
+        resource = Resource.create({
+            "service.name": "claude-code-transcripts",
+            "service.namespace": "claude-code",
+            "host.name": host,
+        })
+        provider = LoggerProvider(resource=resource)
+        # The OTLP exporter already retries transient gRPC errors (UNAVAILABLE)
+        # with internal exponential backoff up to `timeout`; on top of that we
+        # flush per file and retry the flush, advancing a file's offset ONLY once
+        # its records are confirmed flushed (see flush_with_retry / per-file save).
+        exporter = OTLPLogExporter(endpoint=endpoint,
+                                   headers=tuple(headers.items()), insecure=False,
+                                   timeout=30)
+        batch = BatchLogRecordProcessor(exporter)
+        provider.add_log_record_processor(batch)
+        logger = provider.get_logger("platypod.transcript-shipper")
+
+    def flush_with_retry(attempts: int = 4) -> bool:
+        """Force-flush the batch, retrying with exponential backoff (2,4,8,…s)."""
+        for i in range(attempts):
+            if batch.force_flush(timeout_millis=30000):
+                return True
+            delay = 2 ** (i + 1)
+            print(f"  flush failed; retry {i + 1}/{attempts} in {delay}s", flush=True)
+            time.sleep(delay)
+        return False
+
+    shipped, failed_files = 0, []
+    for fp in files:
+        p = Path(fp)
+        try:
+            st = p.stat()
+        except OSError:
+            continue
+        meta = state.get(fp, {})
+        offset = meta.get("offset", 0)
+        if meta.get("inode") != st.st_ino or st.st_size < offset:
+            offset = 0  # rotated or truncated → re-read
+        if offset >= st.st_size:
+            continue
+
+        project = p.parent.name
+        titles = session_titles(p)
+        with p.open("rb") as fh:
+            fh.seek(offset)
+            data = fh.read()
+        # only consume up to the last complete line
+        last_nl = data.rfind(b"\n")
+        if last_nl == -1:
+            continue
+        consumed = last_nl + 1
+        lines = data[:consumed].decode("utf-8", errors="replace").splitlines()
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                o = json.loads(line)
+            except ValueError:
+                continue
+            if o.get("type") not in CONTENT_TYPES:
+                continue
+            msg = o.get("message") if isinstance(o.get("message"), dict) else {}
+            sid = o.get("sessionId", "")
+            attrs = {
+                "session_id": sid,
+                "session_title": titles.get(sid, ""),
+                "project": project,
+                "type": str(o.get("type", "")),
+                "role": str(msg.get("role", "")),
+                "uuid": str(o.get("uuid", "")),
+                "parent_uuid": str(o.get("parentUuid", "")),
+                "git_branch": str(o.get("gitBranch", "")),
+                "cc_version": str(o.get("version", "")),
+            }
+            attrs.update(tool_fields(msg))
+            attrs = {k: v for k, v in attrs.items() if v}
+            body = redact(line, secrets)
+            ts = o.get("timestamp")
+            ts_ns = None
+            if isinstance(ts, str):
+                try:
+                    from datetime import datetime
+                    ts_ns = int(datetime.fromisoformat(
+                        ts.replace("Z", "+00:00")).timestamp() * 1e9)
+                except ValueError:
+                    ts_ns = None
+            if not args.dry_run:
+                logger.emit(
+                    timestamp=ts_ns or time.time_ns(),
+                    observed_timestamp=time.time_ns(),
+                    severity_number=SeverityNumber.INFO,
+                    body=body, attributes=attrs,
+                )
+            shipped += 1
+            limit_hit = bool(args.limit and shipped >= args.limit)
+            if limit_hit:
+                break
+        else:
+            limit_hit = False
+
+        # Confirm this file's records are flushed before advancing its offset, so
+        # a transient push failure is re-shipped next run instead of being lost.
+        if args.dry_run:
+            pass
+        elif flush_with_retry():
+            state[fp] = {"inode": st.st_ino, "offset": offset + consumed}
+            save_state(state)
+        else:
+            failed_files.append(p.name)  # offset NOT advanced → retried next run
+        if limit_hit:
+            break
+
+    if not args.dry_run:
+        provider.shutdown()
+    verb = "(dry-run) would ship" if args.dry_run else "shipped"
+    print(f"{verb} {shipped} records{f' (limit {args.limit})' if args.limit else ''}")
+    if failed_files:
+        print(f"WARNING: push failed for {len(failed_files)} file(s) after retries "
+              f"(offsets not advanced — re-run to retry): {', '.join(failed_files[:5])}"
+              f"{'…' if len(failed_files) > 5 else ''}")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

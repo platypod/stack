@@ -2,3 +2,6 @@ out
 tmp
 values/*/values.yaml
 bin/kubectl-config.sh
+
+# transcript shipper venv
+bin/.venv/

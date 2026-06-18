@@ -84,6 +84,32 @@ data:
               - target_label: __address__
                 replacement: {{ .Values.k8s.names.services.prefix }}{{ .Values.observability.prometheusSnmpExporter.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.prometheusSnmpExporter.ports.http.targetPort }}
       {{- end }}
+      # USD->currency FX rates (ECB daily, via the json-exporter `fx` module).
+      # Feeds usd_fx_rate{currency=...} to Mimir for the Claude Code cost
+      # dashboard's currency conversion. ECB updates ~daily, but the Prometheus
+      # scrape manager jitters the FIRST scrape across the whole interval, so a
+      # long interval leaves the metric (and the dashboard) empty for that long
+      # after any collector restart. 5m keeps first-scrape latency low at
+      # negligible cost (~288 req/day to a cached public API).
+      prometheus/fx:
+        config:
+          scrape_configs:
+          - job_name: 'fx-rates'
+            scrape_interval: 5m
+            scrape_timeout: 30s
+            metrics_path: /probe
+            params:
+              module: [fx]
+            static_configs:
+            - targets:
+              - 'https://api.frankfurter.dev/v1/latest?base=USD'
+            relabel_configs:
+            - source_labels: [__address__]
+              target_label: __param_target
+            - source_labels: [__param_target]
+              target_label: instance
+            - target_label: __address__
+              replacement: {{ .Values.k8s.names.services.prefix }}{{ .Values.observability.prometheusJsonExporter.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.prometheusJsonExporter.ports.http.targetPort }}
       prometheus/transmission:
         config:
           scrape_configs:
@@ -227,6 +253,10 @@ data:
         {{- end }}
         metrics/transmission:
           receivers: [prometheus/transmission]
+          processors: [attributes/prometheus, batch, memory_limiter]
+          exporters: [otlphttp/mimir]
+        metrics/fx:
+          receivers: [prometheus/fx]
           processors: [attributes/prometheus, batch, memory_limiter]
           exporters: [otlphttp/mimir]
         metrics/k8s_cluster:

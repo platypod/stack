@@ -7,6 +7,10 @@ observability:
       format: json
     gateway:
       host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      # Dedicated host for the OTLP/gRPC ingress (h2c → port 4317), guarded by the
+      # Basic-auth Authelia endpoint. Used by non-interactive clients (e.g. Claude
+      # Code telemetry) that send Authorization: Basic, not a session cookie.
+      grpcHost: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.otelCollector.label }}-grpc{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       label: "{{ .Values.observability.otelCollector.label }}-gateway"
       resources:
         requests:

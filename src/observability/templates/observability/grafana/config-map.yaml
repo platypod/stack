@@ -71,6 +71,13 @@ data:
       type: file
       options:
         path: /var/lib/grafana/dashboards/platform
+    - name: 'Claude'
+      orgId: 1
+      folder: 'Claude'
+      type: file
+      allowUiUpdates: true
+      options:
+        path: /var/lib/grafana/dashboards/claude
 
   datasources.yaml: |
     apiVersion: 1

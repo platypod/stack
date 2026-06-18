@@ -1,0 +1,507 @@
+{
+  "uid": "claude-custom-indicators",
+  "title": "Claude - Custom indicators",
+  "tags": [
+    "platypod",
+    "claude-code",
+    "transcripts"
+  ],
+  "schemaVersion": 39,
+  "refresh": "",
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "project",
+        "label": "Project",
+        "type": "query",
+        "datasource": {
+          "type": "loki",
+          "uid": "logs"
+        },
+        "query": "label_values({service_name=\"claude-code-transcripts\"}, project)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "session",
+        "label": "Session",
+        "type": "query",
+        "datasource": {
+          "type": "loki",
+          "uid": "logs"
+        },
+        "query": "label_values({service_name=\"claude-code-transcripts\", project=~\"$project\"}, session_title)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "sort": 1,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Messages (range)",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "logs"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "logs"
+          },
+          "expr": "sum(count_over_time({service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
+          "queryType": "instant"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Tool calls (range)",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "logs"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "logs"
+          },
+          "expr": "sum(count_over_time({service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"} | tool_name!=``[$__range]))",
+          "queryType": "instant"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Sessions (range)",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "logs"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "logs"
+          },
+          "expr": "count(count by (session_title) (count_over_time({service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])))",
+          "queryType": "instant"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Projects (range)",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "logs"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "logs"
+          },
+          "expr": "count(count by (project) (count_over_time({service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])))",
+          "queryType": "instant"
+        }
+      ]
+    },
+    {
+      "type": "piechart",
+      "title": "Tool usage (range)",
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 4
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "logs"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "pieType": "donut"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "logs"
+          },
+          "expr": "sum by (tool_name) (count_over_time({service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"} | tool_name!=``[$__range]))",
+          "queryType": "instant",
+          "legendFormat": "{{tool_name}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Tool calls over time",
+      "gridPos": {
+        "h": 9,
+        "w": 16,
+        "x": 8,
+        "y": 4
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "logs"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 50,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "logs"
+          },
+          "expr": "sum by (tool_name) (count_over_time({service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"} | tool_name!=``[$__auto]))",
+          "queryType": "range",
+          "legendFormat": "{{tool_name}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Messages by role over time",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "logs"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "logs"
+          },
+          "expr": "sum by (role) (count_over_time({service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"}[$__auto]))",
+          "queryType": "range",
+          "legendFormat": "{{role}}"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Activity by project (range)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "logs"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "legend": {
+          "showLegend": false
+        },
+        "xTickLabelRotation": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "logs"
+          },
+          "expr": "sum by (project) (count_over_time({service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
+          "queryType": "instant",
+          "format": "table",
+          "legendFormat": "{{project}}"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Sessions by activity (range)",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "logs"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Value",
+            "desc": true
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "session_title": "Session",
+              "Value": "Messages",
+              "project": "Project"
+            },
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "logs"
+          },
+          "expr": "sum by (session_title, project) (count_over_time({service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
+          "queryType": "instant",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "type": "logs",
+      "title": "Transcript content — selected session (tool I/O, responses)",
+      "gridPos": {
+        "h": 13,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "logs"
+      },
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Ascending"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "logs"
+          },
+          "expr": "{service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"}",
+          "queryType": "range",
+          "maxLines": 2000
+        }
+      ]
+    }
+  ]
+}

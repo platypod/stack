@@ -1,0 +1,19 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+
+metadata:
+  name: {{ .Values.k8s.names.middlewares.prefix }}{{ .Values.authelia.label }}-basic{{ .Values.k8s.names.middlewares.suffix }}
+  labels:
+    chartVersion: {{ .Chart.Version }}
+    env: {{ .Values.project.env }}
+
+spec:
+  forwardAuth:
+    # Basic-auth-capable authz endpoint — see authelia--config-map.yaml.
+    address: 'http://{{ .Values.k8s.names.services.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.authelia.ports.http.targetPort }}/api/authz/forward-auth-basic'
+    authResponseHeaders:
+      - 'Remote-User'
+      - 'Remote-Groups'
+      - 'Remote-Email'
+      - 'Remote-Name'
+    trustForwardHeader: true

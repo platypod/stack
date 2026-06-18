@@ -237,8 +237,21 @@ data:
       address: tcp://0.0.0.0:{{ .Values.authelia.ports.http.targetPort }}/
       endpoints:
         authz:
+          # Default endpoint — cookie/session based, used by every browser-facing
+          # service. Left untouched.
           forward-auth:
             implementation: 'ForwardAuth'
+          # Dedicated endpoint for non-interactive clients: authenticates from an
+          # Authorization: Basic header (validated against LLDAP) before falling
+          # back to a session cookie. Only the OTLP/gRPC ingress uses it, so the
+          # default endpoint's behaviour is unchanged for everything else.
+          forward-auth-basic:
+            implementation: 'ForwardAuth'
+            authn_strategies:
+              - name: 'HeaderAuthorization'
+                schemes:
+                  - 'Basic'
+              - name: 'CookieSession'
 
     ntp:
       disable_failure: true
@@ -323,7 +336,7 @@ data:
       cookies:
       - domain: {{ .Values.traefik.domain }}
         authelia_url: https://{{ tpl .Values.authelia.host . }}
-        default_redirection_url: https://{{ tpl .Values.dashy.host . }}
+        default_redirection_url: https://{{ tpl .Values.homepage.host . }}
 
     regulation:
       max_retries: 5

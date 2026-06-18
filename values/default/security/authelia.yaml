@@ -40,6 +40,15 @@ authelia:
       targetPort: 9959
   replicasNb: 1
   rules:
+    # OTLP/gRPC telemetry ingress: only the otel-telemetry service account, via
+    # Authorization: Basic (1FA). The dedicated forward-auth-basic endpoint makes
+    # Basic auth usable here without changing any browser-facing service.
+    - policy: one_factor
+      subject:
+      - "user:otel-telemetry"
+      domain:
+      - "{{ tpl .Values.observability.otelCollector.gateway.grpcHost . }}"
+
     - policy: bypass
       domain:
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bazarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
@@ -63,7 +72,6 @@ authelia:
 
     - policy: one_factor
       domain:
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.dashy.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.homepage.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.pokeclicker.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
 

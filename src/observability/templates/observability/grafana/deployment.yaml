@@ -17,6 +17,7 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/observability/grafana/config-map.yaml") . | sha256sum }}
         checksum/dashboards: {{ include (print $.Template.BasePath "/observability/grafana/dashboards-config-map.yaml") . | sha256sum }}
+        checksum/dashboards-claude: {{ include (print $.Template.BasePath "/observability/grafana/dashboards-claude-config-map.yaml") . | sha256sum }}
     spec:
       {{- if .Values.traefik.loadBalancerIP }}
       # Resolve the Authelia hostname to the Traefik LoadBalancer internally so
@@ -61,6 +62,8 @@ spec:
         # the Platform folder.
         - name: dashboards
           mountPath: /var/lib/grafana/dashboards/platform
+        - name: dashboards-claude
+          mountPath: /var/lib/grafana/dashboards/claude
         - mountPath: /var/lib/grafana
           name: {{ $appVolume }}
           subPath: grafana/data
@@ -100,3 +103,6 @@ spec:
       - name: dashboards
         configMap:
           name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.dashboard.label }}-dashboards{{ .Values.k8s.names.configMaps.suffix }}
+      - name: dashboards-claude
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.dashboard.label }}-dashboards-claude{{ .Values.k8s.names.configMaps.suffix }}

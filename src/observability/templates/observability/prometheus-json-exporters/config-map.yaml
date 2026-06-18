@@ -5,6 +5,24 @@ metadata:
 data:
   config.yml: |
     modules:
+      # USD -> currency exchange rates (ECB daily reference rates via
+      # frankfurter.app, no API key). One series per currency:
+      # usd_fx_rate{currency="EUR"} = EUR per 1 USD. Consumed by the Claude Code
+      # cost dashboard to convert USD cost into the selected display currency.
+      # USD itself is absent from the feed (it is the base) — the dashboard
+      # falls back to a rate of 1 for USD.
+      fx:
+        http_client_config:
+          follow_redirects: true
+        # NOTE: every entry for the same metric name MUST repeat an identical
+        # `help` string, or the prometheus client panics ("inconsistent help").
+        metrics:
+        - { name: usd_fx_rate, type: value, help: "USD to currency rate (ECB via frankfurter.dev)", path: '{ .rates.EUR }', labels: { currency: "EUR" } }
+        - { name: usd_fx_rate, type: value, help: "USD to currency rate (ECB via frankfurter.dev)", path: '{ .rates.JPY }', labels: { currency: "JPY" } }
+        - { name: usd_fx_rate, type: value, help: "USD to currency rate (ECB via frankfurter.dev)", path: '{ .rates.GBP }', labels: { currency: "GBP" } }
+        - { name: usd_fx_rate, type: value, help: "USD to currency rate (ECB via frankfurter.dev)", path: '{ .rates.CHF }', labels: { currency: "CHF" } }
+        - { name: usd_fx_rate, type: value, help: "USD to currency rate (ECB via frankfurter.dev)", path: '{ .rates.CAD }', labels: { currency: "CAD" } }
+        - { name: usd_fx_rate, type: value, help: "USD to currency rate (ECB via frankfurter.dev)", path: '{ .rates.AUD }', labels: { currency: "AUD" } }
       jellyfin:
         headers:
           Authorization: MediaBrowser Token={{ .Values.jellyfin.apiKey }}
