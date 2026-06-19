@@ -49,6 +49,20 @@ data:
           attributes:
             - session_title
             - project
+            - tool_name
+      # Enable the delete API (used to drop and repopulate the transcript stream).
+      # retention_period is large so nothing is auto-purged by age — only explicit
+      # delete requests act.
+      deletion_mode: filter-and-delete
+      retention_period: 8760h
+
+    # Compactor processes delete requests (retention must be enabled for it to run).
+    compactor:
+      working_directory: /tmp/loki/compactor
+      retention_enabled: true
+      delete_request_store: filesystem
+      compaction_interval: 5m
+      delete_request_cancel_period: 10m
 
     schema_config:
       configs:

@@ -137,6 +137,39 @@ def tool_fields(msg: dict) -> dict:
     return out
 
 
+def render_body(o: dict) -> str:
+    """Render a transcript line into readable text (instead of a raw JSON blob),
+    so the Grafana logs panel is legible. Full content is preserved — text, tool
+    inputs and tool results — just unwrapped from the JSON envelope (whose ids/
+    metadata already travel as structured metadata)."""
+    msg = o.get("message") if isinstance(o.get("message"), dict) else {}
+    content = msg.get("content")
+    if isinstance(content, str):
+        return content
+    parts = []
+    if isinstance(content, list):
+        for b in content:
+            if not isinstance(b, dict):
+                continue
+            t = b.get("type")
+            if t == "text":
+                parts.append(b.get("text", ""))
+            elif t == "thinking":
+                parts.append("💭 " + (b.get("thinking", "") or ""))
+            elif t == "tool_use":
+                inp = json.dumps(b.get("input", {}), ensure_ascii=False)
+                parts.append(f"🔧 {b.get('name', 'tool')}({inp})")
+            elif t == "tool_result":
+                c = b.get("content")
+                if isinstance(c, list):
+                    c = "\n".join(x.get("text", "") if isinstance(x, dict) else str(x)
+                                  for x in c)
+                err = " [error]" if b.get("is_error") else ""
+                parts.append(f"↳{err} {c}")
+    body = "\n".join(p for p in parts if p).strip()
+    return body or f"({o.get('type', 'message')})"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Ship Claude Code transcripts to Loki.")
     ap.add_argument("--projects", default="*",
@@ -235,6 +268,9 @@ def main() -> int:
             msg = o.get("message") if isinstance(o.get("message"), dict) else {}
             sid = o.get("sessionId", "")
             attrs = {
+                "fmt": "text",  # body-format marker — dashboards filter on it so a
+                                # format change never mixes old/new bodies (Loki keeps
+                                # both when the body changes; this hides the stale ones)
                 "session_id": sid,
                 "session_title": titles.get(sid, ""),
                 "project": project,
@@ -247,7 +283,7 @@ def main() -> int:
             }
             attrs.update(tool_fields(msg))
             attrs = {k: v for k, v in attrs.items() if v}
-            body = redact(line, secrets)
+            body = redact(render_body(o), secrets)
             ts = o.get("timestamp")
             ts_ns = None
             if isinstance(ts, str):

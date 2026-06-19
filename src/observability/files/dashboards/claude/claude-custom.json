@@ -50,6 +50,25 @@
           "text": "All",
           "value": "$__all"
         }
+      },
+      {
+        "name": "tool",
+        "label": "Tool",
+        "type": "query",
+        "datasource": {
+          "type": "loki",
+          "uid": "logs"
+        },
+        "query": "label_values({service_name=\"claude-code-transcripts\"}, tool_name)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "sort": 1,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
       }
     ]
   },
@@ -137,7 +156,7 @@
             "type": "loki",
             "uid": "logs"
           },
-          "expr": "sum(count_over_time({service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"} | tool_name!=``[$__range]))",
+          "expr": "sum(count_over_time({service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"} | tool_name!=``| tool_name=~\"$tool\" [$__range]))",
           "queryType": "instant"
         }
       ]
@@ -245,7 +264,14 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "short",
+          "links": [
+            {
+              "title": "Filter dashboard by this tool",
+              "targetBlank": false,
+              "url": "/d/claude-custom-indicators?${__url_time_range}&${__all_variables}&var-tool=${__field.labels.tool_name}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -272,7 +298,7 @@
             "type": "loki",
             "uid": "logs"
           },
-          "expr": "sum by (tool_name) (count_over_time({service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"} | tool_name!=``[$__range]))",
+          "expr": "sum by (tool_name) (count_over_time({service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"} | tool_name!=``| tool_name=~\"$tool\" [$__range]))",
           "queryType": "instant",
           "legendFormat": "{{tool_name}}"
         }
@@ -300,7 +326,14 @@
             "stacking": {
               "mode": "normal"
             }
-          }
+          },
+          "links": [
+            {
+              "title": "Filter dashboard by this tool",
+              "targetBlank": false,
+              "url": "/d/claude-custom-indicators?${__url_time_range}&${__all_variables}&var-tool=${__field.labels.tool_name}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -320,7 +353,7 @@
             "type": "loki",
             "uid": "logs"
           },
-          "expr": "sum by (tool_name) (count_over_time({service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"} | tool_name!=``[$__auto]))",
+          "expr": "sum by (tool_name) (count_over_time({service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"} | tool_name!=``| tool_name=~\"$tool\" [$__auto]))",
           "queryType": "range",
           "legendFormat": "{{tool_name}}"
         }
@@ -389,7 +422,14 @@
           "unit": "short",
           "color": {
             "mode": "palette-classic"
-          }
+          },
+          "links": [
+            {
+              "title": "Filter dashboard by this project",
+              "targetBlank": false,
+              "url": "/d/claude-custom-indicators?${__url_time_range}&${__all_variables}&var-project=${__data.fields.project}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -429,7 +469,44 @@
       },
       "fieldConfig": {
         "defaults": {},
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Session"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Filter dashboard by this session",
+                    "targetBlank": false,
+                    "url": "/d/claude-custom-indicators?${__url_time_range}&${__all_variables}&var-session=${__data.fields.Session}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Project"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Filter dashboard by this project",
+                    "targetBlank": false,
+                    "url": "/d/claude-custom-indicators?${__url_time_range}&${__all_variables}&var-project=${__data.fields.Project}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "showHeader": true,
@@ -470,7 +547,7 @@
     },
     {
       "type": "logs",
-      "title": "Transcript content — selected session (tool I/O, responses)",
+      "title": "Transcript — readable content (pick a Session)",
       "gridPos": {
         "h": 13,
         "w": 24,
@@ -485,10 +562,11 @@
         "showTime": true,
         "showLabels": false,
         "wrapLogMessage": true,
-        "prettifyLogMessage": true,
+        "prettifyLogMessage": false,
         "enableLogDetails": true,
         "dedupStrategy": "none",
-        "sortOrder": "Ascending"
+        "sortOrder": "Ascending",
+        "fontSize": "small"
       },
       "targets": [
         {
@@ -497,11 +575,14 @@
             "type": "loki",
             "uid": "logs"
           },
-          "expr": "{service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"}",
+          "expr": "{service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"} | tool_name=~\"$tool\"",
           "queryType": "range",
           "maxLines": 2000
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {}
+      }
     }
   ]
 }

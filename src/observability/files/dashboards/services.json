@@ -29,13 +29,20 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (service) (rate(traefik_service_requests_total[2m])) > 0",
+          "expr": "sum by (service) (rate(traefik_service_requests_total{service=~\"$service\"}[2m])) > 0",
           "legendFormat": "{{service}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps"
+          "unit": "reqps",
+          "links": [
+            {
+              "title": "Filter by this service",
+              "targetBlank": false,
+              "url": "/d/services-ingress?${__url_time_range}&${__all_variables}&var-service=${__field.labels.service}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -95,13 +102,20 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (service) (rate(traefik_service_requests_total{code=~\"5..\"}[2m]))",
+          "expr": "sum by (service) (rate(traefik_service_requests_total{code=~\"5..\", service=~\"$service\"}[2m]))",
           "legendFormat": "{{service}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps"
+          "unit": "reqps",
+          "links": [
+            {
+              "title": "Filter by this service",
+              "targetBlank": false,
+              "url": "/d/services-ingress?${__url_time_range}&${__all_variables}&var-service=${__field.labels.service}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -128,13 +142,20 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le, service) (rate(traefik_service_request_duration_seconds_bucket[5m]))) > 0",
+          "expr": "histogram_quantile(0.95, sum by (le, service) (rate(traefik_service_request_duration_seconds_bucket{service=~\"$service\"}[5m]))) > 0",
           "legendFormat": "{{service}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "s",
+          "links": [
+            {
+              "title": "Filter by this service",
+              "targetBlank": false,
+              "url": "/d/services-ingress?${__url_time_range}&${__all_variables}&var-service=${__field.labels.service}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -161,13 +182,20 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (service) (rate(traefik_service_responses_bytes_total[2m])) > 0",
+          "expr": "sum by (service) (rate(traefik_service_responses_bytes_total{service=~\"$service\"}[2m])) > 0",
           "legendFormat": "{{service}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "Bps"
+          "unit": "Bps",
+          "links": [
+            {
+              "title": "Filter by this service",
+              "targetBlank": false,
+              "url": "/d/services-ingress?${__url_time_range}&${__all_variables}&var-service=${__field.labels.service}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -213,7 +241,7 @@
     },
     {
       "type": "stat",
-      "title": "TLS cert \u2014 days to expiry",
+      "title": "TLS cert — days to expiry",
       "datasource": {
         "type": "prometheus",
         "uid": "metrics"
@@ -255,7 +283,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Authelia \u2014 auth & authz activity",
+      "title": "Authelia — auth & authz activity",
       "datasource": {
         "type": "prometheus",
         "uid": "metrics"
@@ -293,7 +321,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Authelia \u2014 requests by status",
+      "title": "Authelia — requests by status",
       "datasource": {
         "type": "prometheus",
         "uid": "metrics"
@@ -324,5 +352,28 @@
         }
       }
     }
-  ]
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "label": "Service",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "metrics"
+        },
+        "query": "label_values(traefik_service_requests_total, service)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "sort": 1,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  }
 }

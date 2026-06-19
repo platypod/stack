@@ -310,7 +310,14 @@
                 "value": null
               }
             ]
-          }
+          },
+          "links": [
+            {
+              "title": "Open this node in Workloads",
+              "targetBlank": false,
+              "url": "/d/workloads?${__url_time_range}&var-node=${__field.labels.node}"
+            }
+          ]
         },
         "overrides": []
       }
@@ -586,7 +593,7 @@
     {
       "type": "logs",
       "title": "Logs",
-      "description": "Pod identity lives in the log_file_path structured metadata (.../<namespace>_<pod>_<uid>/<container>/N.log) \u2014 Loki streams aren't labeled per pod.",
+      "description": "Pod identity lives in the log_file_path structured metadata (.../<namespace>_<pod>_<uid>/<container>/N.log) — Loki streams aren't labeled per pod.",
       "datasource": {
         "type": "loki",
         "uid": "logs"

@@ -264,7 +264,14 @@
         "defaults": {
           "unit": "percent",
           "min": 0,
-          "max": 100
+          "max": 100,
+          "links": [
+            {
+              "title": "Open this node in Workloads",
+              "targetBlank": false,
+              "url": "/d/workloads?${__url_time_range}&var-node=${__field.labels.node}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -299,7 +306,14 @@
         "defaults": {
           "unit": "percent",
           "min": 0,
-          "max": 100
+          "max": 100,
+          "links": [
+            {
+              "title": "Open this node in Workloads",
+              "targetBlank": false,
+              "url": "/d/workloads?${__url_time_range}&var-node=${__field.labels.node}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -332,7 +346,14 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "short",
+          "links": [
+            {
+              "title": "Open this node in Workloads",
+              "targetBlank": false,
+              "url": "/d/workloads?${__url_time_range}&var-node=${__field.labels.node}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -365,7 +386,14 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "Bps"
+          "unit": "Bps",
+          "links": [
+            {
+              "title": "Open this node in Workloads",
+              "targetBlank": false,
+              "url": "/d/workloads?${__url_time_range}&var-node=${__field.labels.node}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -398,7 +426,14 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "Bps"
+          "unit": "Bps",
+          "links": [
+            {
+              "title": "Open this node in Workloads",
+              "targetBlank": false,
+              "url": "/d/workloads?${__url_time_range}&var-node=${__field.labels.node}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -433,7 +468,14 @@
         "defaults": {
           "unit": "percent",
           "min": 0,
-          "max": 100
+          "max": 100,
+          "links": [
+            {
+              "title": "Open this node in Workloads",
+              "targetBlank": false,
+              "url": "/d/workloads?${__url_time_range}&var-node=${__field.labels.node}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -471,7 +513,14 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "short",
+          "links": [
+            {
+              "title": "Open this node in Workloads",
+              "targetBlank": false,
+              "url": "/d/workloads?${__url_time_range}&var-node=${__field.labels.node}"
+            }
+          ]
         },
         "overrides": []
       },

@@ -232,7 +232,14 @@
             "stacking": {
               "mode": "normal"
             }
-          }
+          },
+          "links": [
+            {
+              "title": "Filter dashboard by this model",
+              "targetBlank": false,
+              "url": "/d/claude-code-usage?${__url_time_range}&${__all_variables}&var-model=${__field.labels.model}"
+            }
+          ]
         },
         "overrides": []
       },
