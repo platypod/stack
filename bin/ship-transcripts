@@ -185,10 +185,21 @@ def main() -> int:
     secrets = harvest_secrets(REPO_VALUES)
     print(f"redaction: harvested {len(secrets)} secret literals from {REPO_VALUES}")
 
-    files = sorted(glob.glob(str(PROJECTS_DIR / args.projects / "*.jsonl")))
+    # Oldest file first so the synthetic ingestion timestamps (below) line up with
+    # real chronology when scrolling the content panel.
+    files = sorted(glob.glob(str(PROJECTS_DIR / args.projects / "*.jsonl")),
+                   key=lambda f: os.path.getmtime(f))
     if not files:
         print("no transcripts matched")
         return 0
+
+    # Loki rejects entries older than ~max_chunk_age behind a stream's head
+    # ("entry too far behind"), so back-dated transcripts can't be backfilled once a
+    # stream holds recent data. We therefore stamp each record with a monotonically
+    # increasing INGESTION timestamp (always ahead of the head → always accepted) and
+    # keep the real time as the `event_time` attribute. Loki time == ship order.
+    ts_base = time.time_ns()
+    ts_seq = 0
 
     state = {} if args.reset else load_state()
     host = socket.gethostname()
@@ -284,18 +295,12 @@ def main() -> int:
             attrs.update(tool_fields(msg))
             attrs = {k: v for k, v in attrs.items() if v}
             body = redact(render_body(o), secrets)
-            ts = o.get("timestamp")
-            ts_ns = None
-            if isinstance(ts, str):
-                try:
-                    from datetime import datetime
-                    ts_ns = int(datetime.fromisoformat(
-                        ts.replace("Z", "+00:00")).timestamp() * 1e9)
-                except ValueError:
-                    ts_ns = None
+            if o.get("timestamp"):
+                attrs["event_time"] = str(o["timestamp"])  # real time, kept as metadata
+            ts_seq += 1
             if not args.dry_run:
                 logger.emit(
-                    timestamp=ts_ns or time.time_ns(),
+                    timestamp=ts_base + ts_seq,        # monotonic ingestion time
                     observed_timestamp=time.time_ns(),
                     severity_number=SeverityNumber.INFO,
                     body=body, attributes=attrs,

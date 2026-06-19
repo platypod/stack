@@ -5,11 +5,6 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
 
 ## Soon
 
-- **Per-module service/job docs.** Create a subfolder under `docs/` for each
-  module and, within it, a `<service|job>.md` for every service or job that
-  module ships. Describe each one's role and configuration — everything that
-  isn't default, plus any default worth noting (pins, quirks, gotchas).
-
 - **Trust the mkcert CA (dev only).** Run `make setup-dev-tls` once per dev
   machine (sudo, installs the CA in the macOS Keychain). Renew the same way when
   the cert expires (~3 years).
@@ -71,6 +66,8 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
 
 ## Recently done
 
+- Per-module service/job docs under `docs/<module>/` — one page per workload
+  (role + non-default config + quirks), 59 pages across all 8 modules (2026-06).
 - OIDC expansion: RomM, Reclaimerr, Vaultwarden, Kavita (2026-06).
 - Kavita + Suwayomi deployed; Komga disabled (`enable: false`).
 - Service version bumps + pinning (no `latest`), except CloudBeaver.

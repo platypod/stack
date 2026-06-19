@@ -22,6 +22,17 @@ Per-module deep-dives live in each module's `README.md`:
 [observability](../src/observability/README.md) ·
 [persistence](../src/persistence/README.md)
 
+**Per-service/job reference** — one page per workload (role + non-default config +
+quirks) under `docs/<module>/`:
+[persistence](persistence/README.md) ·
+[core](core/README.md) ·
+[security](security/README.md) ·
+[observability](observability/README.md) ·
+[files](files/README.md) ·
+[games](games/README.md) ·
+[media](media/README.md) ·
+[dev-tools](dev-tools/README.md)
+
 The operational reference (chart structure, value conventions, dev/prod
 differences, how to add a service) is split across
 [operations.md](operations.md) and [conventions.md](conventions.md).
