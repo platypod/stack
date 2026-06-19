@@ -6,7 +6,7 @@ deluge:
   logLevel: info
   credentials:
     username: admin
-    password: deluge
+    password: password
   download:
     torrents: "{{ .Values.media.system.data.path }}/torrents/{{ .Values.deluge.label }}"
     ongoing: "{{ .Values.media.system.data.path }}/ongoing/{{ .Values.deluge.label }}"

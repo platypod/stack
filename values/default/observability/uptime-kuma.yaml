@@ -21,7 +21,7 @@ uptimeKuma:
   # First-boot admin, created by the seed Job. Override per env if desired.
   credentials:
     username: admin
-    password: uptime-kuma-admin
+    password: password
   # Monitors seeded by the post-install/upgrade Job. Each is an in-cluster HTTP
   # check against the service's ClusterIP (bypasses Authelia, so we see the real
   # app health, not a 302 to the login page). Idempotent: matched by name.

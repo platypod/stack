@@ -7,8 +7,8 @@ wikijs:
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.wikijs.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
     name: "{{ .Values.wikijs.label }}"
     credentials:
-      username: "{{ .Values.wikijs.label }}User"
-      password: "{{ .Values.wikijs.label }}Password"
+      username: admin
+      password: password
     image: postgres:17
     label: "{{ .Values.wikijs.label }}-db"
     ports:

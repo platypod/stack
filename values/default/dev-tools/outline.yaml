@@ -9,8 +9,8 @@ outline:
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.outline.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
     name: "{{ .Values.outline.label }}"
     credentials:
-      username: "{{ .Values.outline.label }}User"
-      password: "{{ .Values.outline.label }}Password"
+      username: admin
+      password: password
     image: postgres:17
     label: "{{ .Values.outline.label }}-db"
     ports:

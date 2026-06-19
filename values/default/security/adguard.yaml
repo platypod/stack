@@ -3,9 +3,9 @@ adguard:
   loadBalancerIP: ""  # override per-env (e.g. dev: 192.168.122.201)
   adminHost: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.adguard.label }}-admin{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   credentials:
-    username: adguard-admin
-    password: adguard-password
-    passwordHash: "$2y$10$tWluEzume4CMHBAd6kCCqO6vi4DRDBMctfNyjInjtfQa2JwWV83xS"
+    username: admin
+    password: password
+    passwordHash: "$2y$10$XEjNfXLsHj7CBrnT1fdMaeqVv.tA.cfpWfulEAKBupXFUUgunxgRS"
   image: adguard/adguardhome:latest
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   label: adguard

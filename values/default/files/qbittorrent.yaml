@@ -4,8 +4,8 @@ qbittorrent:
   image: linuxserver/qbittorrent:latest
   label: qbittorrent
   credentials:
-    username: qbittorrentUser
-    password: qbittorrentPassword
+    username: admin
+    password: password
   download:
     torrents: "{{ .Values.media.system.data.path }}/torrents/{{ .Values.qbittorrent.label }}"
     ongoing: "{{ .Values.media.system.data.path }}/ongoing/{{ .Values.qbittorrent.label }}"

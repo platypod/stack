@@ -18,7 +18,7 @@ reclaimerr:
     # Admin account auto-created on first boot by the reclaimerr-setup Job.
     # reclaimerr fixes the username to "admin"; only the password is ours.
     # Override per-env. Min 3 / max 64 chars.
-    password: reclaimerr-admin
+    password: password
   # Connections auto-wired by the setup Job via POST /api/settings/save/service
   # (idempotent upsert; reclaimerr runs a live connection test before saving).
   # reclaimerr supports radarr, sonarr, jellyfin, emby, plex, seerr, tautulli —

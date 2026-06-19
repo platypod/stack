@@ -13,8 +13,8 @@ lldap:
     name: "{{ .Values.lldap.label }}"
     label: "{{ .Values.lldap.label }}-db"
     credentials:
-      username: "{{ .Values.lldap.label }}User"
-      password: "{{ .Values.lldap.label }}Password"
+      username: admin
+      password: password
     ports:
       http:
         name: pgsql

@@ -34,7 +34,7 @@ storage:
   localStorage:
     enable: true
     default:
-      rootPath: ./volumes/
+      rootPath: /var/local/platypod/volumes/
       capacityStorage: 1Gi
       nodeAffinity:
         required:

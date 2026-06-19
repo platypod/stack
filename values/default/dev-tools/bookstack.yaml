@@ -9,9 +9,9 @@ bookstack:
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bookstack.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
     name: "{{ .Values.bookstack.label }}"
     credentials:
-      username: "{{ .Values.bookstack.label }}User"
-      password: "{{ .Values.bookstack.label }}Password"
-      rootPassword: "{{ .Values.bookstack.label }}RootPassword"
+      username: admin
+      password: password
+      rootPassword: passwordRoot
     image: mysql:9
     # MySQL 9's baseline RSS is heavy (~400Mi even idle); 256Mi OOMKills on init.
     resources:

@@ -19,7 +19,7 @@ vaultwarden:
       name: vw-ws
       targetPort: 3012
   credentials:
-    adminToken: vaultwardenAdminToken
+    adminToken: password
   signupsAllowed: false
   invitationsAllowed: true
   logLevel: warn

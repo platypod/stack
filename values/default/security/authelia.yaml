@@ -6,8 +6,8 @@ authelia:
     name: "{{ .Values.authelia.label }}"
     logQueries: false
     credentials:
-      username: "{{ .Values.authelia.label }}User"
-      password: "{{ .Values.authelia.label }}Password"
+      username: admin
+      password: password
     image: postgres:17
     resources:
       requests:

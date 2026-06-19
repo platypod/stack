@@ -4,8 +4,8 @@ transmission:
   image: lscr.io/linuxserver/transmission:latest
   label: transmission
   credentials:
-    username: transmission
-    password: transmission
+    username: admin
+    password: password
   download:
     torrents: "{{ .Values.media.system.data.path }}/torrents"
     ongoing: "{{ .Values.media.system.data.path }}/ongoing"

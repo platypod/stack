@@ -1,8 +1,8 @@
 dbeaver:
   enable: true
   credentials:
-    username: dbeaverAdmin
-    password: dbeaverPassword
+    username: admin
+    password: password
   # CloudBeaver uses its embedded management database (persisted on the apps PVC);
   # it is intentionally NOT backed by the shared PostgreSQL — see the deployment
   # template for why (CloudBeaver's external-Postgres migration path self-conflicts).

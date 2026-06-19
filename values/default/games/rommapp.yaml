@@ -9,8 +9,8 @@ rommapp:
       hashed: ""
   enable: true
   credentials:
-    username: rommappUser
-    password: rommappPassword
+    username: admin
+    password: password
   database:
     credentials:
       username: "{{ .Values.rommapp.credentials.username }}"
