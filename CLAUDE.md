@@ -15,6 +15,21 @@ live in `docs/` and in each module's `src/<module>/README.md`:
 - [docs/TODO.md](docs/TODO.md) — backlog
 - `src/<module>/README.md` — per-module deep-dives
 
+## Where to look (read the one file, not all of `docs/`)
+
+| If the talk is about… | Start here |
+|---|---|
+| Adding/editing a service, chart structure, value conventions, setup Jobs, pitfalls | [docs/conventions.md](docs/conventions.md) |
+| Which service is in which module / the catalog | [docs/services.md](docs/services.md) |
+| Deep-dive on one service | `docs/<module>/<service>.md` (e.g. [docs/media/jellyfin.md](docs/media/jellyfin.md), [docs/security/authelia.md](docs/security/authelia.md)) |
+| Auth: Authelia forward-auth, OIDC, LLDAP seeding | [docs/authentication.md](docs/authentication.md) + [docs/security/](docs/security/README.md) |
+| Deploy/lifecycle, dev-vs-prod, PV access, day-to-day | [docs/operations.md](docs/operations.md) |
+| `make` targets + variables | [docs/make-targets.md](docs/make-targets.md) |
+| Backlog | [docs/TODO.md](docs/TODO.md) |
+
+Modules: `core` `dev-tools` `files` `games` `media` `observability` `persistence`
+`security` — each has `src/<module>/README.md` and `docs/<module>/`.
+
 ## Critical rules (full rationale in the linked docs)
 
 - **Always wrap template-valued strings with `tpl`** — `{{ tpl .Values.x.host . }}`,

@@ -15,7 +15,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/Pittinic/platypod">
-    <img src="doc/images/logo.png" alt="Logo" width="80" height="80">
+    <img src="docs/images/logo.png" alt="Logo" width="80" height="80">
   </a>
 
 <h3 align="center">platypod</h3>
@@ -425,7 +425,7 @@ Project Link: [https://github.com/Pittinic/platypod](https://github.com/Pittinic
 [license-url]: https://github.com/Pittinic/platypod/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/nicolas-pittion-rossillon-947534166
-[product-screenshot]: doc/images/demo.gif
+[product-screenshot]: docs/images/demo.gif
 [Kubernetes]: https://img.shields.io/badge/kubernetes-%23326CE5?style=for-the-badge&logo=kubernetes&logoColor=FFFFFF
 [Kubernetes-url]: https://kubernetes.io/
 [Traefik]: https://img.shields.io/badge/traefik-%2324A1C1?style=for-the-badge&logo=traefikproxy&logoColor=FFFFFF

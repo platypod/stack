@@ -15,7 +15,6 @@ values/
   default/<module>/     # Default values — .yaml.gotmpl (Go templates, env-agnostic)
   dev/values.yaml       # Dev overrides
   prd/values.yaml       # Prod overrides
-images/<name>/          # Custom Docker images → ghcr.io/platypod/<name>:<tag>
 helmfile.yaml.gotmpl    # Environments, value load order, release dependency graph
 Makefile                # Primary interface (see make-targets.md)
 ```
@@ -33,7 +32,6 @@ service list.
 - Values load in dependency order in `helmfile.yaml.gotmpl` — foundational files
   first, cross-module aggregators (authelia) last, env override last of all.
 - Module release order is declared via `needs:` in `helmfile.yaml.gotmpl`.
-- Custom images live in `images/` → `ghcr.io/platypod/<name>:<tag>`.
 
 ## Pitfalls
 
@@ -127,11 +125,6 @@ initContainers:
 4. Override in `values/<env>/values.yaml` as needed.
 5. Pattern: Deployment → Service → IngressRoute (+ Authelia middleware if auth'd).
 
-## Adding a custom image
-
-1. Create `images/<name>/Dockerfile`.
-2. `make build IMAGE=<name> VERSION=<tag>`.
-3. Reference `ghcr.io/platypod/<name>:<tag>` in the values file.
 
 ## Environment variable
 
