@@ -5,9 +5,11 @@ observability:
     resources:
       requests:
         cpu: 100m
-        memory: 192Mi
+        # Grafana 13 OSS builds an in-memory bleve search index over all
+        # provisioned dashboards at startup; 384Mi got OOMKilled (exit 137).
+        memory: 256Mi
       limits:
-        memory: 384Mi
+        memory: 768Mi
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.dashboard.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
     oidc:
       clientId: kyqP5Y1daxOz8lMlmYOyOWuq7rbmyUQO34NUp1k3FKZxh55v3tP05pVVZRIwSTnC

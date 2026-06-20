@@ -136,6 +136,38 @@ N|--reset|--projects=GLOB"`.
   file offset, so re-run with `ARGS="--reset"` to re-ship (Loki dedupes exact
   duplicate lines).
 
+### Derived metrics (Mimir) — `claude_tx_*`
+
+Telemetry and transcript *logs* are metadata/content; for **aggregatable** insight
+the shipper also derives numeric metrics from the structured transcript fields and
+pushes them to Mimir over the same OTLP gateway. Dashboards built on these use
+PromQL (fast, alertable) instead of LogQL line-counting.
+
+They are emitted as **gauges stamped at each message's own event time**, not
+process-clock counters — because Mimir's OTLP ingestion requires *cumulative*
+temporality (rejects deltas) and the shipper backfills/tails incrementally, so a
+gauge carrying the per-message value at its timestamp is the only shape that stays
+idempotent across re-runs and backfill. Aggregate in PromQL with `sum_over_time`
+(counts/tokens/cost), `quantile_over_time` (latency), or max−min of the epoch gauge
+(session duration). The standard OTel metrics SDK won't backdate datapoints, so the
+shipper builds OTLP datapoints by hand (`emit_metrics` in `bin/ship-transcripts`).
+
+| Metric | Labels | Meaning |
+|---|---|---|
+| `claude_tx_tokens` | `kind`(input/output/cache_read/cache_write), `model`, `project`, `session_*` | per-message token counts |
+| `claude_tx_cost_usd` | `model`, `project`, `session_*` | per-message cost (token kinds × per-model rates; cache read 0.1×, 5m write 1.25×, 1h write 2× input) |
+| `claude_tx_tool_calls` | `tool_name`, `project`, `session_*` | tool invocations |
+| `claude_tx_tool_latency_seconds` | `tool_name`, … | tool_use→tool_result delta (DAG-matched) |
+| `claude_tx_tool_errors` | `tool_name`, … | `is_error` tool results |
+| `claude_tx_turns` | `project`, `session_*` | human turns (non-tool-result user messages) |
+| `claude_tx_stop_reason` | `stop_reason`, … | assistant stop reasons |
+| `claude_tx_event_epoch_seconds` | `project`, `session_*` | message event epoch → session duration / time-of-day |
+
+The per-model rate table lives in `bin/ship-transcripts` (`MODEL_RATES`); update it
+when pricing changes. Unknown models fall back to Opus-tier. **Next step:** rebuild
+`claude-custom.json` panels on these PromQL series (exec-summary, efficiency,
+patterns rows) and keep one Loki panel for the readable transcript content.
+
 ### Cost currency conversion (live FX)
 
 The cost panels convert USD → a selectable display currency using **real ECB

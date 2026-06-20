@@ -26,9 +26,21 @@ data:
       storage_prefix: blocks
       tsdb:
         dir: /storage/tsdb
+      bucket_store:
+        # Store-gateway path (anything older than query_store_after, i.e. most of
+        # this dashboard's range) reads via the bucket index. Default rejects a
+        # >1h-stale index with HTTP 500 — which empties every historical panel
+        # whenever the compactor's index refresh lags. Sync often and tolerate a
+        # long staleness so a slow refresh degrades gracefully instead of erroring.
+        sync_interval: 5m
+        bucket_index:
+          max_stale_period: 24h
 
     compactor:
       data_dir: /storage/compactor
+      # Refresh the bucket index frequently (default 15m) so newly-compacted
+      # blocks become queryable quickly and the index never drifts stale.
+      cleanup_interval: 5m
       sharding_ring:
         kvstore:
           store: memberlist

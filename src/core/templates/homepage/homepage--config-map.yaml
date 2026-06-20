@@ -50,6 +50,7 @@ data:
           href: https://api.invidious.io/
           description: YouTube without ads.
   services.yaml: |
+{{- if or .Values.jellyfin.enable .Values.jellyseerr.enable .Values.mediarvester.enable .Values.komga.enable .Values.kavita.enable .Values.deluge.enable .Values.qbittorrent.enable }}
     - Media-User:
 {{- if .Values.jellyfin.enable }}
       - Jellyfin:
@@ -117,6 +118,7 @@ data:
             password: {{ .Values.qbittorrent.credentials.password }}
             enableLeechProgress: true
 {{- end }}
+{{- end }}
     - Infrastructure:
       - Traefik:
           icon: traefik.png
@@ -136,10 +138,12 @@ data:
             username: {{ .Values.adguard.credentials.username }}
             password: {{ .Values.adguard.credentials.password }}
 {{- end }}
+{{- if .Values.observability.enable }}
       - Grafana:
           icon: grafana.png
           href: https://{{ tpl .Values.observability.dashboard.host . }}
           description: Dashboards to monitor everything and know what's up.
+{{- end }}
       - Authelia:
           icon: authelia.png
           href: https://{{ tpl .Values.authelia.host . }}
@@ -158,6 +162,7 @@ data:
             url: http://{{ .Values.uptimeKuma.label }}:{{ .Values.uptimeKuma.ports.http.targetPort }}
             slug: all
 {{- end }}
+{{- if or .Values.bookstack.enable .Values.wikijs.enable .Values.outline.enable .Values.itTools.enable .Values.cyberChef.enable .Values.dbeaver.enable .Values.whoami.enable .Values.vaultwarden.enable }}
     - Dev Tools:
 {{- if .Values.bookstack.enable }}
       - Bookstack:
@@ -207,6 +212,8 @@ data:
           href: https://{{ tpl .Values.vaultwarden.host . }}
           description: Self-hosted Bitwarden-compatible password manager.
 {{- end }}
+{{- end }}
+{{- if or .Values.rommapp.enable .Values.pokeclicker.enable }}
     - Games:
 {{- if .Values.rommapp.enable }}
       - RommApp:
@@ -220,6 +227,8 @@ data:
           href: https://{{ tpl .Values.pokeclicker.host . }}
           description: Pokémon idle clicker game.
 {{- end }}
+{{- end }}
+{{- if or .Values.prowlarr.enable .Values.transmission.enable .Values.suwayomi.enable .Values.radarr.enable .Values.sonarr.enable .Values.readarr.enable .Values.bazarr.enable .Values.flaresolverr.enable .Values.reclaimerr.enable }}
     - Media-Maintainer:
 {{- if .Values.prowlarr.enable }}
       - Prowlarr:
@@ -300,6 +309,7 @@ data:
           icon: mdi-delete-sweep
           href: https://{{ tpl .Values.reclaimerr.host . }}
           description: Automatically reclaims media disk space.
+{{- end }}
 {{- end }}
   widgets.yaml: |
     # https://gethomepage.dev/widgets/info/resources/

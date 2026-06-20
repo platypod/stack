@@ -1,4 +1,7 @@
 observability:
+  # Gates the observability stack's homepage tile (Grafana). The module itself is
+  # deployed/withheld via the helmfile selector; set false where it isn't running.
+  enable: true
   mounts:
     containers: /var/lib/docker/containers
   pvc: "{{ .Values.storage.defaultVolumes.apps }}"
