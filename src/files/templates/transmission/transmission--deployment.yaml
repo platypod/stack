@@ -37,6 +37,24 @@ spec:
           subPath: transmission/config
         - mountPath: /seed
           name: {{ $configMap }}
+      # Create the download/incomplete dirs on the media volume. Prod's NFS share
+      # already has them, but a fresh dev PVC is empty — and Transmission reports
+      # `download-dir-free-space: -1` for a non-existent download dir, which crashes
+      # the transmission-exporter sidecar (it unmarshals that into uint64). mkdir is
+      # idempotent; chown only the service's own leaf dirs (never the whole share).
+      - name: init-download-dirs
+        image: busybox:1
+        command:
+        - sh
+        - -c
+        - |
+          mkdir -p "{{ tpl .Values.transmission.download.finished . }}" "{{ tpl .Values.transmission.download.ongoing . }}"
+          chown {{ .Values.media.system.userId }}:{{ .Values.media.system.groupId }} \
+            "{{ tpl .Values.transmission.download.finished . }}" "{{ tpl .Values.transmission.download.ongoing . }}"
+        volumeMounts:
+        - mountPath: {{ .Values.media.system.data.path }}
+          name: {{ $mediaVolume }}
+          subPath: downloads/transmission
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.transmission.image }}

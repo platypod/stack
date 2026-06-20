@@ -1346,7 +1346,7 @@
             "type": "loki",
             "uid": "logs"
           },
-          "expr": "{service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\", fmt=\"text\"} | tool_name=~\"$tool\""
+          "expr": "{service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"} | tool_name=~\"$tool\" | fmt=\"text\""
         }
       ]
     },
