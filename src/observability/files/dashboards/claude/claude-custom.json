@@ -123,7 +123,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "currencyUSD",
+          "unit": "none",
           "color": {
             "mode": "thresholds"
           },
@@ -150,7 +150,7 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "value_and_name",
+        "textMode": "value",
         "orientation": "auto"
       },
       "targets": [
@@ -181,7 +181,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "currencyUSD",
+          "unit": "none",
           "color": {
             "mode": "thresholds"
           },
@@ -208,7 +208,7 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "value_and_name",
+        "textMode": "value",
         "orientation": "auto"
       },
       "targets": [
@@ -265,7 +265,7 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "value_and_name",
+        "textMode": "value",
         "orientation": "auto"
       },
       "targets": [
@@ -323,7 +323,7 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "value_and_name",
+        "textMode": "value",
         "orientation": "auto"
       },
       "targets": [
@@ -380,7 +380,7 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "value_and_name",
+        "textMode": "value",
         "orientation": "auto"
       },
       "targets": [
@@ -437,7 +437,7 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "value_and_name",
+        "textMode": "value",
         "orientation": "auto"
       },
       "targets": [
@@ -494,7 +494,7 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "value_and_name",
+        "textMode": "value",
         "orientation": "auto"
       },
       "targets": [
@@ -552,7 +552,7 @@
         },
         "colorMode": "value",
         "graphMode": "none",
-        "textMode": "value_and_name",
+        "textMode": "value",
         "orientation": "auto"
       },
       "targets": [
@@ -596,7 +596,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "currencyUSD",
+          "unit": "none",
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 25,
@@ -700,7 +700,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "currencyUSD"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -750,7 +750,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "currencyUSD",
+          "unit": "none",
           "custom": {
             "orientation": "horizontal",
             "fillOpacity": 80
@@ -1188,7 +1188,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "currencyUSD"
+                "value": "none"
               },
               {
                 "id": "decimals",
@@ -1349,6 +1349,67 @@
           "expr": "{service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\", fmt=\"text\"} | tool_name=~\"$tool\""
         }
       ]
+    },
+    {
+      "id": 27,
+      "type": "row",
+      "title": "Reference",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 65,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 28,
+      "type": "text",
+      "title": "Cost basis",
+      "gridPos": {
+        "x": 0,
+        "y": 66,
+        "w": 24,
+        "h": 4
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Costs here are *notional API-equivalent*, not your bill.** Every cost value is `tokens \u00d7 pay-as-you-go API list price` (see the price table). On a **Pro/Max subscription you pay a flat monthly fee**, so these numbers are $0 of marginal spend \u2014 read them as *usage intensity / value extracted*, and for comparing projects, sessions and models. They become real money only on the metered API."
+      },
+      "transparent": false
+    },
+    {
+      "id": 29,
+      "type": "text",
+      "title": "API token prices (used for cost calc)",
+      "gridPos": {
+        "x": 0,
+        "y": 70,
+        "w": 12,
+        "h": 8
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "| Model | Input | Output |\n|---|--:|--:|\n| Fable 5 | $10 | $50 |\n| Opus 4.5\u20134.8 | $5 | $25 |\n| Opus 4.0 / 4.1 | $15 | $75 |\n| Sonnet 4.x | $3 | $15 |\n| Haiku 4.5 | $1 | $5 |\n\n_USD per million tokens. Cache: **read \u00d70.1**, **write 5m \u00d71.25**, **write 1h \u00d72** of the input rate. Source of truth: `MODEL_RATES` in `bin/ship-transcripts`._"
+      },
+      "transparent": false
+    },
+    {
+      "id": 30,
+      "type": "text",
+      "title": "Subscription plans",
+      "gridPos": {
+        "x": 12,
+        "y": 70,
+        "w": 12,
+        "h": 8
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "| Plan | Price | Billing |\n|---|--:|---|\n| Pro | ~$20/mo | flat fee |\n| Max 5\u00d7 | ~$100/mo | flat fee |\n| Max 20\u00d7 | ~$200/mo | flat fee |\n| API | metered | per token (table \u2192 left) |\n\n_Reference only \u2014 verify current plan pricing at anthropic.com. Subscriptions are flat-fee within usage limits; the panels above do **not** reflect plan cost._"
+      },
+      "transparent": false
     }
   ],
   "annotations": {

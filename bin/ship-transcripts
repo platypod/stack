@@ -26,7 +26,11 @@ from pathlib import Path
 HOME = Path.home()
 PROJECTS_DIR = HOME / ".claude" / "projects"
 SETTINGS = HOME / ".claude" / "settings.json"
-STATE = HOME / ".claude" / ".platypod-transcript-shipper.json"
+# Per-file byte offsets. Overridable so a one-off backfill to a *different*
+# gateway (e.g. dev via a port-forward) tracks its own offsets instead of
+# clobbering the shared/prod state. Defaults to the prod state path.
+STATE = Path(os.environ.get("PLATYPOD_TRANSCRIPT_STATE",
+                            HOME / ".claude" / ".platypod-transcript-shipper.json"))
 REPO_VALUES = Path(__file__).resolve().parent.parent / "values"
 
 # Line types worth shipping (these carry message content). Others (queue-operation,

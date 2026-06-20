@@ -64,11 +64,27 @@ data:
 
     limits:
       compactor_blocks_retention_period: {{ .Values.observability.metrics.retention }}
+      # Accept back-dated samples. The transcript shipper backfills metrics at each
+      # message's historical event time; Mimir is a near-real-time TSDB and rejects
+      # samples older than the head's max time as "sample-timestamp-too-old" once the
+      # head has advanced to now. A wide out-of-order window lets the full transcript
+      # history land (and re-land idempotently on re-export). Matches retention.
+      out_of_order_time_window: {{ .Values.observability.metrics.retention }}
+      # Backfilled (out-of-order) samples live in the ingester's in-memory OOO head
+      # until compacted to blocks. The querier otherwise only consults ingesters for
+      # recent data (~13h), so historical backfill is invisible until it lands in
+      # blocks + the bucket index. Widen so the OOO head is queried for old ranges
+      # too (store-gateway still serves blocks; results merge/dedupe). This is a
+      # per-tenant limit (model.Duration → "1y" form is accepted here).
+      query_ingesters_within: {{ .Values.observability.metrics.retention }}
       # Single-tenant homelab: defaults (20k) are too tight once kubeletstats,
       # k8s_cluster, traefik etc. all flow in.
       max_global_series_per_user: 300000
-      ingestion_rate: 50000
-      ingestion_burst_size: 100000
+      # Headroom for the transcript backfill burst: re-exporting the full history
+      # pushes ~170k samples in a few seconds, which blew past the old 50k/s limit
+      # (samples dropped as rate_limited). Generous for a single-tenant homelab.
+      ingestion_rate: 250000
+      ingestion_burst_size: 500000
 
     usage_stats:
       enabled: false

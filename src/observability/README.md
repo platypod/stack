@@ -135,6 +135,28 @@ N|--reset|--projects=GLOB"`.
 - **Known limit:** a dropped batch on a transient gRPC error still advances the
   file offset, so re-run with `ARGS="--reset"` to re-ship (Loki dedupes exact
   duplicate lines).
+- **Offset state is one ledger — per destination.** The byte offsets in
+  `~/.claude/.platypod-transcript-shipper.json` record *what's been shipped*,
+  not *where to*. They default to prod. If you ship the same transcripts to a
+  **second** gateway (e.g. dev) with that shared file, a `--reset` there rewrites
+  the ledger to "all shipped" and your next prod run sends nothing. Give each
+  destination its own ledger via `PLATYPOD_TRANSCRIPT_STATE`. Re-shipping is safe
+  regardless (Loki dedupes identical lines; the Mimir gauges are idempotent).
+- **Shipping to dev (or any non-prod gateway).** Endpoint/headers come from
+  `~/.claude/settings.json` by default but env vars win, and `--insecure` allows
+  plaintext gRPC for a port-forward straight to the gateway (bypassing
+  Traefik/Authelia):
+
+  ```sh
+  kubectl -n dev-platypod port-forward svc/opentelemetry-collector-gateway 4317:4317 &
+  PLATYPOD_TRANSCRIPT_STATE=~/.claude/.platypod-transcript-shipper.dev.json \
+  OTEL_EXPORTER_OTLP_ENDPOINT=localhost:4317 \
+    bin/.venv/bin/python bin/ship-transcripts --reset --insecure
+  ```
+
+  Env knobs: `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_EXPORTER_OTLP_HEADERS` (override
+  settings.json), `PLATYPOD_TRANSCRIPT_STATE` (offset-ledger path). CLI flags:
+  `--insecure`, plus the usual `--reset|--dry-run|--limit N|--projects=GLOB`.
 
 ### Derived metrics (Mimir) — `claude_tx_*`
 
@@ -164,9 +186,32 @@ shipper builds OTLP datapoints by hand (`emit_metrics` in `bin/ship-transcripts`
 | `claude_tx_event_epoch_seconds` | `project`, `session_*` | message event epoch → session duration / time-of-day |
 
 The per-model rate table lives in `bin/ship-transcripts` (`MODEL_RATES`); update it
-when pricing changes. Unknown models fall back to Opus-tier. **Next step:** rebuild
-`claude-custom.json` panels on these PromQL series (exec-summary, efficiency,
-patterns rows) and keep one Loki panel for the readable transcript content.
+when pricing changes. Unknown models fall back to Opus-tier. Visualised by the
+**Claude - Custom indicators** dashboard (PromQL on these series + one Loki content
+panel). Costs there are **notional API-equivalent** (`tokens × API list price`),
+not your subscription bill — see the dashboard's Reference row.
+
+**Backfilling history into Mimir needs four non-default settings** (in
+`mimir/config-map.yaml` — Mimir is a near-real-time TSDB and otherwise silently
+drops back-dated samples even though the shipper reports them sent):
+
+- `limits.out_of_order_time_window: 1y` — else back-dated samples are rejected
+  `sample-timestamp-too-old` once the head reaches now.
+- `limits.ingestion_rate` / `ingestion_burst_size` (250k/500k) — the ~170k-sample
+  backfill burst was dropped as `rate_limited` at the 50k default.
+- `limits.query_ingesters_within: 1y` — OOO samples live in the ingester's
+  in-memory OOO head; the querier only consults ingesters for ~13h by default, so
+  historical ranges return nothing until this is widened. (It's a per-tenant
+  *limit*, **not** a `querier:` field — putting it under `querier:` crashes Mimir.)
+- `compactor.cleanup_interval: 5m` + `blocks_storage.bucket_store.bucket_index.max_stale_period: 24h`
+  — keep the bucket index fresh so store-gateway (block) queries don't 500 with
+  `bucket-index-too-old`.
+
+> **Verifying backfill:** instant queries mislead for these sparse historical
+> gauges (5-min lookback shows only "today"). Use range functions, e.g.
+> `count(count_over_time(claude_tx_event_epoch_seconds[400d]))`, and check Mimir
+> `/metrics`: `cortex_discarded_samples_total{reason=...}` +
+> `cortex_ingester_tsdb_out_of_order_samples_appended_total`.
 
 ### Cost currency conversion (live FX)
 
