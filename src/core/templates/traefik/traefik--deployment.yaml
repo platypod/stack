@@ -19,6 +19,10 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
+      {{- with .Values.traefik.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.serviceAccounts.suffix }}
       {{- if .Values.acme.enable }}
       initContainers:

@@ -29,6 +29,12 @@ traefik:
       nodePort: 30679
   replicasNb: 1
   loadBalancerIP: ""   # set per env; used by Adguard DNS rewrite
+  # Pin the pod to specific node(s). Required in prod: the Service is
+  # externalTrafficPolicy=Local, so MetalLB announces the LoadBalancer IP from
+  # whichever node runs this pod. The IP lives in mini4's VM subnet (10.0.2.0/24),
+  # so the pod must stay on a mini4 node or the VIP becomes unreachable from the
+  # host ingress (homepage 000). Empty = no constraint (dev, single node).
+  nodeSelector: {}
   resolverName: letsencrypt
   tls:
     selfSigned: false
