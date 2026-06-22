@@ -6,6 +6,7 @@ Identity + access for the whole stack: **LLDAP** (user directory) → **Authelia
 ## Services
 - [authelia](authelia.md) — auth gateway (forward-auth, Basic, OIDC).
 - [lldap](lldap.md) — lightweight LDAP user/group directory.
+- [vaultwarden](vaultwarden.md) — Bitwarden-compatible password manager; OIDC (SSO).
 - [postgres](postgres.md) — backing DB (one instance each for Authelia and LLDAP).
 - [redis](redis.md) — Authelia session store.
 

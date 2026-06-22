@@ -1,17 +1,15 @@
 # dev-tools module
 
-Documentation, password management, database tooling and assorted dev utilities.
+Documentation, database tooling and assorted dev utilities.
 See [docs/services.md](../../docs/services.md) for the catalog.
 
 ## OIDC services
 
-BookStack, Wiki.js, Outline and Vaultwarden all delegate login to Authelia via
+BookStack, Wiki.js and Outline all delegate login to Authelia via
 OIDC. Clients are declared in the security module's Authelia ConfigMap; per-env
 credentials live in `values/{dev,prd}/values.yaml`. See
 [docs/authentication.md](../../docs/authentication.md).
 
-- **Vaultwarden** uses the OIDC `code` flow with `offline_access` (SSO). The
-  master-password vault is unchanged — OIDC governs *access* to the web vault.
 - **Outline** has *no* local login path — OIDC is mandatory.
 - **Wiki.js** version is pinned to whatever is currently running; check before
   bumping — downgrading the image downgrades its Postgres schema.

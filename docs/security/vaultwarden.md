@@ -1,4 +1,4 @@
-# vaultwarden (dev-tools)
+# vaultwarden (security)
 
 Bitwarden-compatible password manager server.
 

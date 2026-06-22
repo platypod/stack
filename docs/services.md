@@ -16,6 +16,7 @@ refers to the model described in [authentication.md](authentication.md).
 |---------|------|------|
 | Authelia | Auth portal (forwardauth + OIDC provider) | bypass (is the portal) |
 | LLDAP | User/group directory (Authelia backend) | own admin UI |
+| Vaultwarden | Password manager | **OIDC** (SSO) |
 
 ## dev-tools
 | Service | Role | Auth |
@@ -23,7 +24,6 @@ refers to the model described in [authentication.md](authentication.md).
 | BookStack | Wiki / docs | **OIDC** |
 | Wiki.js | Wiki | **OIDC** |
 | Outline | Team knowledge base | **OIDC** |
-| Vaultwarden | Password manager | **OIDC** (SSO) |
 | CloudBeaver (dbeaver) | DB web client | own login (`group:dev`); pinned 24.3.5 |
 | IT-Tools | Dev utilities | bypass |
 | CyberChef | Data-format swiss-army knife | bypass |

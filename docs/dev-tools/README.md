@@ -5,7 +5,6 @@ Self-hosted knowledge bases, utilities, and a DB client.
 ## Services
 | Service | Image | Notes |
 |---|---|---|
-| [vaultwarden](vaultwarden.md) | `vaultwarden/server:1.36.0` | Bitwarden server; OIDC |
 | [bookstack](bookstack.md) | `lscr.io/linuxserver/bookstack:latest` | wiki; MySQL + role-seed Job |
 | [wikijs](wikijs.md) | `ghcr.io/requarks/wiki:2.5.314` | wiki; Postgres + OIDC-seed Job |
 | [outline](outline.md) | `outlinewiki/outline:latest` | wiki; Postgres + Redis |

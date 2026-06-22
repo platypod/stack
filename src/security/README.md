@@ -1,6 +1,14 @@
 # security module
 
-Services: Adguard, Authelia, LLDAP
+Services: Adguard, Authelia, LLDAP, Vaultwarden
+
+## Vaultwarden — password manager
+
+Bitwarden-compatible vault. Login delegates to Authelia via the OIDC `code` flow
+with `offline_access` (SSO) — the master-password vault is unchanged; OIDC governs
+*access* to the web vault. The OIDC client is declared in the Authelia ConfigMap;
+per-env credentials live in `values/{dev,prd}/values.yaml`. SQLite DB lives on the
+local `config` volume (NFS can't host SQLite WAL).
 
 ## Adguard — DNS design
 
