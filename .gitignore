@@ -3,6 +3,9 @@ tmp
 values/*/values.yaml
 bin/kubectl-config.sh
 
+# Per-machine make overrides (copy from Makefile.local.example)
+Makefile.local
+
 # transcript shipper venv
 bin/.venv/
 *.pyc

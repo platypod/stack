@@ -16,6 +16,36 @@ export KUBECONFIG := $(KUBECONFIG_$(ENV))
 HELMFILE = helmfile --environment $(ENV)
 SELECTOR = $(if $(MODULE),--selector name=$(ENV)--platypod--$(MODULE),)
 
+ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+
+# Optional per-machine overrides (gitignored). On a fresh clone this file is
+# absent → no-op. A machine that keeps the prod values.yaml on the NFS share sets
+# STATE_MOUNT here so `make link-values` can symlink it. See
+# ../infra/docs/secrets-on-nfs.md.
+STATE_MOUNT ?=
+-include $(ROOT)/Makefile.local
+
+# REQUIRE_VALUES (set by Makefile.local for prd) makes deploy/diff abort if the
+# env values.yaml is missing/dangling — e.g. the NFS share isn't mounted — rather
+# than letting helmfile render a half-empty release from default values alone.
+REQUIRE_VALUES ?=
+
+.PHONY: require-values link-values
+require-values:
+	@if [ "$(REQUIRE_VALUES)" = "1" ] && [ ! -e "values/$(ENV)/values.yaml" ]; then \
+	  echo "ERROR: values/$(ENV)/values.yaml is missing or dangling (NFS share not mounted?)."; \
+	  echo "  Run 'make link-values ENV=$(ENV)' after mounting, or check the share is up."; \
+	  echo "  Refusing to deploy from defaults only — secrets/overrides would be absent."; \
+	  exit 1; \
+	fi
+
+link-values:   ## Symlink the env values.yaml to the NFS share  (ENV=prd)
+	@test -n "$(STATE_MOUNT)" || { echo "STATE_MOUNT not set — configure Makefile.local first (see ../infra/docs/secrets-on-nfs.md)"; exit 1; }
+	@target="$(STATE_MOUNT)/stack/$(ENV)/values.yaml"; \
+	test -f "$$target" || { echo "Not found on share: $$target (mounted? copied?)"; exit 1; }; \
+	ln -sfn "$$target" "values/$(ENV)/values.yaml" && \
+	  echo "Linked values/$(ENV)/values.yaml -> $$target"
+
 # ---------------------------------------------------------------------------
 # Dependencies
 # ---------------------------------------------------------------------------
@@ -70,15 +100,15 @@ install-csi:   ## Install the NFS CSI driver (nfs.csi.k8s.io) — required for N
 status:        ## List deployed releases and their status  (ENV=dev)
 	helm list --namespace $(ENV)-platypod
 
-diff:          ## Dry-run: show what would change  (ENV=dev MODULE=core)
+diff: require-values  ## Dry-run: show what would change  (ENV=dev MODULE=core)
 	$(HELMFILE) $(SELECTOR) diff --args="--disable-validation"
 
-deploy-base:   ## Deploy always-on base only: persistence, core, security  (ENV=dev)
+deploy-base: require-values  ## Deploy always-on base only: persistence, core, security  (ENV=dev)
 	@helmfile --environment $(ENV) --selector name=$(ENV)--platypod--persistence sync
 	@helmfile --environment $(ENV) --selector name=$(ENV)--platypod--core sync
 	@helmfile --environment $(ENV) --selector name=$(ENV)--platypod--security sync
 
-deploy:        ## Deploy full stack or a single module  (ENV=dev MODULE=core)
+deploy: require-values  ## Deploy full stack or a single module  (ENV=dev MODULE=core)
 	$(HELMFILE) $(SELECTOR) sync --args="--timeout 10m0s"
 
 destroy:       ## Destroy full stack or a single module  (ENV=dev MODULE=core)
@@ -103,7 +133,7 @@ ship-transcripts: ## Ship Claude Code transcripts → Loki (content) + Mimir (cl
 
 .PHONY: help
 help:          ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) \
+	@grep -hE '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) \
 	  | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 .DEFAULT_GOAL := help

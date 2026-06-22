@@ -1,7 +1,7 @@
 mediarvester:
   enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.mediarvester.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: ghcr.io/platypod/mediarvester:v1.1.0
+  image: ghcr.io/platypod/mediarvester:v1.3.0
   label: mediarvester
   ports:
     http:
@@ -27,4 +27,4 @@ mediarvester:
       cpu: 100m
       memory: 256Mi
     limits:
-      memory: 512Mi
+      memory: 768Mi

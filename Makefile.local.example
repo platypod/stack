@@ -1,0 +1,17 @@
+# stack/Makefile.local — per-machine overrides (COPY to Makefile.local; gitignored)
+# -----------------------------------------------------------------------------
+# Optional. Keeps the *prod* values.yaml (secrets + overrides) on the NFS share.
+# Mirrors infra/Makefile.local. Full rationale: ../infra/docs/secrets-on-nfs.md
+#
+# After copying, with the share mounted (see infra: make mount-state):
+#   make link-values ENV=prd     # symlink values/prd/values.yaml -> share
+#   make diff ENV=prd            # renders from the linked values
+# -----------------------------------------------------------------------------
+
+STATE_MOUNT := $(HOME)/nfs/platypod
+
+# Guard prod deploys/diffs against an unmounted share (the stack env token is
+# `prd`, not `prod`). dev keeps its in-repo values/dev/values.yaml.
+ifeq ($(ENV),prd)
+  REQUIRE_VALUES := 1
+endif
