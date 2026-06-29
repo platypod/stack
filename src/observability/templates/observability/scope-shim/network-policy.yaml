@@ -1,0 +1,46 @@
+{{- $s := .Values.observability.scopeShim }}
+{{- $grafana := print .Values.k8s.names.pods.prefix .Values.observability.dashboard.label .Values.k8s.names.pods.suffix }}
+# Defense-in-depth: only Grafana may reach a shim, only a shim may reach its
+# upstream (prom-label-proxy / Loki). NOTE: not enforced under flannel (the
+# cluster's default CNI); the shim's shared-secret header is the CNI-independent
+# control. See docs/observability/dashboard-multitenancy.md.
+{{- range $i := $s.instances }}
+{{- $shim := print $.Values.k8s.names.pods.prefix $i.label $.Values.k8s.names.pods.suffix }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $shim }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ $shim }}
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: {{ $grafana }}
+    ports:
+    - protocol: TCP
+      port: {{ $s.ports.http.targetPort }}
+{{- end }}
+---
+# prom-label-proxy: reachable only from the metrics shim.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Values.k8s.names.pods.prefix }}{{ .Values.observability.labelProxy.label }}{{ .Values.k8s.names.pods.suffix }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.observability.labelProxy.label }}{{ .Values.k8s.names.pods.suffix }}
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          scopeShimInstance: metrics
+    ports:
+    - protocol: TCP
+      port: {{ .Values.observability.labelProxy.ports.http.targetPort }}

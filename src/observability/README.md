@@ -115,6 +115,29 @@ per-file byte offsets (`~/.claude/.platypod-transcript-shipper.json`) and ships
 only new lines — first run backfills, later runs tail. `ARGS="--dry-run|--limit
 N|--reset|--projects=GLOB"`.
 
+**Automating it (Claude Code `SessionEnd` hook).** Because the shipper is
+incremental (offset ledger) and idempotent, it's safe to fire on every session
+close instead of remembering to run `make`. Add a hook to the laptop's
+`~/.claude/settings.json` — Claude Code runs it when a session ends:
+
+```json
+"hooks": {
+  "SessionEnd": [
+    { "hooks": [ { "type": "command",
+      "command": "nohup sh -c 'cd ~/Workspace/perso/platypod/stack && make ship-transcripts' >> ~/.claude/ship-transcripts.log 2>&1 &" } ] }
+  ]
+}
+```
+
+- **Backgrounded** (`nohup … &`) so the gRPC flush never delays the CLI exiting;
+  all output appends to `~/.claude/ship-transcripts.log` for inspection.
+- **`SessionEnd`** fires once per session close. Use `"Stop"` instead to fire after
+  every assistant response (more frequent; the no-new-data run is cheap — reads
+  offsets and exits).
+- Hooks load at Claude Code **startup**, so restart the CLI after editing settings.
+- Shares the same offset ledger as manual `make ship-transcripts` runs — the two
+  coexist; neither re-ships what the other already sent.
+
 - **Transport:** reuses the existing OTLP/gRPC gateway + Basic auth read straight
   from `~/.claude/settings.json` — no new ingress, no new credentials. Lands as
   `{service_name="claude-code-transcripts"}`; the full (redacted) JSONL line is the
@@ -158,7 +181,7 @@ N|--reset|--projects=GLOB"`.
   settings.json), `PLATYPOD_TRANSCRIPT_STATE` (offset-ledger path). CLI flags:
   `--insecure`, plus the usual `--reset|--dry-run|--limit N|--projects=GLOB`.
 
-### Derived metrics (Mimir) — `claude_tx_*`
+### Derived metrics (Mimir) — `ai_tx_*`
 
 Telemetry and transcript *logs* are metadata/content; for **aggregatable** insight
 the shipper also derives numeric metrics from the structured transcript fields and
@@ -176,14 +199,14 @@ shipper builds OTLP datapoints by hand (`emit_metrics` in `bin/ship-transcripts`
 
 | Metric | Labels | Meaning |
 |---|---|---|
-| `claude_tx_tokens` | `kind`(input/output/cache_read/cache_write), `model`, `project`, `session_*` | per-message token counts |
-| `claude_tx_cost_usd` | `model`, `project`, `session_*` | per-message cost (token kinds × per-model rates; cache read 0.1×, 5m write 1.25×, 1h write 2× input) |
-| `claude_tx_tool_calls` | `tool_name`, `project`, `session_*` | tool invocations |
-| `claude_tx_tool_latency_seconds` | `tool_name`, … | tool_use→tool_result delta (DAG-matched) |
-| `claude_tx_tool_errors` | `tool_name`, … | `is_error` tool results |
-| `claude_tx_turns` | `project`, `session_*` | human turns (non-tool-result user messages) |
-| `claude_tx_stop_reason` | `stop_reason`, … | assistant stop reasons |
-| `claude_tx_event_epoch_seconds` | `project`, `session_*` | message event epoch → session duration / time-of-day |
+| `ai_tx_tokens` | `kind`(input/output/cache_read/cache_write), `model`, `project`, `session_*` | per-message token counts |
+| `ai_tx_cost_usd` | `model`, `project`, `session_*` | per-message cost (token kinds × per-model rates; cache read 0.1×, 5m write 1.25×, 1h write 2× input) |
+| `ai_tx_tool_calls` | `tool_name`, `project`, `session_*` | tool invocations |
+| `ai_tx_tool_latency_seconds` | `tool_name`, … | tool_use→tool_result delta (DAG-matched) |
+| `ai_tx_tool_errors` | `tool_name`, … | `is_error` tool results |
+| `ai_tx_turns` | `project`, `session_*` | human turns (non-tool-result user messages) |
+| `ai_tx_stop_reason` | `stop_reason`, … | assistant stop reasons |
+| `ai_tx_event_epoch_seconds` | `project`, `session_*` | message event epoch → session duration / time-of-day |
 
 The per-model rate table lives in `bin/ship-transcripts` (`MODEL_RATES`); update it
 when pricing changes. Unknown models fall back to Opus-tier. Visualised by the
@@ -209,7 +232,7 @@ drops back-dated samples even though the shipper reports them sent):
 
 > **Verifying backfill:** instant queries mislead for these sparse historical
 > gauges (5-min lookback shows only "today"). Use range functions, e.g.
-> `count(count_over_time(claude_tx_event_epoch_seconds[400d]))`, and check Mimir
+> `count(count_over_time(ai_tx_event_epoch_seconds[400d]))`, and check Mimir
 > `/metrics`: `cortex_discarded_samples_total{reason=...}` +
 > `cortex_ingester_tsdb_out_of_order_samples_appended_total`.
 

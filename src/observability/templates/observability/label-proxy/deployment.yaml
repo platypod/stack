@@ -1,0 +1,33 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.observability.labelProxy.label .Values.k8s.names.pods.suffix }}
+{{- $mimirSvc := print .Values.k8s.names.services.prefix .Values.observability.metrics.label .Values.k8s.names.services.suffix }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $pod }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.labelProxy.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.observability.labelProxy.image }}
+        args:
+        - --label={{ .Values.observability.labelProxy.enforceLabel }}
+        - --header-name={{ .Values.observability.labelProxy.headerName }}
+        # The X-Owner value is a regex (^(|user)$ for a user, .* for an admin).
+        - --regex-match
+        # Also enforce the matcher on the label/series APIs so Grafana template
+        # variables (label_values(...)) are scoped, not just the query APIs.
+        - --enable-label-apis
+        - --upstream=http://{{ $mimirSvc }}:{{ .Values.observability.metrics.ports.http.targetPort }}/prometheus
+        - --insecure-listen-address=0.0.0.0:{{ .Values.observability.labelProxy.ports.http.targetPort }}
+        ports:
+        - containerPort: {{ .Values.observability.labelProxy.ports.http.targetPort }}
+        resources:
+          {{- toYaml .Values.observability.labelProxy.resources | nindent 10 }}

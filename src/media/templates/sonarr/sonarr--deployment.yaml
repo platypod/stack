@@ -30,6 +30,7 @@ spec:
         ports:
         - name: {{ .Values.sonarr.ports.http.name }}
           containerPort: {{ .Values.sonarr.ports.http.targetPort }}
+        {{- include "media.netProbes" .Values.sonarr.ports.http.targetPort | nindent 8 }}
         env:
         - name: PUID
           value: "{{ .Values.media.system.userId }}"

@@ -1,0 +1,81 @@
+{{- $lldapSvc := print .Values.k8s.names.services.prefix .Values.lldap.label .Values.k8s.names.services.suffix }}
+{{- $s := .Values.observability.scopeShim }}
+{{- range $i := $s.instances }}
+{{- $pod := print $.Values.k8s.names.pods.prefix $i.label $.Values.k8s.names.pods.suffix }}
+{{- $upstreamSvc := print $.Values.k8s.names.services.prefix $i.upstreamLabel $.Values.k8s.names.services.suffix }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $pod }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+        scopeShimInstance: {{ $i.name }}
+      annotations:
+        # The script is read once at startup; restart the pod when it changes.
+        checksum/config: {{ include (print $.Template.BasePath "/observability/scope-shim/config-map.yaml") $ | sha256sum }}
+    spec:
+      containers:
+      - name: {{ $.Values.k8s.names.containers.prefix }}{{ $i.label }}{{ $.Values.k8s.names.containers.suffix }}
+        image: {{ $s.image }}
+        command: ["python3", "/app/shim.py"]
+        env:
+        - name: LLDAP_URL
+          value: "http://{{ $lldapSvc }}:{{ $.Values.lldap.ports.http.targetPort }}"
+        # Backend for this instance ({{ $i.name }}): metrics → prom-label-proxy, logs → Loki.
+        - name: UPSTREAM
+          value: "http://{{ $upstreamSvc }}:{{ $i.upstreamPort }}"
+        - name: LLDAP_USER
+          value: {{ $s.lldap.user | quote }}
+        - name: LLDAP_PASS
+          value: {{ $s.lldap.password | quote }}
+        - name: ADMIN_GROUP
+          value: {{ $s.adminGroup | quote }}
+        - name: SHIM_SECRET
+          value: {{ $s.secret | quote }}
+        - name: SHIM_SECRET_HEADER
+          value: {{ $s.secretHeader | quote }}
+        - name: USER_HEADER
+          value: {{ $s.userHeader | quote }}
+        - name: SHARED_OWNER
+          value: {{ $s.sharedOwner | quote }}
+        - name: TENANT_PREFIX
+          value: {{ $s.tenantPrefix | quote }}
+        - name: SHARED_TENANTS
+          value: {{ $s.sharedTenants | quote }}
+        - name: CACHE_TTL
+          value: {{ $s.cacheTtlSeconds | quote }}
+        - name: PORT
+          value: {{ $s.ports.http.targetPort | quote }}
+        ports:
+        - containerPort: {{ $s.ports.http.targetPort }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ $s.ports.http.targetPort }}
+          initialDelaySeconds: 5
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ $s.ports.http.targetPort }}
+          initialDelaySeconds: 2
+          periodSeconds: 10
+        resources:
+          {{- toYaml $s.resources | nindent 10 }}
+        volumeMounts:
+        - name: script
+          mountPath: /app/shim.py
+          subPath: shim.py
+      volumes:
+      - name: script
+        configMap:
+          name: {{ $.Values.k8s.names.configMaps.prefix }}{{ $s.scriptConfigMap }}{{ $.Values.k8s.names.configMaps.suffix }}
+{{- end }}

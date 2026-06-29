@@ -1,0 +1,16 @@
+{{- $s := .Values.observability.scopeShim }}
+{{- range $i := $s.instances }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $.Values.k8s.names.services.prefix }}{{ $i.label }}{{ $.Values.k8s.names.services.suffix }}
+spec:
+  ports:
+  - protocol: TCP
+    name: {{ $s.ports.http.name }}
+    port: {{ $s.ports.http.targetPort }}
+    targetPort: {{ $s.ports.http.targetPort }}
+  selector:
+    app: {{ $.Values.k8s.names.pods.prefix }}{{ $i.label }}{{ $.Values.k8s.names.pods.suffix }}
+{{- end }}

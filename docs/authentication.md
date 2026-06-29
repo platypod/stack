@@ -88,6 +88,18 @@ forward-auth layer (or are intentionally public).
 General-purpose pages (Dashy, Homepage, PokéClicker) only require any
 authenticated user (`one_factor`), no specific group.
 
+## Per-user dashboard data isolation (authorization)
+
+Authelia/LLDAP handle *authn*; **data scoping** in the shared Grafana dashboards
+(each user sees only their own Claude/Jellyfin data, `admins` see everyone) is a
+separate *authorization* concern enforced below Grafana. It does **not** run
+through Authelia on the datasource hop — a small ForwardAuth "scope shim" derives
+admin-ness live from the LLDAP `admins` group instead (the bearer-authz path was
+rejected on feasibility). The `admins` group therefore also governs dashboard
+scope.
+
+→ Full design + rationale: [observability/dashboard-multitenancy.md](observability/dashboard-multitenancy.md).
+
 ## Adding a new OIDC client
 
 1. Add the client block to `authelia--config-map.yaml` (hash the secret with

@@ -52,6 +52,7 @@ spec:
         ports:
         - name: {{ .Values.bazarr.ports.http.name }}
           containerPort: {{ .Values.bazarr.ports.http.targetPort }}
+        {{- include "media.netProbes" .Values.bazarr.ports.http.targetPort | nindent 8 }}
         env:
         - name: PUID
           value: "{{ .Values.media.system.userId }}"

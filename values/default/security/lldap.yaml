@@ -47,6 +47,9 @@ lldap:
       - dev
       - download
       - media
+      # Built-in LLDAP group (auto-created). Listed here so the seed Job can
+      # assign the grafana-authz service account to it (read-all, no write).
+      - lldap_strict_readonly
     users:
       - id: admin
         email: pl@ty.pod
@@ -77,6 +80,16 @@ lldap:
         displayName: OTEL Telemetry
         password: otel-telemetry-secret
         groups: []
+      # Read-only service account for the Grafana datasource scope shim: looks up
+      # any user's group membership (admins-or-not) to scope dashboard queries.
+      # Member of lldap_strict_readonly → can read all users/groups, no write.
+      # See docs/observability/dashboard-multitenancy.md.
+      - id: grafana-authz
+        email: grafana-authz@platypod.local
+        displayName: Grafana Authz
+        password: grafana-authz-secret
+        groups:
+          - lldap_strict_readonly
   replicasNb: 1
   resources:
     requests:

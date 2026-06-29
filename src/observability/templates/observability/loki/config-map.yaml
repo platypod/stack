@@ -4,7 +4,10 @@ metadata:
   name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.configMaps.suffix }}
 data:
   local-config.yaml: |
-    auth_enabled: false
+    # Multi-tenant: per-user transcript tenants (claude-<user>) + a default tenant
+    # for untagged logs. The gateway sets X-Scope-OrgID per push; reads come via
+    # the logs scope shim. See docs/observability/dashboard-multitenancy.md.
+    auth_enabled: true
 
     server:
       http_listen_port: {{ .Values.observability.logs.ports.http.targetPort }}

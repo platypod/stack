@@ -113,6 +113,26 @@ def message_cost_usd(usage: dict, model: str) -> float:
     ) / 1_000_000
 
 
+def message_cost_usd_by_kind(usage: dict, model: str) -> dict[str, float]:
+    """USD cost of one assistant message, split by token kind (same kinds as
+    ai_tx_tokens). Sums to message_cost_usd(). Lets the dashboard show that
+    cache_read dominates token volume but only a small share of cost."""
+    in_rate, out_rate = model_rates(model)
+    cc = usage.get("cache_creation") or {}
+    w5 = cc.get("ephemeral_5m_input_tokens", 0) or 0
+    w1h = cc.get("ephemeral_1h_input_tokens", 0) or 0
+    if not cc:  # older shape: only a flat cache_creation_input_tokens → treat as 5m
+        w5 = usage.get("cache_creation_input_tokens", 0) or 0
+    return {
+        "input": (usage.get("input_tokens", 0) or 0) * in_rate / 1_000_000,
+        "output": (usage.get("output_tokens", 0) or 0) * out_rate / 1_000_000,
+        "cache_read": (usage.get("cache_read_input_tokens", 0) or 0)
+        * in_rate * CACHE_READ_MULT / 1_000_000,
+        "cache_write": (w5 * CACHE_WRITE_5M_MULT + w1h * CACHE_WRITE_1H_MULT)
+        * in_rate / 1_000_000,
+    }
+
+
 def to_epoch_ns(ts: str) -> int | None:
     """ISO-8601 transcript timestamp → epoch nanoseconds (None if unparseable)."""
     if not ts:
@@ -271,7 +291,7 @@ def emit_metrics(o: dict, msg: dict, sid: str, project: str, title: str,
     typ = o.get("type")
     base = {"project": project, "session_id": sid, "session_title": title}
     # Per-session min/max → session duration & time-of-day, for every content line.
-    add("claude_tx_event_epoch_seconds", ts / 1e9, ts, **base)
+    add("ai_tx_event_epoch_seconds", ts / 1e9, ts, **base)
 
     if typ == "assistant":
         usage = msg.get("usage") or {}
@@ -289,12 +309,15 @@ def emit_metrics(o: dict, msg: dict, sid: str, project: str, title: str,
             ("cache_write", cache_write),
         ):
             if val:
-                add("claude_tx_tokens", val, ts, kind=kind, **mbase)
+                add("ai_tx_tokens", val, ts, kind=kind, **mbase)
         if usage:
-            add("claude_tx_cost_usd", message_cost_usd(usage, model), ts, **mbase)
+            add("ai_tx_cost_usd", message_cost_usd(usage, model), ts, **mbase)
+            for kind, cost in message_cost_usd_by_kind(usage, model).items():
+                if cost:
+                    add("ai_tx_cost_usd_by_kind", cost, ts, kind=kind, **mbase)
         sr = msg.get("stop_reason")
         if sr:
-            add("claude_tx_stop_reason", 1, ts, stop_reason=str(sr), **base)
+            add("ai_tx_stop_reason", 1, ts, stop_reason=str(sr), **base)
         content = msg.get("content")
         if isinstance(content, list):
             counts: dict[str, int] = {}
@@ -306,7 +329,7 @@ def emit_metrics(o: dict, msg: dict, sid: str, project: str, title: str,
                     if tid:
                         tool_use_map[tid] = (name, ts)
             for name, n in counts.items():
-                add("claude_tx_tool_calls", n, ts, tool_name=name, **base)
+                add("ai_tx_tool_calls", n, ts, tool_name=name, **base)
 
     elif typ == "user":
         content = msg.get("content")
@@ -317,13 +340,13 @@ def emit_metrics(o: dict, msg: dict, sid: str, project: str, title: str,
             name, use_ts = tool_use_map.get(str(b.get("tool_use_id", "")), ("", None))
             tn = {"tool_name": name} if name else {}
             if b.get("is_error"):
-                add("claude_tx_tool_errors", 1, ts, **tn, **base)
+                add("ai_tx_tool_errors", 1, ts, **tn, **base)
             if use_ts is not None and ts >= use_ts:
-                add("claude_tx_tool_latency_seconds", (ts - use_ts) / 1e9, ts,
+                add("ai_tx_tool_latency_seconds", (ts - use_ts) / 1e9, ts,
                     **tn, **base)
         # A human turn = a user message that isn't purely tool_result plumbing.
         if not (isinstance(content, list) and results and len(results) == len(content)):
-            add("claude_tx_turns", 1, ts, **base)
+            add("ai_tx_turns", 1, ts, **base)
 
 
 def main() -> int:
@@ -336,9 +359,22 @@ def main() -> int:
                     help="parse + redact + count, but do not send or advance offsets")
     ap.add_argument("--reset", action="store_true",
                     help="ignore saved offsets (re-ship everything)")
+    ap.add_argument("--metrics-only", action="store_true",
+                    help="emit metrics only, no Loki log lines, and leave the saved "
+                         "offset state untouched — idempotent metric backfill (e.g. "
+                         "with --reset) without duplicating transcript content in Loki")
     ap.add_argument("--insecure", action="store_true",
                     help="plaintext gRPC (no TLS) — for a local port-forward to the gateway")
+    ap.add_argument("--owner", default="",
+                    help="identity these transcripts belong to (default: $PLATYPOD_OWNER "
+                         "or the OS user). Stamped as the `owner`/`user` metric labels and "
+                         "the Loki tenant `claude-<owner>` for per-user dashboard isolation.")
     args = ap.parse_args()
+
+    import getpass
+    owner = args.owner or os.environ.get("PLATYPOD_OWNER") or getpass.getuser()
+    tenant = "claude-" + re.sub(r"[^a-z0-9-]+", "-", owner.lower()).strip("-")
+    print(f"owner: {owner}  (Loki tenant: {tenant})")
 
     secrets = harvest_secrets(REPO_VALUES)
     print(f"redaction: harvested {len(secrets)} secret literals from {REPO_VALUES}")
@@ -381,8 +417,13 @@ def main() -> int:
         # with internal exponential backoff up to `timeout`; on top of that we
         # flush per file and retry the flush, advancing a file's offset ONLY once
         # its records are confirmed flushed (see flush_with_retry / per-file save).
+        # Loki tenant: per-user transcript isolation. The gateway forwards this
+        # X-Scope-OrgID (headers_setter) to Loki. Metrics keep no tenant (Mimir
+        # multitenancy is off; per-user scoping there is the `owner` label).
+        log_headers = dict(headers)
+        log_headers["x-scope-orgid"] = tenant
         exporter = OTLPLogExporter(endpoint=endpoint,
-                                   headers=tuple(headers.items()), insecure=args.insecure,
+                                   headers=tuple(log_headers.items()), insecure=args.insecure,
                                    timeout=30)
         # Large backfills emit records faster than the exporter drains; the
         # default 2048-deep queue overflows ("Queue full, dropping Log"). Size it
@@ -407,6 +448,11 @@ def main() -> int:
 
         def add_metric(name: str, value: float, ts_ns: int, **attrs) -> None:
             attrs = {k: v for k, v in attrs.items() if v not in (None, "")}
+            # `owner` drives prom-label-proxy scoping; `user` is a parallel,
+            # non-enforced copy so an admin dashboard can focus on one user (the
+            # proxy overrides `owner`, so it can't be used as a filter variable).
+            attrs.setdefault("owner", owner)
+            attrs.setdefault("user", owner)
             metric_series.setdefault(name, []).append(NumberDataPoint(
                 attributes=attrs, start_time_unix_nano=int(ts_ns),
                 time_unix_nano=int(ts_ns), value=value))
@@ -486,12 +532,13 @@ def main() -> int:
                 attrs["event_time"] = str(o["timestamp"])  # real time, kept as metadata
             ts_seq += 1
             if not args.dry_run:
-                logger.emit(
-                    timestamp=ts_base + ts_seq,        # monotonic ingestion time
-                    observed_timestamp=time.time_ns(),
-                    severity_number=SeverityNumber.INFO,
-                    body=body, attributes=attrs,
-                )
+                if not args.metrics_only:
+                    logger.emit(
+                        timestamp=ts_base + ts_seq,        # monotonic ingestion time
+                        observed_timestamp=time.time_ns(),
+                        severity_number=SeverityNumber.INFO,
+                        body=body, attributes=attrs,
+                    )
                 emit_metrics(o, msg, sid, project, titles.get(sid, ""),
                              tool_use_map, add_metric)
             shipped += 1
@@ -506,8 +553,11 @@ def main() -> int:
         if args.dry_run:
             pass
         elif flush_with_retry():
-            state[fp] = {"inode": st.st_ino, "offset": offset + consumed}
-            save_state(state)
+            # --metrics-only is a side-channel backfill: don't advance the offset
+            # state that drives incremental log shipping (logs weren't emitted).
+            if not args.metrics_only:
+                state[fp] = {"inode": st.st_ino, "offset": offset + consumed}
+                save_state(state)
         else:
             failed_files.append(p.name)  # offset NOT advanced → retried next run
         if limit_hit:

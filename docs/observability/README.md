@@ -19,3 +19,8 @@ per-service reference.
 
 ## Jobs
 - [uptime-kuma-setup-job](uptime-kuma-setup-job.md) — seeds admin + monitors.
+
+## Design notes
+- [dashboard-multitenancy](dashboard-multitenancy.md) — per-user data isolation
+  in the shared dashboards (label-scoped Mimir + multi-tenant Loki + a ForwardAuth
+  scope shim); decision record + design.

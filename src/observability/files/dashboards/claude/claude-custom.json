@@ -37,7 +37,7 @@
           "uid": "metrics"
         },
         "query": {
-          "query": "label_values(claude_tx_event_epoch_seconds, project)",
+          "query": "label_values(ai_tx_event_epoch_seconds, project)",
           "refId": "A"
         },
         "includeAll": true,
@@ -58,7 +58,7 @@
           "uid": "metrics"
         },
         "query": {
-          "query": "label_values(claude_tx_event_epoch_seconds{project=~\"$project\"}, session_title)",
+          "query": "label_values(ai_tx_event_epoch_seconds{project=~\"$project\"}, session_title)",
           "refId": "A"
         },
         "includeAll": true,
@@ -79,7 +79,7 @@
           "uid": "metrics"
         },
         "query": {
-          "query": "label_values(claude_tx_tool_calls, tool_name)",
+          "query": "label_values(ai_tx_tool_calls, tool_name)",
           "refId": "A"
         },
         "includeAll": true,
@@ -160,7 +160,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "sum(sum_over_time(claude_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
+          "expr": "sum(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
           "instant": true
         }
       ]
@@ -218,7 +218,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "(sum(sum_over_time(claude_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))) / clamp_min(count(count by (session_id)(sum_over_time(claude_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))),1)",
+          "expr": "(sum(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))) / clamp_min(count(count by (session_id)(sum_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))),1)",
           "instant": true
         }
       ]
@@ -275,7 +275,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "sum(sum_over_time(claude_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
+          "expr": "sum(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
           "instant": true
         }
       ]
@@ -333,7 +333,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "sum(sum_over_time(claude_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\", kind=\"cache_read\"}[$__range])) / clamp_min(sum(sum_over_time(claude_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\", kind=~\"input|cache_read\"}[$__range])),1)",
+          "expr": "sum(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\", kind=\"cache_read\"}[$__range])) / clamp_min(sum(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\", kind=~\"input|cache_read\"}[$__range])),1)",
           "instant": true
         }
       ]
@@ -390,7 +390,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "count(count by (session_id)(sum_over_time(claude_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])))",
+          "expr": "count(count by (session_id)(sum_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])))",
           "instant": true
         }
       ]
@@ -447,7 +447,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "sum(sum_over_time(claude_tx_turns{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
+          "expr": "sum(sum_over_time(ai_tx_turns{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
           "instant": true
         }
       ]
@@ -504,7 +504,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "sum(sum_over_time(claude_tx_tool_calls{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
+          "expr": "sum(sum_over_time(ai_tx_tool_calls{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
           "instant": true
         }
       ]
@@ -562,7 +562,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "sum(sum_over_time(claude_tx_tool_errors{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) / clamp_min(sum(sum_over_time(claude_tx_tool_calls{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])),1)",
+          "expr": "sum(sum_over_time(ai_tx_tool_errors{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) / clamp_min(sum(sum_over_time(ai_tx_tool_calls{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])),1)",
           "instant": true
         }
       ]
@@ -627,7 +627,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "sum by (model)(sum_over_time(claude_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__interval])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
+          "expr": "sum by (model)(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__interval])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
           "legendFormat": "{{model}}"
         }
       ]
@@ -679,7 +679,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "sum by (kind)(sum_over_time(claude_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__interval]))",
+          "expr": "sum by (kind)(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__interval]))",
           "legendFormat": "{{kind}}"
         }
       ]
@@ -728,7 +728,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "sum by (model)(sum_over_time(claude_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
+          "expr": "sum by (model)(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
           "legendFormat": "{{model}}",
           "instant": true
         }
@@ -777,7 +777,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "sum by (project)(sum_over_time(claude_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
+          "expr": "sum by (project)(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
           "legendFormat": "{{project}}",
           "instant": true
         }
@@ -785,8 +785,9 @@
     },
     {
       "id": 15,
-      "type": "piechart",
-      "title": "Tokens by kind",
+      "type": "table",
+      "title": "Tokens & cost by kind (${currency:text})",
+      "description": "cache_read dominates token volume but only a small share of cost — it bills at 0.1x the input rate.",
       "datasource": {
         "type": "prometheus",
         "uid": "metrics"
@@ -799,27 +800,111 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "custom": {
+            "align": "auto"
+          }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tokens"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tokens %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cost"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "gradient"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cost %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
       },
       "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "values": [
-            "value",
-            "percent"
-          ]
-        },
-        "pieType": "donut",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "values": false
-        }
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Cost",
+            "desc": true
+          }
+        ]
       },
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "kind": "Kind",
+              "Value #A": "Tokens",
+              "Value #B": "Tokens %",
+              "Value #C": "Cost",
+              "Value #D": "Cost %"
+            }
+          }
+        }
+      ],
       "targets": [
         {
           "refId": "A",
@@ -827,9 +912,39 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "sum by (kind)(sum_over_time(claude_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
-          "legendFormat": "{{kind}}",
-          "instant": true
+          "format": "table",
+          "instant": true,
+          "expr": "sum by (kind)(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "format": "table",
+          "instant": true,
+          "expr": "sum by (kind)(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) / scalar(sum(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))) * 100"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "format": "table",
+          "instant": true,
+          "expr": "sum by (kind)(sum_over_time(ai_tx_cost_usd_by_kind{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "format": "table",
+          "instant": true,
+          "expr": "sum by (kind)(sum_over_time(ai_tx_cost_usd_by_kind{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) / scalar(sum(sum_over_time(ai_tx_cost_usd_by_kind{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))) * 100"
         }
       ]
     },
@@ -890,7 +1005,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "sum by (tool_name)(sum_over_time(claude_tx_tool_calls{project=~\"$project\", session_title=~\"${session:regex}\", tool_name=~\"$tool\"}[$__range]))",
+          "expr": "sum by (tool_name)(sum_over_time(ai_tx_tool_calls{project=~\"$project\", session_title=~\"${session:regex}\", tool_name=~\"$tool\"}[$__range]))",
           "legendFormat": "{{tool_name}}",
           "instant": true
         }
@@ -939,7 +1054,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "sum by (tool_name)(sum_over_time(claude_tx_tool_latency_seconds{project=~\"$project\", session_title=~\"${session:regex}\", tool_name=~\"$tool\"}[$__range])) / clamp_min(sum by (tool_name)(count_over_time(claude_tx_tool_latency_seconds{project=~\"$project\", session_title=~\"${session:regex}\", tool_name=~\"$tool\"}[$__range])),1)",
+          "expr": "sum by (tool_name)(sum_over_time(ai_tx_tool_latency_seconds{project=~\"$project\", session_title=~\"${session:regex}\", tool_name=~\"$tool\"}[$__range])) / clamp_min(sum by (tool_name)(count_over_time(ai_tx_tool_latency_seconds{project=~\"$project\", session_title=~\"${session:regex}\", tool_name=~\"$tool\"}[$__range])),1)",
           "legendFormat": "{{tool_name}}",
           "instant": true
         }
@@ -989,7 +1104,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "sum by (stop_reason)(sum_over_time(claude_tx_stop_reason{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
+          "expr": "sum by (stop_reason)(sum_over_time(ai_tx_stop_reason{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
           "legendFormat": "{{stop_reason}}",
           "instant": true
         }
@@ -1038,7 +1153,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "max by (tool_name)(max_over_time(claude_tx_tool_latency_seconds{project=~\"$project\", session_title=~\"${session:regex}\", tool_name=~\"$tool\"}[$__range]))",
+          "expr": "max by (tool_name)(max_over_time(ai_tx_tool_latency_seconds{project=~\"$project\", session_title=~\"${session:regex}\", tool_name=~\"$tool\"}[$__range]))",
           "legendFormat": "{{tool_name}}",
           "instant": true
         }
@@ -1087,7 +1202,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "sum by (tool_name)(sum_over_time(claude_tx_tool_errors{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
+          "expr": "sum by (tool_name)(sum_over_time(ai_tx_tool_errors{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
           "legendFormat": "{{tool_name}}",
           "instant": true
         }
@@ -1140,7 +1255,7 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "expr": "sum(sum_over_time(claude_tx_turns{project=~\"$project\", session_title=~\"${session:regex}\"}[$__interval]))",
+          "expr": "sum(sum_over_time(ai_tx_turns{project=~\"$project\", session_title=~\"${session:regex}\"}[$__interval]))",
           "legendFormat": "turns"
         }
       ]
@@ -1270,7 +1385,7 @@
           },
           "format": "table",
           "instant": true,
-          "expr": "sum by (session_title, project)(sum_over_time(claude_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))"
+          "expr": "sum by (session_title, project)(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))"
         },
         {
           "refId": "B",
@@ -1280,7 +1395,7 @@
           },
           "format": "table",
           "instant": true,
-          "expr": "sum by (session_title, project)(sum_over_time(claude_tx_tool_calls{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))"
+          "expr": "sum by (session_title, project)(sum_over_time(ai_tx_tool_calls{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))"
         },
         {
           "refId": "C",
@@ -1290,7 +1405,7 @@
           },
           "format": "table",
           "instant": true,
-          "expr": "(max by (session_title, project)(max_over_time(claude_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) - min by (session_title, project)(min_over_time(claude_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])))"
+          "expr": "(max by (session_title, project)(max_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) - min by (session_title, project)(min_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])))"
         },
         {
           "refId": "D",
@@ -1300,7 +1415,7 @@
           },
           "format": "table",
           "instant": true,
-          "expr": "sum by (session_title, project)(sum_over_time(claude_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))"
+          "expr": "sum by (session_title, project)(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))"
         }
       ]
     },

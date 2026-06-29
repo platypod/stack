@@ -42,6 +42,8 @@ transmission:
   resources:
     requests:
       cpu: 100m
-      memory: 128Mi
-    limits:
       memory: 256Mi
+    limits:
+      # 256Mi OOMKilled the daemon once the torrent list grew (resume/verification
+      # state is held in memory). Raised to give headroom for a large/active set.
+      memory: 768Mi

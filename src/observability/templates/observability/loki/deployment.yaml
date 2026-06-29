@@ -29,6 +29,11 @@ spec:
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.observability.logs.image }}
+        # Allow admins' federated reads: X-Scope-OrgID may list several tenants
+        # (claude-<user>|_shared) so they can see everyone. See dashboard-multitenancy.md.
+        args:
+        - '-config.file=/etc/loki/local-config.yaml'
+        - '-querier.multi-tenant-queries-enabled=true'
         resources:
           {{- toYaml .Values.observability.logs.resources | nindent 10 }}
         ports:

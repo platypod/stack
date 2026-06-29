@@ -10,6 +10,7 @@ For cluster provisioning see [`infra/k8s-in-vms`](../../infra/CLAUDE.md).
 | [conventions.md](conventions.md) | Chart structure, value conventions, pitfalls, setup Jobs, adding a service |
 | [services.md](services.md) | Catalog of every service, by module, with its auth model |
 | [authentication.md](authentication.md) | Authelia forward-auth + OIDC, who uses what, access groups |
+| [decisions.md](decisions.md) | Non-obvious *why-we-built-it-this-way* choices for the stack |
 | [TODO.md](TODO.md) | Consolidated backlog (soon / later / done) |
 
 Per-module deep-dives live in each module's `README.md`:

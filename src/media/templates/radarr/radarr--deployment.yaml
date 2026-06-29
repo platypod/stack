@@ -30,6 +30,7 @@ spec:
         ports:
         - name: {{ .Values.radarr.ports.http.name }}
           containerPort: {{ .Values.radarr.ports.http.targetPort }}
+        {{- include "media.netProbes" .Values.radarr.ports.http.targetPort | nindent 8 }}
         env:
         - name: PUID
           value: "{{ .Values.media.system.userId }}"

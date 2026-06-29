@@ -55,6 +55,7 @@ spec:
         ports:
         - name: {{ .Values.readarr.ports.http.name }}
           containerPort: {{ .Values.readarr.ports.http.targetPort }}
+        {{- include "media.netProbes" .Values.readarr.ports.http.targetPort | nindent 8 }}
         env:
         - name: PUID
           value: "{{ .Values.media.system.userId }}"

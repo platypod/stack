@@ -28,6 +28,7 @@ spec:
         ports:
         - name: {{ .Values.prowlarr.ports.http.name }}
           containerPort: {{ .Values.prowlarr.ports.http.targetPort }}
+        {{- include "media.netProbes" .Values.prowlarr.ports.http.targetPort | nindent 8 }}
         env:
         - name: PUID
           value: "{{ .Values.media.system.userId }}"

@@ -127,9 +127,10 @@ build:         ## Build and push a custom image  (IMAGE=pokeclicker VERSION=v0.1
 # ---------------------------------------------------------------------------
 
 .PHONY: ship-transcripts
-ship-transcripts: ## Ship Claude Code transcripts → Loki (content) + Mimir (claude_tx_* metrics); redacts stack/values secrets; tails by default. ARGS="--dry-run|--limit N|--reset|--insecure|--projects=GLOB" (env: OTEL_EXPORTER_OTLP_ENDPOINT, PLATYPOD_TRANSCRIPT_STATE)
-	@test -x bin/.venv/bin/python || { echo "bootstrapping bin/.venv…"; python3 -m venv bin/.venv && bin/.venv/bin/pip install -q --disable-pip-version-check opentelemetry-sdk opentelemetry-exporter-otlp-proto-grpc; }
-	@bin/.venv/bin/python bin/ship-transcripts $(ARGS)
+ship-transcripts: ## [retired → prompt-meter submodule] Ship AI usage telemetry (ai_tx_* + transcripts). Delegates to ../prompt-meter; ARGS passed through.
+	@echo "→ stack/bin/ship-transcripts is retired; delegating to the prompt-meter submodule (ai_tx_* schema)."
+	@$(MAKE) --no-print-directory -C ../prompt-meter install >/dev/null
+	@$(MAKE) --no-print-directory -C ../prompt-meter ship ARGS="$(ARGS)"
 
 .PHONY: help
 help:          ## Show this help

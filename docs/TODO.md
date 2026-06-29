@@ -24,6 +24,13 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
 - **Default-user enable/disable on Authelia** — add lifecycle management for the
   default users (activation / deactivation) in LLDAP/Authelia.
 
+- **Review architectural decision-records management.** Want a cleaner view of
+  every decision taken — against which alternatives, and why. Currently split
+  across [decisions.md](decisions.md) (new), [authentication.md](authentication.md),
+  the per-feature deep-dives (e.g. [observability/dashboard-multitenancy.md](observability/dashboard-multitenancy.md)),
+  and [`infra/docs/decisions.md`](../../infra/docs/decisions.md). Consider a
+  consistent ADR format/index spanning both subsystems.
+
 - **Document LE crawl traffic spikes** seen after certificate signing.
   (ref: `acme-staging-v02.api.letsencrypt.org/acme/chall/185205204/...`)
 

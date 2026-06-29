@@ -4,6 +4,18 @@ metadata:
   name: "{{ .Values.k8s.names.configMaps.prefix }}{{ tpl .Values.observability.otelCollector.gateway.label . }}{{ .Values.k8s.names.configMaps.suffix }}"
 data:
   collector.yaml: |
+    extensions:
+      # Forward the per-request x-scope-orgid (set by ship-transcripts) as the
+      # Loki tenant header. Logs without it (e.g. native Claude telemetry, future
+      # pod logs) fall back to the default tenant. See
+      # docs/observability/dashboard-multitenancy.md.
+      headers_setter:
+        headers:
+          - action: upsert
+            key: X-Scope-OrgID
+            from_context: x-scope-orgid
+            default_value: {{ .Values.observability.logs.defaultTenant | default "_shared" | quote }}
+
     receivers:
 
       # Cluster-state metrics from the K8s API: pod phases, container restarts,
@@ -20,8 +32,12 @@ data:
         protocols:
           grpc:
             endpoint: 0.0.0.0:{{ .Values.observability.otelCollector.gateway.ports.grpc.targetPort }}
+            # Expose request metadata (e.g. the shipper's x-scope-orgid) so the
+            # headers_setter extension can forward it as the Loki tenant.
+            include_metadata: true
           http:
             endpoint: 0.0.0.0:{{ .Values.observability.otelCollector.gateway.ports.http.targetPort }}
+            include_metadata: true
       {{- if .Values.observability.otelCollector.receivers.jellyfinCustom.enable }}
       prometheus/jellyfinCustom:
         config:
@@ -143,6 +159,13 @@ data:
         timeout: 5s
         send_batch_size: 512
         send_batch_max_size: 2048
+      # Logs batch separately per x-scope-orgid so one Loki push never mixes
+      # tenants (the batcher otherwise drops per-request metadata).
+      batch/logs:
+        timeout: 5s
+        send_batch_size: 512
+        send_batch_max_size: 2048
+        metadata_keys: [x-scope-orgid]
       memory_limiter:
         check_interval: 1s
         limit_mib: 4000
@@ -191,6 +214,17 @@ data:
           - key: reivi_label
             action: insert
             value: reivi_value
+      # Per-user dashboard isolation: every metric must carry an `owner` label so
+      # prom-label-proxy (which rejects empty-matching regexes) can scope it.
+      # Jellyfin's per-user `user_name` becomes the owner; everything else is
+      # "_shared" (visible to all). Claude metrics keep any owner the shipper set.
+      # See docs/observability/dashboard-multitenancy.md.
+      transform/owner:
+        metric_statements:
+        - context: datapoint
+          statements:
+          - set(attributes["owner"], attributes["user_name"]) where attributes["owner"] == nil and attributes["user_name"] != nil
+          - set(attributes["owner"], "_shared") where attributes["owner"] == nil
 
     exporters:
       debug/verbose:
@@ -213,6 +247,9 @@ data:
           insecure: true
       otlphttp/loki:
         endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.logs.ports.http.targetPort }}/otlp
+        # Per-tenant X-Scope-OrgID injected from request metadata (Loki auth_enabled).
+        auth:
+          authenticator: headers_setter
         tls:
           insecure: true
       otlphttp/tempo:
@@ -223,53 +260,54 @@ data:
           insecure: true
 
     service:
+      extensions: [headers_setter]
       pipelines:
         logs:
           receivers: [otlp]
-          processors: [batch, memory_limiter]
+          processors: [batch/logs, memory_limiter]
           exporters: [otlphttp/loki]
 
         metrics/otlp:
           receivers: [otlp]
-          processors: [attributes/otlp, batch, memory_limiter]
+          processors: [attributes/otlp, transform/owner, batch, memory_limiter]
           exporters: [otlphttp/mimir]
         {{- if .Values.observability.otelCollector.receivers.jellyfinCustom.enable }}
         metrics/jellyfinCustom:
           receivers: [prometheus/jellyfinCustom]
-          processors: [attributes/prometheus, batch, memory_limiter]
+          processors: [attributes/prometheus, transform/owner, batch, memory_limiter]
           exporters: [otlphttp/mimir]
         {{- end }}
         {{- if .Values.observability.otelCollector.receivers.jellyfinNative.enable }}
         metrics/jellyfinNative:
           receivers: [prometheus/jellyfinNative]
-          processors: [attributes/prometheus, batch, memory_limiter]
+          processors: [attributes/prometheus, transform/owner, batch, memory_limiter]
           exporters: [otlphttp/mimir]
         {{- end }}
         {{- if .Values.observability.otelCollector.receivers.synologySnmp.enable }}
         metrics/synologySnmp:
           receivers: [prometheus/synologySnmp]
-          processors: [attributes/snmp, batch, memory_limiter]
+          processors: [attributes/snmp, transform/owner, batch, memory_limiter]
           exporters: [otlphttp/mimir]
         {{- end }}
         metrics/transmission:
           receivers: [prometheus/transmission]
-          processors: [attributes/prometheus, batch, memory_limiter]
+          processors: [attributes/prometheus, transform/owner, batch, memory_limiter]
           exporters: [otlphttp/mimir]
         metrics/fx:
           receivers: [prometheus/fx]
-          processors: [attributes/prometheus, batch, memory_limiter]
+          processors: [attributes/prometheus, transform/owner, batch, memory_limiter]
           exporters: [otlphttp/mimir]
         metrics/k8s_cluster:
           receivers: [k8s_cluster]
-          processors: [transform/k8s_cluster, attributes/k8s_cluster, batch, memory_limiter]
+          processors: [transform/k8s_cluster, attributes/k8s_cluster, transform/owner, batch, memory_limiter]
           exporters: [otlphttp/mimir]
         metrics/traefik:
           receivers: [prometheus/traefik]
-          processors: [attributes/prometheus, batch, memory_limiter]
+          processors: [attributes/prometheus, transform/owner, batch, memory_limiter]
           exporters: [otlphttp/mimir]
         metrics/authelia:
           receivers: [prometheus/authelia]
-          processors: [attributes/prometheus, batch, memory_limiter]
+          processors: [attributes/prometheus, transform/owner, batch, memory_limiter]
           exporters: [otlphttp/mimir]
 
         traces:

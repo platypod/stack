@@ -1,6 +1,9 @@
 observability:
   logs:
     label: loki
+    # Loki tenant for logs that don't set X-Scope-OrgID (native Claude telemetry,
+    # future k8s pod logs). Admins federate it (scopeShim.sharedTenants).
+    defaultTenant: "_shared"
     image: grafana/loki:3.7.2
     resources:
       requests:
