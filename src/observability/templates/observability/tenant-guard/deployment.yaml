@@ -1,0 +1,50 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.observability.tenantGuard.label .Values.k8s.names.pods.suffix }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $pod }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/observability/tenant-guard/config-map.yaml") . | sha256sum }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.tenantGuard.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.observability.tenantGuard.image }}
+        command: ["python3", "/app/guard.py"]
+        env:
+        - name: TENANT_PREFIX
+          value: {{ .Values.observability.tenantGuard.tenantPrefix | quote }}
+        - name: PORT
+          value: {{ .Values.observability.tenantGuard.ports.http.targetPort | quote }}
+        ports:
+        - containerPort: {{ .Values.observability.tenantGuard.ports.http.targetPort }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ .Values.observability.tenantGuard.ports.http.targetPort }}
+          initialDelaySeconds: 5
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ .Values.observability.tenantGuard.ports.http.targetPort }}
+          initialDelaySeconds: 2
+          periodSeconds: 10
+        resources:
+          {{- toYaml .Values.observability.tenantGuard.resources | nindent 10 }}
+        volumeMounts:
+        - name: script
+          mountPath: /app/guard.py
+          subPath: guard.py
+      volumes:
+      - name: script
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.tenantGuard.label }}{{ .Values.k8s.names.configMaps.suffix }}

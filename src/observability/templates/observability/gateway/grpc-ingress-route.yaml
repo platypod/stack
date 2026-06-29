@@ -22,7 +22,11 @@ spec:
   - kind: Rule
     match: Host(`{{ tpl .Values.observability.otelCollector.gateway.grpcHost . }}`)
     middlewares:
+    # 1. Authenticate (Basic → LLDAP) and emit Remote-User.
     - name: {{ .Values.k8s.names.middlewares.prefix }}{{ .Values.authelia.label }}-basic{{ .Values.k8s.names.middlewares.suffix }}
+      namespace: {{ .Values.k8s.namespace }}
+    # 2. Enforce that the writer only claims its own Loki tenant (x-scope-orgid).
+    - name: {{ .Values.k8s.names.middlewares.prefix }}{{ .Values.observability.tenantGuard.label }}{{ .Values.k8s.names.middlewares.suffix }}
       namespace: {{ .Values.k8s.namespace }}
     services:
     - kind: Service

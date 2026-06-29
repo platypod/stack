@@ -1,6 +1,8 @@
 # Per-user dashboard data isolation
 
-**Status:** decided — implementation pending.
+**Status:** implemented & verified on **dev** (read-side scoping, Loki multitenancy,
+and per-user ingest hardening). Not yet rolled to prod — see the prod caveats in the
+migration + rollout notes below.
 
 How we let several users share the Grafana dashboards (Claude usage, Jellyfin,
 …) while each one sees **only their own data**, and admins see **everyone's**.
@@ -245,6 +247,69 @@ new labels/tenant is invisible** (and orphaned):
 - **Native Claude telemetry** (CLI, `service_name=claude-code-desktop`) lands in
   `_shared` unless the laptop's `~/.claude/settings.json` sets
   `OTEL_EXPORTER_OTLP_HEADERS` to include `x-scope-orgid=claude-<user>`.
+
+## Ingest hardening: per-user write authorization (enforce-don't-stamp)
+
+By default `--owner` is **client-declared** — a shipper could claim another user's
+identity. For untrusted shippers, the ingest path enforces that a writer may only
+write **its own** Loki tenant, without changing the client tool:
+
+1. **Per-user gateway auth.** The OTLP/gRPC ingest rule is opened from the single
+   `otel-telemetry` account to the **`otel-writers` group** (Authelia
+   `access_control`, [authelia.yaml](../../values/default/security/authelia.yaml)).
+   Each shipper authenticates with its **own** LLDAP creds, so Authelia's
+   `Remote-User` is the real identity. `otel-telemetry` stays a group member (the
+   shared/CI path) until every shipper is a real account.
+2. **`tenant-guard` ForwardAuth shim** (`src/observability/.../tenant-guard/`),
+   chained **after** `authelia-basic` on the gRPC ingress. It `403`s any request
+   whose `x-scope-orgid` ≠ `claude-<slug(Remote-User)>`. Requests with no tenant
+   header (metrics exports, native telemetry) are allowed — they claim no tenant
+   and land in the default `_shared`.
+
+**Coverage (important asymmetry):** this protects the **Loki tenant** (transcript
+*content*) — a writer physically cannot write `claude-<someone-else>`. It does
+**not** protect the **Mimir `owner` label**, which lives in the OTLP payload (not a
+header) and stays client-declared — a writer could still mislabel its own *metrics'*
+owner (fake token counts). Closing that would need payload-level stamping; left
+open deliberately since the sensitive data is the content, not the counts.
+
+Verified on dev: `otel-writers` member with matching `--owner` ships fine; the same
+creds forging another `--owner` get `PERMISSION_DENIED` on the log export (metrics
+still flow); a non-member is denied at Authelia.
+
+### Why the guard (enforce), not the `headers_setter` stamp
+
+Two ways to make the tenant trustworthy server-side. We **chose the guard** (the
+client sets `x-scope-orgid`; the gateway 403s it if it isn't the writer's own
+tenant). We **rejected the stamp** (repoint the gateway's existing `headers_setter`
+at `Remote-User` so the tenant is *derived* server-side and the client's claim is
+ignored entirely). Same security guarantee — no writing into another tenant — and
+both are unbypassable (the middleware / exporter is mandatory on the path). It
+came down to fit, not safety:
+
+- **The stamp can't keep the `claude-` prefix.** `headers_setter` copies a context
+  value *verbatim* (`from_context: remote-user` → tenant `dave`, not `claude-dave`);
+  it has no templating. Using it would force **dropping the `claude-` prefix**,
+  which ripples across the system: the read-side scope shim builds `claude-<user>`,
+  prompt-meter's `tenant_prefix` is `claude-`, and all existing data lives under
+  `claude-<user>` tenants (→ a re-ship). So "no new pod in the gateway" turns into a
+  cross-cutting rename + data migration. Net: *less* tidy, not more — which corrects
+  an earlier offhand "the stamp is tidier" remark.
+- **The guard tightens the metric side too, for honest clients.** Passing the guard
+  requires `x-scope-orgid == claude-<Remote-User>`, i.e. `--owner == Remote-User`;
+  since prompt-meter uses the same `--owner` for the metric `owner` label *and* the
+  tenant, an honest run that passes the guard also has a correct `owner` label. The
+  stamp only fixes the tenant and leaves the metric label untouched.
+
+**Accepted, still open:** a *custom malicious* tool could send metrics with a forged
+`owner` and simply omit the tenant header (so the guard waves it through). Neither
+approach closes that — it's a payload-level concern (see the *Coverage asymmetry*
+above). Left open on purpose: the sensitive data is transcript *content* (the
+tenant), not token *counts* (the label).
+
+**Revisit the stamp only if** you decide to drop the `claude-` prefix for unrelated
+reasons — then deriving the tenant from `Remote-User` becomes the natural, pod-free
+choice.
 
 ## Rollout / testing note
 

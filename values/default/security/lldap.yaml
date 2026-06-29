@@ -50,6 +50,10 @@ lldap:
       # Built-in LLDAP group (auto-created). Listed here so the seed Job can
       # assign the grafana-authz service account to it (read-all, no write).
       - lldap_strict_readonly
+      # Members may push telemetry to the OTLP/gRPC gateway. The Authelia ingest
+      # rule allows this group; the tenant-guard shim then enforces that each one
+      # may only write its own Loki tenant (claude-<user>).
+      - otel-writers
     users:
       - id: admin
         email: pl@ty.pod
@@ -66,20 +70,25 @@ lldap:
         password: davethedev
         groups:
           - dev
+          - otel-writers   # may ship his own telemetry (tenant claude-dave)
       - id: guest
         email: gues@ty.pod
         displayName: guesto
         password: guest-password
         groups: []
       # Non-interactive service account for OTLP/gRPC telemetry ingestion
-      # (Claude Code). Authenticates via Authorization: Basic against the
-      # otel-collector-grpc ingress; no group memberships, scoped by the
-      # Authelia access_control rule on that host alone.
+      # (native Claude Code telemetry / non-human shippers). Member of
+      # otel-writers so it keeps working through the broadened ingest rule.
+      # It writes no per-user tenant (no x-scope-orgid → lands in _shared), so the
+      # tenant-guard lets it through. Remove once every shipper is a real per-user
+      # account; until then it's the shared/CI path. See docs/observability/
+      # dashboard-multitenancy.md.
       - id: otel-telemetry
         email: otel-telemetry@platypod.local
         displayName: OTEL Telemetry
         password: otel-telemetry-secret
-        groups: []
+        groups:
+          - otel-writers
       # Read-only service account for the Grafana datasource scope shim: looks up
       # any user's group membership (admins-or-not) to scope dashboard queries.
       # Member of lldap_strict_readonly → can read all users/groups, no write.

@@ -59,6 +59,24 @@ observability:
       limits:
         memory: 64Mi
 
+  # Ingest-side ForwardAuth: enforces that an authenticated writer may only claim
+  # its own Loki tenant (x-scope-orgid == claude-<slug(Remote-User)>). Chained
+  # after authelia-basic on the OTLP/gRPC ingress. See dashboard-multitenancy.md.
+  tenantGuard:
+    label: tenant-guard
+    image: python:3-alpine
+    tenantPrefix: "claude-"   # must match the shipper's tenant + scopeShim
+    ports:
+      http:
+        name: http
+        targetPort: 8080
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 64Mi
+
   # prom-label-proxy: rewrites every PromQL/label query to inject the `owner`
   # matcher supplied (as a regex) by the scope shim via the X-Owner header.
   # Fronts Mimir so the Grafana metrics datasource is per-user scoped.

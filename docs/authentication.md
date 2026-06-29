@@ -84,6 +84,7 @@ forward-auth layer (or are intentionally public).
 | `media` | *arr stack, Mediarvester, RomM, Komga/Kavita, Suwayomi |
 | `download` | Transmission, qBittorrent, Deluge |
 | `dev` | AdGuard, BookStack, Wiki.js, Outline, CloudBeaver, Grafana, Loki/Mimir/Tempo, Uptime-Kuma, whoami, the `*-db` admin UIs |
+| `otel-writers` | Push telemetry to the OTLP/gRPC gateway (Basic auth). The `tenant-guard` shim then limits each writer to its own `claude-<user>` Loki tenant — see [observability/dashboard-multitenancy.md](observability/dashboard-multitenancy.md). |
 
 General-purpose pages (Dashy, Homepage, PokéClicker) only require any
 authenticated user (`one_factor`), no specific group.

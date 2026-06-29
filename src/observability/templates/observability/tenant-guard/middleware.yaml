@@ -1,0 +1,13 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ .Values.k8s.names.middlewares.prefix }}{{ .Values.observability.tenantGuard.label }}{{ .Values.k8s.names.middlewares.suffix }}
+  labels:
+    chartVersion: {{ .Chart.Version }}
+    env: {{ .Values.project.env }}
+spec:
+  forwardAuth:
+    # Chained AFTER authelia-basic, so the request already carries Remote-User.
+    # The guard 403s a writer claiming an x-scope-orgid that isn't its own tenant.
+    address: 'http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.tenantGuard.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.tenantGuard.ports.http.targetPort }}/auth'
+    trustForwardHeader: true

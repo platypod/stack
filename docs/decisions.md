@@ -20,3 +20,23 @@ two-datasource admin bypass (no OSS datasource permissions), token-forward /
 swapping Authelia (the shim is inherent glue, not an Authelia shortcoming).
 
 → Full decision record + design: [observability/dashboard-multitenancy.md](observability/dashboard-multitenancy.md).
+
+## Per-user telemetry ingest hardening (enforce, don't stamp)
+
+`--owner` is client-declared, so a shipper could claim another user's identity. The
+ingest path now authorizes per-user writes: the OTLP/gRPC Authelia rule is opened to
+the **`otel-writers`** group (each shipper uses its own LLDAP creds → real
+`Remote-User`), and a **`tenant-guard` ForwardAuth shim** (after `authelia-basic`)
+**403s** any request whose `x-scope-orgid` ≠ `claude-<Remote-User>`. So a writer can
+only write its own Loki tenant. Tenant-less traffic (metrics, native telemetry) is
+allowed → `_shared`. `otel-telemetry` stays a group member (shared/CI path) until
+all shippers are real accounts.
+
+Chosen the **guard (enforce/403)** over the **`headers_setter` stamp** (derive the
+tenant from `Remote-User`, ignore the client): the stamp copies the username
+verbatim so it can't keep the `claude-` prefix → would force a system-wide prefix
+rename + re-ship. Guard also tightens the metric `owner` for honest clients.
+**Open gap:** the Mimir `owner` label is in the OTLP payload, so neither approach
+stops a custom tool forging metric owner (low-sensitivity — counts, not content).
+
+→ Detail in the *Ingest hardening* section of [observability/dashboard-multitenancy.md](observability/dashboard-multitenancy.md).

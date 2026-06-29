@@ -40,12 +40,14 @@ authelia:
       targetPort: 9959
   replicasNb: 1
   rules:
-    # OTLP/gRPC telemetry ingress: only the otel-telemetry service account, via
+    # OTLP/gRPC telemetry ingress: any member of the otel-writers group, via
     # Authorization: Basic (1FA). The dedicated forward-auth-basic endpoint makes
-    # Basic auth usable here without changing any browser-facing service.
+    # Basic auth usable here without changing any browser-facing service. The
+    # tenant-guard shim (next middleware) then enforces that each writer may only
+    # write its own Loki tenant. See docs/observability/dashboard-multitenancy.md.
     - policy: one_factor
       subject:
-      - "user:otel-telemetry"
+      - "group:otel-writers"
       domain:
       - "{{ tpl .Values.observability.otelCollector.gateway.grpcHost . }}"
 

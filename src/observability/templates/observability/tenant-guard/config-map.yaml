@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.tenantGuard.label }}{{ .Values.k8s.names.configMaps.suffix }}
+data:
+  # Traefik ForwardAuth on the OTLP/gRPC ingest path. Runs AFTER authelia-basic
+  # (which authenticates and emits Remote-User). It enforces that a writer may
+  # only claim its own Loki tenant: x-scope-orgid must equal "<prefix><slug(user)>".
+  # Requests with no x-scope-orgid (e.g. metrics exports, native telemetry) are
+  # allowed — they claim no tenant and land in the gateway's default tenant.
+  # See docs/observability/dashboard-multitenancy.md.
+  guard.py: |
+    import os, re
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    USER_HEADER   = os.environ.get("USER_HEADER", "Remote-User")
+    TENANT_HEADER = os.environ.get("TENANT_HEADER", "x-scope-orgid")
+    PREFIX        = os.environ.get("TENANT_PREFIX", "claude-")
+    PORT          = int(os.environ.get("PORT", "8080"))
+
+    def slug(u):
+        return re.sub(r"[^a-z0-9-]+", "-", u.lower()).strip("-")
+
+    class H(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
+        def _send(self, code, body=b""):
+            self.send_response(code)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            if body and self.command != "HEAD":
+                self.wfile.write(body)
+
+        def decide(self):
+            if self.path == "/healthz":
+                return self._send(200, b"ok")
+            tenant = self.headers.get(TENANT_HEADER)
+            if not tenant:
+                # No tenant claimed (metrics / native telemetry) → allow.
+                return self._send(200, b"ok")
+            user = self.headers.get(USER_HEADER)
+            if not user:
+                return self._send(403, b"no authenticated user")
+            if tenant == PREFIX + slug(user):
+                return self._send(200, b"ok")
+            return self._send(403, b"tenant does not match identity")
+
+        do_GET = do_POST = do_HEAD = do_PUT = do_DELETE = decide
+
+        def log_message(self, *a):
+            pass
+
+    if __name__ == "__main__":
+        ThreadingHTTPServer(("0.0.0.0", PORT), H).serve_forever()
