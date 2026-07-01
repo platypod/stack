@@ -113,10 +113,10 @@ data:
       uid: metrics
       type: prometheus
       access: proxy
+      {{- if .Values.observability.scopeShim.scopeMetrics }}
       # Routed through the scope shim (→ prom-label-proxy → Mimir/prometheus), NOT
-      # Mimir directly, so every query is per-user scoped on the `owner` label.
-      # The shim reads X-Grafana-User (dataproxy.send_user_header) and forwards the
-      # path to prom-label-proxy, whose upstream already targets Mimir /prometheus.
+      # Mimir directly, so every query is per-user scoped on the `owner` label. The
+      # shim reads X-Grafana-User (dataproxy.send_user_header) + the shared secret.
       url: http://{{ range $.Values.observability.scopeShim.instances }}{{ if eq .name "metrics" }}{{ $.Values.k8s.names.services.prefix }}{{ .label }}{{ $.Values.k8s.names.services.suffix }}{{ end }}{{ end }}:{{ $.Values.observability.scopeShim.ports.http.targetPort }}
       isDefault: true
       editable: false
@@ -125,6 +125,14 @@ data:
         httpHeaderName1: '{{ .Values.observability.scopeShim.secretHeader }}'
       secureJsonData:
         httpHeaderValue1: '{{ .Values.observability.scopeShim.secret }}'
+      {{- else }}
+      # scopeMetrics=false: query Mimir directly — no per-user metric scoping. Used
+      # where all Grafana users are admins and/or to keep pre-`owner` history
+      # visible. Logs stay tenant-isolated regardless. See dashboard-multitenancy.md.
+      url: http://{{ $.Values.k8s.names.services.prefix }}{{ $.Values.observability.metrics.label }}{{ $.Values.k8s.names.services.suffix }}:{{ $.Values.observability.metrics.ports.http.targetPort }}/prometheus
+      isDefault: true
+      editable: false
+      {{- end }}
 
   jellyfin.json: |
     {
