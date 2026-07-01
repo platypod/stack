@@ -5,6 +5,32 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
 
 ## Soon
 
+- **Per-theme Mimir tenants (e.g. `k8s` / `ai` / `services`).** Right now Mimir is
+  single-tenant (`multitenancy_enabled: false`) — *every* metric family (cluster
+  infra: kubeletstats/traefik/k8s_cluster, `ai_tx_*` transcript telemetry,
+  per-service exporters) shares one bucket, so there is no way to wipe-and-rebuild
+  one family (e.g. re-deriving `ai_tx_*` from the local Claude transcripts after a
+  shipper bug) without nuking a year of unrelated cluster history too. Mimir also
+  has no delete-series-by-label API at all (confirmed: not implemented,
+  [grafana/mimir#4968](https://github.com/grafana/mimir/issues/4968)), so a bad
+  label value currently just has to age out via retention.
+  **Proposal:** split by *write source*, not by user — flip
+  `multitenancy_enabled: true` and have the OTLP gateway stamp `X-Scope-OrgID`
+  per metric family the same way it already stamps Loki's `claude-<user>` tenant
+  for transcripts (see
+  [docs/observability/dashboard-multitenancy.md](observability/dashboard-multitenancy.md)).
+  This does **not** contradict that doc's "rejected: full multi-tenancy for
+  everything" call — that rejection was specifically about *per-user* metric
+  tenants fighting admin-sees-everything and being structurally wrong for
+  co-mingled scrapes (Jellyfin). Per-theme tenants are a few, static, and
+  orthogonal: the existing `owner`-label + prom-label-proxy isolation would still
+  run *inside* the `ai` tenant for per-user scoping; the tenant wall only buys a
+  safe blast radius for bulk operations (delete/rebuild one theme without
+  touching the others). Needs: theme taxonomy definition, gateway routing rule
+  per metric family, admin federated-read config (small fixed tenant list, unlike
+  the dynamic per-user Loki case), and an update to dashboard-multitenancy.md
+  recording this as an accepted extension once implemented.
+
 - **Trust the mkcert CA (dev only).** Run `make setup-dev-tls` once per dev
   machine (sudo, installs the CA in the macOS Keychain). Renew the same way when
   the cert expires (~3 years).
@@ -23,6 +49,16 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
 
 - **Default-user enable/disable on Authelia** — add lifecycle management for the
   default users (activation / deactivation) in LLDAP/Authelia.
+
+- **Backups + key durability review (esp. Vaultwarden).** Vaultwarden's SQLite
+  vault is on a **node-local** volume (NFS can't host SQLite WAL), protected only
+  by the nightly config-backup → NFS (so up to ~24h exposure, and the NFS copy is
+  a SQLite snapshot, not point-in-time). Review: (a) backup cadence/restore drills
+  for the local SQLite apps; (b) where Vaultwarden's data lands and how to
+  recover it; (c) **securing the primary/key material** — the Vaultwarden admin
+  token + the broader plaintext-secrets-in-Git problem (ties into the SOPS item
+  above). Decide what the "primary key" is (SOPS age key? a backup-encryption
+  key?) and how it's stored/rotated/escrowed off-cluster.
 
 - **Review architectural decision-records management.** Want a cleaner view of
   every decision taken — against which alternatives, and why. Currently split

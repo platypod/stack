@@ -695,7 +695,7 @@
       "gridPos": {
         "x": 0,
         "y": 14,
-        "w": 8,
+        "w": 6,
         "h": 8
       },
       "fieldConfig": {
@@ -743,9 +743,9 @@
         "uid": "metrics"
       },
       "gridPos": {
-        "x": 8,
+        "x": 6,
         "y": 14,
-        "w": 8,
+        "w": 6,
         "h": 8
       },
       "fieldConfig": {
@@ -785,126 +785,41 @@
     },
     {
       "id": 15,
-      "type": "table",
-      "title": "Tokens & cost by kind (${currency:text})",
-      "description": "cache_read dominates token volume but only a small share of cost — it bills at 0.1x the input rate.",
+      "type": "piechart",
+      "title": "Tokens by kind",
       "datasource": {
         "type": "prometheus",
         "uid": "metrics"
       },
       "gridPos": {
-        "x": 16,
+        "x": 12,
         "y": 14,
-        "w": 8,
+        "w": 6,
         "h": 8
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "align": "auto"
-          }
+          "unit": "short"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Tokens"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "short"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Tokens %"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "percent"
-              },
-              {
-                "id": "decimals",
-                "value": 1
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Cost"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "none"
-              },
-              {
-                "id": "decimals",
-                "value": 2
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background",
-                  "mode": "gradient"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Cost %"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "percent"
-              },
-              {
-                "id": "decimals",
-                "value": 1
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "sortBy": [
-          {
-            "displayName": "Cost",
-            "desc": true
-          }
-        ]
-      },
-      "transformations": [
-        {
-          "id": "merge",
-          "options": {}
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
         },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true
-            },
-            "renameByName": {
-              "kind": "Kind",
-              "Value #A": "Tokens",
-              "Value #B": "Tokens %",
-              "Value #C": "Cost",
-              "Value #D": "Cost %"
-            }
-          }
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
         }
-      ],
+      },
       "targets": [
         {
           "refId": "A",
@@ -912,41 +827,62 @@
             "type": "prometheus",
             "uid": "metrics"
           },
-          "format": "table",
-          "instant": true,
-          "expr": "sum by (kind)(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))"
-        },
-        {
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics"
-          },
-          "format": "table",
-          "instant": true,
-          "expr": "sum by (kind)(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) / scalar(sum(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))) * 100"
-        },
-        {
-          "refId": "C",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics"
-          },
-          "format": "table",
-          "instant": true,
-          "expr": "sum by (kind)(sum_over_time(ai_tx_cost_usd_by_kind{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))"
-        },
-        {
-          "refId": "D",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics"
-          },
-          "format": "table",
-          "instant": true,
-          "expr": "sum by (kind)(sum_over_time(ai_tx_cost_usd_by_kind{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) / scalar(sum(sum_over_time(ai_tx_cost_usd_by_kind{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))) * 100"
+          "expr": "sum by (kind)(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
+          "legendFormat": "{{kind}}",
+          "instant": true
         }
       ]
+    },
+    {
+      "id": 31,
+      "type": "piechart",
+      "title": "Tokens by kind, weighted by cost (${currency:text})",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "metrics"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 14,
+        "w": 6,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics"
+          },
+          "expr": "sum by (kind)(sum_over_time(ai_tx_cost_usd_by_kind{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
+          "legendFormat": "{{kind}}",
+          "instant": true
+        }
+      ],
+      "description": "Same token volume, weighted by what it actually costs \u2014 cache_read dominates the pie on the left but barely registers here (bills at 0.1x the input rate)."
     },
     {
       "id": 16,
@@ -1121,7 +1057,7 @@
       "gridPos": {
         "x": 0,
         "y": 31,
-        "w": 8,
+        "w": 12,
         "h": 8
       },
       "fieldConfig": {
@@ -1168,9 +1104,9 @@
         "uid": "metrics"
       },
       "gridPos": {
-        "x": 8,
+        "x": 12,
         "y": 31,
-        "w": 8,
+        "w": 12,
         "h": 8
       },
       "fieldConfig": {
@@ -1205,58 +1141,6 @@
           "expr": "sum by (tool_name)(sum_over_time(ai_tx_tool_errors{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
           "legendFormat": "{{tool_name}}",
           "instant": true
-        }
-      ]
-    },
-    {
-      "id": 22,
-      "type": "timeseries",
-      "title": "Turns over time",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "metrics"
-      },
-      "gridPos": {
-        "x": 16,
-        "y": 31,
-        "w": 8,
-        "h": 8
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "stacking": {
-              "mode": "none"
-            },
-            "showPoints": "never",
-            "lineWidth": 1,
-            "lineInterpolation": "smooth"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics"
-          },
-          "expr": "sum(sum_over_time(ai_tx_turns{project=~\"$project\", session_title=~\"${session:regex}\"}[$__interval]))",
-          "legendFormat": "turns"
         }
       ]
     },
@@ -1363,7 +1247,8 @@
           "id": "organize",
           "options": {
             "excludeByName": {
-              "Time": true
+              "Time": true,
+              "session_id": true
             },
             "renameByName": {
               "session_title": "Session",
@@ -1385,7 +1270,7 @@
           },
           "format": "table",
           "instant": true,
-          "expr": "sum by (session_title, project)(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))"
+          "expr": "(sum by (session_id, project)(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))) * on(session_id, project) group_left(session_title) (topk by (session_id, project) (1, max by (session_id, project, session_title)(max_over_time(ai_tx_event_epoch_seconds{project=~\\\"$project\\\", session_title=~\\\"${session:regex}\\\"}[$__range]))) * 0 + 1)"
         },
         {
           "refId": "B",
@@ -1395,7 +1280,7 @@
           },
           "format": "table",
           "instant": true,
-          "expr": "sum by (session_title, project)(sum_over_time(ai_tx_tool_calls{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))"
+          "expr": "(sum by (session_id, project)(sum_over_time(ai_tx_tool_calls{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))) * on(session_id, project) group_left(session_title) (topk by (session_id, project) (1, max by (session_id, project, session_title)(max_over_time(ai_tx_event_epoch_seconds{project=~\\\"$project\\\", session_title=~\\\"${session:regex}\\\"}[$__range]))) * 0 + 1)"
         },
         {
           "refId": "C",
@@ -1405,7 +1290,7 @@
           },
           "format": "table",
           "instant": true,
-          "expr": "(max by (session_title, project)(max_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) - min by (session_title, project)(min_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])))"
+          "expr": "((max by (session_id, project)(max_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) - min by (session_id, project)(min_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])))) * on(session_id, project) group_left(session_title) (topk by (session_id, project) (1, max by (session_id, project, session_title)(max_over_time(ai_tx_event_epoch_seconds{project=~\\\"$project\\\", session_title=~\\\"${session:regex}\\\"}[$__range]))) * 0 + 1)"
         },
         {
           "refId": "D",
@@ -1415,9 +1300,10 @@
           },
           "format": "table",
           "instant": true,
-          "expr": "sum by (session_title, project)(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))"
+          "expr": "(sum by (session_id, project)(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))) * on(session_id, project) group_left(session_title) (topk by (session_id, project) (1, max by (session_id, project, session_title)(max_over_time(ai_tx_event_epoch_seconds{project=~\\\"$project\\\", session_title=~\\\"${session:regex}\\\"}[$__range]))) * 0 + 1)"
         }
-      ]
+      ],
+      "description": "Grouped by session_id, not session_title \u2014 a session's title can change mid-flight (Claude Code refines it, or a shipper bug briefly mislabeled some), and grouping by the label itself used to split one session into several rows. The join always shows the most-recently-seen title."
     },
     {
       "id": 25,
