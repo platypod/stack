@@ -16,7 +16,13 @@ data:
       grpc_server_max_concurrent_streams: 1000
 
     common:
-      instance_addr: 0.0.0.0
+      # No instance_addr override: it's the address ring/gRPC components dial to
+      # reach *this* instance (query-scheduler <-> querier <-> frontend, even
+      # within one monolithic pod), not a bind address. "0.0.0.0" used to be set
+      # here, which isn't dialable — ring health checks failed ("could only find
+      # 0 - unhealthy instances: 0.0.0.0:9096"), which stalled/timed out queries
+      # and eventually writes too. Let Loki auto-detect the pod's real IP
+      # (default interface list already includes eth0).
       path_prefix: /tmp/loki
       storage:
         filesystem:

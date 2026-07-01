@@ -10,7 +10,10 @@ observability:
         cpu: 100m
         memory: 256Mi
       limits:
-        memory: 512Mi
+        # Bumped from 512Mi — OOMKilled (exit 137) after auth_enabled +
+        # multi-tenancy landed: per-tenant index/limits overhead plus
+        # pattern_ingester's always-on metric_aggregation pushed it over.
+        memory: 768Mi
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
     ports:
       grpc:
