@@ -3,7 +3,12 @@ observability:
     image: otel/opentelemetry-collector-contrib:0.154.0
     label: opentelemetry-collector
     logging:
-      level: debug
+      # Was left on debug from earlier troubleshooting — every collector,
+      # gateway included, dumps a full datapoint/transform trace per metric at
+      # this level. Under a large backfill it's enough log I/O to make the
+      # gateway miss its own export deadlines back to clients. Every other
+      # observability component here already defaults to info.
+      level: info
       format: json
     gateway:
       host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
