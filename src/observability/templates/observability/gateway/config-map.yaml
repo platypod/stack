@@ -5,16 +5,30 @@ metadata:
 data:
   collector.yaml: |
     extensions:
-      # Forward the per-request x-scope-orgid (set by ship-transcripts) as the
-      # Loki tenant header. Logs without it (e.g. native Claude telemetry, future
-      # pod logs) fall back to the default tenant. See
+      # Forward the per-request x-scope-orgid (set by the shipper) as the Loki
+      # tenant header. Logs without it (e.g. native Claude telemetry, future pod
+      # logs) fall back to the default tenant. See
       # docs/observability/dashboard-multitenancy.md.
-      headers_setter:
+      headers_setter/logs:
         headers:
           - action: upsert
             key: X-Scope-OrgID
             from_context: x-scope-orgid
             default_value: {{ .Values.observability.logs.defaultTenant | default "_shared" | quote }}
+      # Same mechanism, applied to Mimir: prompt-meter is the only OTLP-pushed
+      # metrics source and is the only one that claims a tenant (x-scope-orgid:
+      # ai), so it's the only thing that lands in the "ai" tenant. Everything
+      # else (k8s_cluster, kubeletstats, jellyfin/snmp scrapes, …) has no client
+      # context to read from and falls back to "anonymous" — the tenant this
+      # whole cluster's metrics already lived in before multi-tenancy existed,
+      # so existing dashboards/history don't move. See
+      # docs/observability/dashboard-multitenancy.md (metrics theme-tenant split).
+      headers_setter/metrics:
+        headers:
+          - action: upsert
+            key: X-Scope-OrgID
+            from_context: x-scope-orgid
+            default_value: "anonymous"
 
     receivers:
 
@@ -166,6 +180,15 @@ data:
         send_batch_size: 512
         send_batch_max_size: 2048
         metadata_keys: [x-scope-orgid]
+      # Same reason, for the one metrics pipeline (otlp/prompt-meter) that
+      # carries a real client-declared tenant (x-scope-orgid: ai). The other
+      # metrics pipelines (jellyfin, k8s_cluster, …) keep the shared plain
+      # `batch` above — they never claim a tenant, so there's nothing to lose.
+      batch/otlp_metrics:
+        timeout: 5s
+        send_batch_size: 512
+        send_batch_max_size: 2048
+        metadata_keys: [x-scope-orgid]
       memory_limiter:
         check_interval: 1s
         limit_mib: 4000
@@ -243,13 +266,17 @@ data:
         # system.cpu.time becomes system_cpu_time. Dashboards must query the
         # normalized names.
         metrics_endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.metrics.ports.http.targetPort }}/otlp/v1/metrics
+        # Per-tenant X-Scope-OrgID injected from request metadata (Mimir
+        # multitenancy_enabled). See headers_setter/metrics above.
+        auth:
+          authenticator: headers_setter/metrics
         tls:
           insecure: true
       otlphttp/loki:
         endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.logs.ports.http.targetPort }}/otlp
         # Per-tenant X-Scope-OrgID injected from request metadata (Loki auth_enabled).
         auth:
-          authenticator: headers_setter
+          authenticator: headers_setter/logs
         tls:
           insecure: true
       otlphttp/tempo:
@@ -260,7 +287,7 @@ data:
           insecure: true
 
     service:
-      extensions: [headers_setter]
+      extensions: [headers_setter/logs, headers_setter/metrics]
       pipelines:
         logs:
           receivers: [otlp]
@@ -269,7 +296,7 @@ data:
 
         metrics/otlp:
           receivers: [otlp]
-          processors: [attributes/otlp, transform/owner, batch, memory_limiter]
+          processors: [attributes/otlp, transform/owner, batch/otlp_metrics, memory_limiter]
           exporters: [otlphttp/mimir]
         {{- if .Values.observability.otelCollector.receivers.jellyfinCustom.enable }}
         metrics/jellyfinCustom:

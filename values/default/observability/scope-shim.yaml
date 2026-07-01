@@ -71,6 +71,9 @@ observability:
     label: tenant-guard
     image: python:3-alpine
     tenantPrefix: "claude-"   # must match the shipper's tenant + scopeShim
+    # Fixed Mimir theme-tenants any authenticated writer may claim (not a
+    # per-user privacy boundary — see mimir/config-map.yaml). Pipe-separated.
+    staticTenants: "ai"
     ports:
       http:
         name: http

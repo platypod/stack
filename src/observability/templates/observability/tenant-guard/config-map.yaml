@@ -6,8 +6,12 @@ data:
   # Traefik ForwardAuth on the OTLP/gRPC ingest path. Runs AFTER authelia-basic
   # (which authenticates and emits Remote-User). It enforces that a writer may
   # only claim its own Loki tenant: x-scope-orgid must equal "<prefix><slug(user)>".
-  # Requests with no x-scope-orgid (e.g. metrics exports, native telemetry) are
-  # allowed — they claim no tenant and land in the gateway's default tenant.
+  # Requests with no x-scope-orgid (e.g. native telemetry) are allowed — they
+  # claim no tenant and land in the gateway's default tenant. A small static
+  # allowlist (STATIC_TENANTS) additionally permits the fixed, non-identity
+  # *theme* tenants used for Mimir (e.g. "ai") — those aren't a privacy
+  # boundary between people the way claude-<user> is, just a coarse
+  # content-type split, so any authenticated writer may claim them.
   # See docs/observability/dashboard-multitenancy.md.
   guard.py: |
     import os, re
@@ -16,6 +20,7 @@ data:
     USER_HEADER   = os.environ.get("USER_HEADER", "Remote-User")
     TENANT_HEADER = os.environ.get("TENANT_HEADER", "x-scope-orgid")
     PREFIX        = os.environ.get("TENANT_PREFIX", "claude-")
+    STATIC        = {t for t in os.environ.get("STATIC_TENANTS", "").split("|") if t}
     PORT          = int(os.environ.get("PORT", "8080"))
 
     def slug(u):
@@ -36,7 +41,9 @@ data:
                 return self._send(200, b"ok")
             tenant = self.headers.get(TENANT_HEADER)
             if not tenant:
-                # No tenant claimed (metrics / native telemetry) → allow.
+                # No tenant claimed (native telemetry) → allow.
+                return self._send(200, b"ok")
+            if tenant in STATIC:
                 return self._send(200, b"ok")
             user = self.headers.get(USER_HEADER)
             if not user:

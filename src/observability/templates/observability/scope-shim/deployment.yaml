@@ -32,6 +32,8 @@ spec:
         # Backend for this instance ({{ $i.name }}): metrics → prom-label-proxy, logs → Loki.
         - name: UPSTREAM
           value: "http://{{ $upstreamSvc }}:{{ $i.upstreamPort }}"
+        - name: INSTANCE_NAME
+          value: {{ $i.name | quote }}
         - name: LLDAP_USER
           value: {{ $s.lldap.user | quote }}
         - name: LLDAP_PASS

@@ -59,6 +59,39 @@ wall. So we use **each backend's natural primitive**.
 - Mimir keeps `multitenancy_enabled: false`; none of the historical-backfill
   limits (`out_of_order_time_window` etc., see [mimir.md](mimir.md)) change.
 
+  **Update (2026-07-01): multitenancy came back, on a different axis.** The
+  above is about *per-user* isolation and the reasoning still holds — rejected
+  again below. But a separate, unrelated need came up: a prompt-meter bug
+  shipped a batch of `ai_tx_*` series with a mangled `session_title` label, and
+  Mimir has **no delete-series-by-label API at all**
+  ([grafana/mimir#4968](https://github.com/grafana/mimir/issues/4968), still
+  open) — with everything in one tenant, there was no way to wipe and rebuild
+  just the bad batch from the local Claude transcripts (the actual source of
+  truth) without nuking a year of cluster/infra metrics history too.
+
+  **Decision: flip `multitenancy_enabled: true`, split by *theme*, not by
+  user.** Two tenants: `ai` (prompt-meter's `ai_tx_*`, claimed via a *fixed*
+  `x-scope-orgid: ai` header — see prompt-meter's `shipper.py`) and the
+  pre-existing implicit `anonymous` tenant (everything else — every
+  scrape-based receiver has no client context to claim a tenant with, so it
+  falls through to the `headers_setter/metrics` extension's default). This is
+  **not** the rejected per-user case: it's a handful of static tenants, no
+  federation of a dynamic per-user list, and it doesn't touch Jellyfin's
+  co-mingled-scrape problem at all (still a `_shared`/per-user split via the
+  `owner` label, running *inside* whichever tenant). The payoff is narrow and
+  specific: `ai` can be wiped and rebuilt from transcripts with zero risk to
+  anything else, because "anything else" was never in that tenant.
+  - Grafana gets a second Mimir datasource, `metrics-ai` (tenant `ai`),
+    used only by the Claude dashboards. The original `metrics` datasource
+    (used by every other dashboard) now pins `X-Scope-OrgID: anonymous`
+    explicitly, so nothing else changes for it.
+  - The scope shim's *metrics* instance no longer overwrites `X-Scope-OrgID`
+    (it still did, as a leftover from sharing code with the *logs* instance,
+    which does need to — that would have silently broken this the moment
+    `scopeMetrics: true` reached an environment that has it default on).
+  - Per-user `owner` isolation is unchanged and runs identically inside
+    whichever tenant a query lands in.
+
 > **Migration caveat (real).** Once the metrics datasource is routed through the
 > proxy, any series **already in Mimir without an `owner` label becomes invisible**
 > (the matcher requires a non-empty owner, even for admins). New samples get

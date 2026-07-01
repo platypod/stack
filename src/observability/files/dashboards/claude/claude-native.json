@@ -32,7 +32,7 @@
         "type": "query",
         "datasource": {
           "type": "prometheus",
-          "uid": "metrics"
+          "uid": "metrics-ai"
         },
         "query": "label_values(claude_code_token_usage, model)",
         "refresh": 2,
@@ -59,7 +59,7 @@
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "fieldConfig": {
         "defaults": {
@@ -100,7 +100,7 @@
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "fieldConfig": {
         "defaults": {
@@ -140,7 +140,7 @@
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "fieldConfig": {
         "defaults": {
@@ -180,7 +180,7 @@
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "fieldConfig": {
         "defaults": {
@@ -220,7 +220,7 @@
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "fieldConfig": {
         "defaults": {
@@ -271,7 +271,7 @@
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "fieldConfig": {
         "defaults": {
@@ -314,7 +314,7 @@
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "fieldConfig": {
         "defaults": {
@@ -351,7 +351,7 @@
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "fieldConfig": {
         "defaults": {
@@ -393,7 +393,7 @@
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "fieldConfig": {
         "defaults": {

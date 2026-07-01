@@ -22,6 +22,8 @@ spec:
         env:
         - name: TENANT_PREFIX
           value: {{ .Values.observability.tenantGuard.tenantPrefix | quote }}
+        - name: STATIC_TENANTS
+          value: {{ .Values.observability.tenantGuard.staticTenants | quote }}
         - name: PORT
           value: {{ .Values.observability.tenantGuard.ports.http.targetPort | quote }}
         ports:

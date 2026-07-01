@@ -14,6 +14,12 @@ data:
     USER     = os.environ["LLDAP_USER"]
     PASS     = os.environ["LLDAP_PASS"]
     UPSTREAM = os.environ["UPSTREAM"].rstrip("/")
+    # "logs" or "metrics" — see deployment.yaml. Only the logs instance owns
+    # X-Scope-OrgID (Loki tenant). Metrics tenancy is a coarse, static
+    # theme-split (ai/anonymous) set on the datasource itself and passed
+    # through prom-label-proxy untouched — this shim only does per-user
+    # `owner` label isolation for metrics, not per-user tenants.
+    INSTANCE = os.environ.get("INSTANCE_NAME", "")
     ADMIN_G = os.environ.get("ADMIN_GROUP", "admins")
     HEADER  = os.environ.get("USER_HEADER", "X-Grafana-User").lower()
     PREFIX  = os.environ.get("TENANT_PREFIX", "claude-")
@@ -152,7 +158,10 @@ data:
                 if k.lower() not in HOP:
                     req.add_header(k, v)
             req.add_header("X-Owner", owner)          # consumed by prom-label-proxy
-            req.add_header("X-Scope-OrgID", tenant)   # consumed by Loki
+            if INSTANCE == "logs":
+                req.add_header("X-Scope-OrgID", tenant)   # consumed by Loki
+            # else: leave whatever X-Scope-OrgID the datasource itself set
+            # (the static "ai" or "anonymous" theme tenant) — pass through as-is.
             try:
                 resp = urllib.request.urlopen(req, timeout=60)
                 status, rheaders, data = resp.getcode(), resp.getheaders(), resp.read()

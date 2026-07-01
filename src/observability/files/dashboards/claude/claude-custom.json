@@ -34,7 +34,7 @@
         "label": "Project",
         "datasource": {
           "type": "prometheus",
-          "uid": "metrics"
+          "uid": "metrics-ai"
         },
         "query": {
           "query": "label_values(ai_tx_event_epoch_seconds, project)",
@@ -55,7 +55,7 @@
         "label": "Session",
         "datasource": {
           "type": "prometheus",
-          "uid": "metrics"
+          "uid": "metrics-ai"
         },
         "query": {
           "query": "label_values(ai_tx_event_epoch_seconds{project=~\"$project\"}, session_title)",
@@ -76,7 +76,7 @@
         "label": "Tool",
         "datasource": {
           "type": "prometheus",
-          "uid": "metrics"
+          "uid": "metrics-ai"
         },
         "query": {
           "query": "label_values(ai_tx_tool_calls, tool_name)",
@@ -113,7 +113,7 @@
       "title": "Cost (${currency:text})",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 0,
@@ -158,7 +158,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "sum(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
           "instant": true
@@ -171,7 +171,7 @@
       "title": "Avg cost / session (${currency:text})",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 3,
@@ -216,7 +216,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "(sum(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))) / clamp_min(count(count by (session_id)(sum_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))),1)",
           "instant": true
@@ -229,7 +229,7 @@
       "title": "Tokens",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 6,
@@ -273,7 +273,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "sum(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
           "instant": true
@@ -286,7 +286,7 @@
       "title": "Cache hit ratio",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 9,
@@ -331,7 +331,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "sum(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\", kind=\"cache_read\"}[$__range])) / clamp_min(sum(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\", kind=~\"input|cache_read\"}[$__range])),1)",
           "instant": true
@@ -344,7 +344,7 @@
       "title": "Sessions",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 12,
@@ -388,7 +388,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "count(count by (session_id)(sum_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])))",
           "instant": true
@@ -401,7 +401,7 @@
       "title": "Turns",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 15,
@@ -445,7 +445,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "sum(sum_over_time(ai_tx_turns{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
           "instant": true
@@ -458,7 +458,7 @@
       "title": "Tool calls",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 18,
@@ -502,7 +502,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "sum(sum_over_time(ai_tx_tool_calls{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
           "instant": true
@@ -515,7 +515,7 @@
       "title": "Tool error rate",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 21,
@@ -560,7 +560,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "sum(sum_over_time(ai_tx_tool_errors{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) / clamp_min(sum(sum_over_time(ai_tx_tool_calls{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])),1)",
           "instant": true
@@ -586,7 +586,7 @@
       "title": "Cost over time by model (${currency:text})",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 0,
@@ -625,7 +625,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "sum by (model)(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__interval])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
           "legendFormat": "{{model}}"
@@ -638,7 +638,7 @@
       "title": "Tokens by kind over time",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 12,
@@ -677,7 +677,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "sum by (kind)(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__interval]))",
           "legendFormat": "{{kind}}"
@@ -690,7 +690,7 @@
       "title": "Cost by model (${currency:text})",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 0,
@@ -726,7 +726,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "sum by (model)(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
           "legendFormat": "{{model}}",
@@ -740,7 +740,7 @@
       "title": "Cost by project (${currency:text})",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 6,
@@ -775,7 +775,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "sum by (project)(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
           "legendFormat": "{{project}}",
@@ -789,7 +789,7 @@
       "title": "Tokens by kind",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 12,
@@ -825,7 +825,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "sum by (kind)(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
           "legendFormat": "{{kind}}",
@@ -839,7 +839,7 @@
       "title": "Tokens by kind, weighted by cost (${currency:text})",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 18,
@@ -875,7 +875,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "sum by (kind)(sum_over_time(ai_tx_cost_usd_by_kind{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
           "legendFormat": "{{kind}}",
@@ -903,7 +903,7 @@
       "title": "Tool usage",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 0,
@@ -939,7 +939,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "sum by (tool_name)(sum_over_time(ai_tx_tool_calls{project=~\"$project\", session_title=~\"${session:regex}\", tool_name=~\"$tool\"}[$__range]))",
           "legendFormat": "{{tool_name}}",
@@ -953,7 +953,7 @@
       "title": "Avg tool latency",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 8,
@@ -988,7 +988,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "sum by (tool_name)(sum_over_time(ai_tx_tool_latency_seconds{project=~\"$project\", session_title=~\"${session:regex}\", tool_name=~\"$tool\"}[$__range])) / clamp_min(sum by (tool_name)(count_over_time(ai_tx_tool_latency_seconds{project=~\"$project\", session_title=~\"${session:regex}\", tool_name=~\"$tool\"}[$__range])),1)",
           "legendFormat": "{{tool_name}}",
@@ -1002,7 +1002,7 @@
       "title": "Stop reasons",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 16,
@@ -1038,7 +1038,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "sum by (stop_reason)(sum_over_time(ai_tx_stop_reason{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
           "legendFormat": "{{stop_reason}}",
@@ -1052,7 +1052,7 @@
       "title": "Max tool latency",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 0,
@@ -1087,7 +1087,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "max by (tool_name)(max_over_time(ai_tx_tool_latency_seconds{project=~\"$project\", session_title=~\"${session:regex}\", tool_name=~\"$tool\"}[$__range]))",
           "legendFormat": "{{tool_name}}",
@@ -1101,7 +1101,7 @@
       "title": "Tool errors by tool",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 12,
@@ -1136,7 +1136,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "expr": "sum by (tool_name)(sum_over_time(ai_tx_tool_errors{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
           "legendFormat": "{{tool_name}}",
@@ -1163,7 +1163,7 @@
       "title": "Sessions (${currency:text})",
       "datasource": {
         "type": "prometheus",
-        "uid": "metrics"
+        "uid": "metrics-ai"
       },
       "gridPos": {
         "x": 0,
@@ -1266,7 +1266,7 @@
           "refId": "A",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "format": "table",
           "instant": true,
@@ -1276,7 +1276,7 @@
           "refId": "B",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "format": "table",
           "instant": true,
@@ -1286,7 +1286,7 @@
           "refId": "C",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "format": "table",
           "instant": true,
@@ -1296,7 +1296,7 @@
           "refId": "D",
           "datasource": {
             "type": "prometheus",
-            "uid": "metrics"
+            "uid": "metrics-ai"
           },
           "format": "table",
           "instant": true,
@@ -1347,7 +1347,7 @@
             "type": "loki",
             "uid": "logs"
           },
-          "expr": "{service_name=\"claude-code-transcripts\", project=~\"$project\", session_title=~\"${session:regex}\"} | tool_name=~\"$tool\" | fmt=\"text\""
+          "expr": "{service_name=~\"claude-code-transcripts|promptmeter\", project=~\"$project\", session_title=~\"${session:regex}\"} | tool_name=~\"$tool\""
         }
       ]
     },

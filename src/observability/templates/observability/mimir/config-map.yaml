@@ -9,7 +9,18 @@ data:
     # Monolithic single-binary Mimir. All state on the PVC (filesystem backend);
     # replication factor 1 everywhere — this is a single-replica homelab TSDB,
     # not an HA cluster.
-    multitenancy_enabled: false
+    #
+    # Multi-tenant by *theme*, not by user (that's still label isolation via
+    # `owner` + prom-label-proxy, unchanged — see dashboard-multitenancy.md).
+    # Everything that predates this flip, plus anything with no client-claimed
+    # tenant (all scrape-based receivers), keeps landing in the implicit
+    # "anonymous" tenant — existing dashboards/history don't move. Only
+    # prompt-meter's OTLP push claims a tenant ("ai"), via the gateway's
+    # headers_setter/metrics extension. This buys a real, storage-level blast
+    # radius: the "ai" tenant's blocks can be wiped and rebuilt from the local
+    # Claude transcripts (the actual source of truth) without touching a single
+    # byte of cluster/infra metrics history.
+    multitenancy_enabled: true
 
     server:
       http_listen_port: {{ .Values.observability.metrics.ports.http.targetPort }}
