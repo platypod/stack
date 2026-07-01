@@ -75,7 +75,24 @@ data:
 
     schema_config:
       configs:
+      # Never edit an existing period's `from` once data exists under it — this
+      # one still holds real data (Claude transcripts since ~2026-05-28), so it
+      # stays as-is. Its `from` (2020-10-24, unmodified boilerplate from Loki's
+      # own getting-started example) meant the local shipper cache walked the
+      # *entire* schema-declared range on every startup: ~1675 daily
+      # directories with zero data in them (verified directly on the PVC),
+      # costing ~28 of a ~30min cold start on NFS-backed storage. Cleaned up
+      # the empty ones once (2026-07-01) — this new period below just stops
+      # that range from growing further, so a future from-scratch rebuild
+      # can't regenerate the same multi-year backlog.
       - from: 2020-10-24
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
+      - from: 2026-07-02
         store: tsdb
         object_store: filesystem
         schema: v13
