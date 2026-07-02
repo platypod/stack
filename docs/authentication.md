@@ -38,6 +38,7 @@ bootstrap admin). Each has an Authelia OIDC client registered.
 | RomM | games | OIDC; account provisioning on first login |
 | Reclaimerr | media | OIDC |
 | Kavita | media | OIDC config pushed via settings API by the setup Job |
+| Audiobookshelf | media | OIDC finished by hand in Settings -> Authentication (no setup Job — no documented non-interactive settings API) |
 | ~~Komga~~ | media | **Disabled** (`enable: false`) — replaced by Kavita |
 
 ## 2. Services with their own user management
@@ -81,7 +82,7 @@ forward-auth layer (or are intentionally public).
 
 | Group | Grants access to |
 |-------|------------------|
-| `media` | *arr stack, Mediarvester, RomM, Komga/Kavita, Suwayomi |
+| `media` | *arr stack, Mediarvester, RomM, Komga/Kavita, Audiobookshelf, Suwayomi |
 | `download` | Transmission, qBittorrent, Deluge |
 | `dev` | AdGuard, BookStack, Wiki.js, Outline, CloudBeaver, Grafana, Loki/Mimir/Tempo, Uptime-Kuma, whoami, the `*-db` admin UIs |
 | `otel-writers` | Push telemetry to the OTLP/gRPC gateway (Basic auth). The `tenant-guard` shim then limits each writer to its own `claude-<user>` Loki tenant — see [observability/dashboard-multitenancy.md](observability/dashboard-multitenancy.md). |

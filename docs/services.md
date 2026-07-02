@@ -42,6 +42,7 @@ refers to the model described in [authentication.md](authentication.md).
 | Mediarvester | Media tooling | `group:media` |
 | Reclaimerr | *arr cleanup | **OIDC** (`group:media`) |
 | Kavita | Comic/book/manga reader | **OIDC** (`group:media`) |
+| Audiobookshelf | Audiobook/podcast server | **OIDC** (`group:media`) |
 | Suwayomi | Manga downloader (feeds Kavita) | none / forwardauth (`group:media`) |
 | ~~Komga~~ | Comic reader | **disabled** (replaced by Kavita) |
 | Flaresolverr | Cloudflare solver (internal) | bypass (cluster CIDR only) |

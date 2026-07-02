@@ -98,6 +98,12 @@ data:
           href: https://{{ tpl .Values.kavita.host . }}
           description: Manga, comics and ebook reader.
 {{- end }}
+{{- if .Values.audiobookshelf.enable }}
+      - Audiobookshelf:
+          icon: audiobookshelf.png
+          href: https://{{ tpl .Values.audiobookshelf.host . }}
+          description: Audiobook and podcast server.
+{{- end }}
 {{- if .Values.deluge.enable }}
       - Deluge:
           icon: deluge.png

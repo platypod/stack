@@ -1,0 +1,33 @@
+audiobookshelf:
+  # New/unproven service — opt in per-env (see values/dev/values.yaml,
+  # values/prd/values.yaml) rather than defaulting on everywhere.
+  enable: false
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.audiobookshelf.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: ghcr.io/advplyr/audiobookshelf:2.35.1
+  label: audiobookshelf
+  # No first-boot admin API/env (unlike Kavita) — Audiobookshelf's initial setup
+  # wizard (create the first/admin user) has to be completed once in the browser.
+  # OIDC via Authelia. Audiobookshelf configures OIDC through its own Settings ->
+  # Authentication screen (paste Issuer/Client ID/Secret — no documented
+  # non-interactive settings API like Kavita's, so no setup Job pushes this).
+  # Empty clientId disables the Authelia client block below.
+  oidc:
+    clientId: ""
+    clientSecret:
+      plain: ""
+      hashed: ""
+  ports:
+    http:
+      name: abs-http
+      targetPort: 80
+  pvc:
+    # config/SQLite → dedicated local volume (NFS can't host SQLite WAL).
+    app: "{{ .Values.storage.defaultVolumes.config }}"
+    media: "{{ .Values.storage.defaultVolumes.media }}"
+  replicasNb: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 768Mi

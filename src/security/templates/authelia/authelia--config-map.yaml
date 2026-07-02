@@ -133,6 +133,34 @@ data:
           token_endpoint_auth_method: 'client_secret_post'
           userinfo_signed_response_alg: 'none'
         {{- end }}
+        {{- if .Values.audiobookshelf.oidc.clientId }}
+        - audience:
+          - 'https://{{ tpl .Values.audiobookshelf.host . }}'
+          authorization_policy: 'one_factor'
+          claims_policy: 'platypod'
+          client_id: '{{ .Values.audiobookshelf.oidc.clientId }}'
+          client_name: 'Audiobookshelf'
+          client_secret: '{{ .Values.audiobookshelf.oidc.clientSecret.hashed }}'
+          public: false
+          # Audiobookshelf's OIDC client requires PKCE.
+          require_pkce: true
+          pkce_challenge_method: 'S256'
+          redirect_uris:
+          - 'https://{{ tpl .Values.audiobookshelf.host . }}/auth/openid/callback'
+          - 'https://{{ tpl .Values.audiobookshelf.host . }}/auth/openid/mobile-redirect'
+          - 'audiobookshelf://oauth'
+          response_types:
+          - 'code'
+          scopes:
+          - 'openid'
+          - 'profile'
+          - 'email'
+          grant_types:
+          - 'authorization_code'
+          token_endpoint_auth_method: 'client_secret_basic'
+          access_token_signed_response_alg: 'none'
+          userinfo_signed_response_alg: 'none'
+        {{- end }}
         {{- if and .Values.komga.enable .Values.komga.oidc.clientId }}
         - audience:
           - 'https://{{ tpl .Values.komga.host . }}'

@@ -1,0 +1,76 @@
+{{- if .Values.audiobookshelf.enable }}
+{{- $appVolume := "app-volume" }}
+{{- $mediaVolume := "media-volume" }}
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.audiobookshelf.label .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.audiobookshelf.replicasNb }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      # Media user so /config, /metadata and the library on NFS share ownership
+      # with the *arrs. NEVER fsGroup on the NFS PVCs (recursive chown) — see CLAUDE.md.
+      securityContext:
+        runAsUser: {{ .Values.media.system.userId }}
+        runAsGroup: {{ .Values.media.system.groupId }}
+      {{- if and .Values.audiobookshelf.oidc.clientId .Values.traefik.loadBalancerIP }}
+      # OIDC discovery: Audiobookshelf fetches the Authelia issuer metadata at its
+      # PUBLIC https URL (NXDOMAIN in-cluster) — resolve it to the Traefik LB,
+      # same trick as Grafana/Komga/Kavita/RomM.
+      hostAliases:
+      - ip: {{ .Values.traefik.loadBalancerIP }}
+        hostnames:
+        - {{ tpl .Values.authelia.host . }}
+      {{- end }}
+      initContainers:
+      - name: init-permissions
+        image: busybox
+        securityContext:
+          runAsUser: 0
+        command: ['sh', '-c', 'mkdir -p /data/audiobookshelf/config /data/audiobookshelf/metadata && chown -R {{ .Values.media.system.userId }}:{{ .Values.media.system.groupId }} /data/audiobookshelf']
+        volumeMounts:
+        - name: {{ $appVolume }}
+          mountPath: /data
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.audiobookshelf.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.audiobookshelf.image }}
+        resources:
+          {{- toYaml .Values.audiobookshelf.resources | nindent 10 }}
+        ports:
+        - name: {{ .Values.audiobookshelf.ports.http.name }}
+          containerPort: {{ .Values.audiobookshelf.ports.http.targetPort }}
+        volumeMounts:
+        # SQLite DB lives here — dedicated local volume (NFS can't host WAL).
+        - mountPath: /config
+          name: {{ $appVolume }}
+          subPath: audiobookshelf/config
+        - mountPath: /metadata
+          name: {{ $appVolume }}
+          subPath: audiobookshelf/metadata
+        # Whole media share mounted; add a library in the UI pointing at the
+        # desired sub-folder ({{ .Values.media.system.data.path }}/audiobooks …), same as Kavita/Komga.
+        - mountPath: {{ .Values.media.system.data.path }}
+          name: {{ $mediaVolume }}
+      volumes:
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.audiobookshelf.pvc.app . }}
+      - name: {{ $mediaVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.audiobookshelf.pvc.media . }}
+{{- end }}
