@@ -1,0 +1,19 @@
+{{- if .Values.jellyfinK8s.enable }}
+
+# ClusterIP only — no IngressRoute. This instance is not user-facing; only
+# jellyswarrm talks to it (as a federation backend for the perf comparison).
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.jellyfinK8s.label }}{{ .Values.k8s.names.services.suffix }}
+
+spec:
+  selector:
+    app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.jellyfinK8s.label }}{{ .Values.k8s.names.pods.suffix }}
+  ports:
+  - protocol: TCP
+    name: {{ .Values.jellyfinK8s.ports.http.name }}
+    port: {{ .Values.jellyfinK8s.ports.http.targetPort }}
+
+{{- end }}

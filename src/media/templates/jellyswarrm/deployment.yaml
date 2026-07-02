@@ -1,0 +1,79 @@
+{{- if .Values.jellyswarrm.enable }}
+
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.jellyswarrm.label .Values.k8s.names.pods.suffix }}
+{{- $appVolume := "app-volume" }}
+{{- $configMap := "config-map" }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/jellyswarrm/config-map.yaml") . | sha256sum }}
+    spec:
+      initContainers:
+      # Seed jellyswarrm.toml (backend list, merge_libraries=false) from the
+      # ConfigMap on first start only — the app rewrites/owns this file
+      # afterwards (e.g. admin UI edits), same pattern as jellyfin/bazarr.
+      - name: seed-config
+        image: busybox:1
+        command:
+        - sh
+        - -c
+        - |
+          DEST=/app/data/jellyswarrm.toml
+          if [ ! -f "$DEST" ]; then
+            echo "Seeding jellyswarrm.toml from ConfigMap..."
+            cp /seed/jellyswarrm.toml "$DEST"
+          else
+            echo "jellyswarrm.toml already exists, skipping seed."
+          fi
+        volumeMounts:
+        - mountPath: /app/data
+          name: {{ $appVolume }}
+          subPath: jellyswarrm
+        - mountPath: /seed
+          name: {{ $configMap }}
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.jellyswarrm.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.jellyswarrm.image }}
+        resources:
+          {{- toYaml .Values.jellyswarrm.resources | nindent 10 }}
+        ports:
+        - name: {{ .Values.jellyswarrm.ports.http.name }}
+          containerPort: {{ .Values.jellyswarrm.ports.http.targetPort }}
+        env:
+        - name: JELLYSWARRM_USERNAME
+          value: "{{ .Values.jellyswarrm.credentials.username }}"
+        - name: JELLYSWARRM_PASSWORD
+          value: "{{ .Values.jellyswarrm.credentials.password }}"
+        # Removes any ambiguity about ./data resolving relative to the
+        # container's WORKDIR — config.rs falls back to "./data" otherwise.
+        - name: JELLYSWARRM_DATA_DIR
+          value: /app/data
+        volumeMounts:
+        - mountPath: /app/data
+          name: {{ $appVolume }}
+          subPath: jellyswarrm
+      volumes:
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.jellyswarrm.pvc . }}
+      - name: {{ $configMap }}
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.jellyswarrm.label }}{{ .Values.k8s.names.configMaps.suffix }}
+
+{{- end }}

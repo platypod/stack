@@ -1,0 +1,92 @@
+{{- if .Values.jellyfinK8s.enable }}
+{{- /*
+  jellyfin-k8s first-boot setup Job — creates the admin user only (this
+  instance isn't wired into Homepage/Jellyseerr, so no API-key handoff needed).
+
+  Flow (idempotent), same shape as jellyfin-setup:
+    1. Poll /System/Info/Public until Jellyfin is up.
+    2. If StartupWizardCompleted=true: verify auth with configured credentials, exit.
+    3. If false: run the startup wizard with the configured admin credentials.
+*/ -}}
+{{- $svc := print .Values.k8s.names.services.prefix .Values.jellyfinK8s.label .Values.k8s.names.services.suffix }}
+apiVersion: batch/v1
+kind: Job
+
+metadata:
+  name: jellyfin-k8s-setup
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "11"
+    "helm.sh/hook-delete-policy": before-hook-creation
+
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: jellyfin-k8s-setup
+        image: python:3-alpine
+        env:
+        - name: JELLYFIN_URL
+          value: "http://{{ $svc }}:{{ .Values.jellyfinK8s.ports.http.targetPort }}"
+        - name: ADMIN_USERNAME
+          value: "{{ .Values.jellyfinK8s.credentials.username }}"
+        - name: ADMIN_PASSWORD
+          value: "{{ .Values.jellyfinK8s.credentials.password }}"
+        command:
+        - python3
+        - -c
+        - |
+          import json, os, time, urllib.request, urllib.error
+
+          BASE     = os.environ["JELLYFIN_URL"]
+          USERNAME = os.environ["ADMIN_USERNAME"]
+          PASSWORD = os.environ["ADMIN_PASSWORD"]
+
+          HDR = ("X-Emby-Authorization",
+                 'MediaBrowser Client="Setup",Device="Setup",DeviceId="jf-k8s-setup-001",Version="1.0"')
+
+          def jf(method, path, body=None, token=None):
+              url = f"{BASE}{path}"
+              data = json.dumps(body).encode() if body else b""
+              req = urllib.request.Request(url, data=data or None, method=method)
+              req.add_header("Content-Type", "application/json")
+              req.add_header(*HDR)
+              if token:
+                  req.add_header("X-Emby-Token", token)
+              try:
+                  with urllib.request.urlopen(req, timeout=10) as r:
+                      raw = r.read()
+                      return json.loads(raw) if raw else {}
+              except urllib.error.HTTPError as e:
+                  raise RuntimeError(f"{method} {path} -> HTTP {e.code}: {e.read().decode()}")
+
+          print("Waiting for Jellyfin (jellyfin-k8s) to be ready...")
+          for i in range(120):
+              try:
+                  info = jf("GET", "/System/Info/Public")
+                  wizard = info.get("StartupWizardCompleted")
+                  print(f"  [{i}] up - StartupWizardCompleted={wizard}")
+                  break
+              except Exception as e:
+                  print(f"  [{i}] Not ready: {e}")
+                  time.sleep(5)
+          else:
+              raise SystemExit("jellyfin-k8s never became ready")
+
+          if wizard:
+              try:
+                  jf("POST", "/Users/AuthenticateByName", {"Username": USERNAME, "Pw": PASSWORD})
+                  print(f"Auth OK for '{USERNAME}' - already configured.")
+              except RuntimeError as e:
+                  raise SystemExit(f"Wizard complete but auth failed: {e}")
+              raise SystemExit(0)
+
+          print("Running startup wizard...")
+          jf("GET", "/Startup/User")
+          jf("POST", "/Startup/User", {"Name": USERNAME, "Password": PASSWORD})
+          jf("POST", "/Startup/Complete")
+          print(f"Wizard completed with user '{USERNAME}'.")
+
+{{- end }}

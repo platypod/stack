@@ -1,0 +1,31 @@
+jellyswarrm:
+  enable: false
+  label: jellyswarrm
+  # Deliberately NOT derived from .label — jellyswarrm takes over the exact
+  # hostname the host-native Jellyfin used to own (jellyfin.<domain>), so
+  # existing bookmarks/apps/users see no change: same URL, same login.
+  host: "{{ .Values.k8s.names.urls.prefix }}jellyfin{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: ghcr.io/llukas22/jellyswarrm:latest
+  credentials:
+    username: admin
+    password: password
+  ports:
+    http:
+      name: jellyswarrm
+      targetPort: 3000
+  # Local (non-NFS) volume for its sqlite db (jellyswarrm.db) — same reasoning
+  # as every other SQLite app config dir in this stack (see stack/CLAUDE.md).
+  pvc: "{{ .Values.storage.defaultVolumes.config }}"
+  # Redirect = client streams directly from whichever backend is chosen
+  # (isolates each backend's own direct-play performance — the comparison this
+  # deployment exists for). Proxy = stream bytes also flow through jellyswarrm,
+  # adding it to the measured path. The upstream default (when omitted) is
+  # actually Proxy, despite docs/config.md claiming Redirect — see config.rs's
+  # default_media_streaming_mode(); set explicitly here either way.
+  streamingMode: Redirect
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi

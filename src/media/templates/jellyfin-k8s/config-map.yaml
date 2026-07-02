@@ -1,0 +1,50 @@
+{{- if .Values.jellyfinK8s.enable }}
+
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.jellyfinK8s.label }}{{ .Values.k8s.names.configMaps.suffix }}
+
+data:
+  settings.json: |
+    <?xml version="1.0" encoding="utf-8"?>
+    <ServerConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <LogFileRetentionDays>3</LogFileRetentionDays>
+      <IsStartupWizardCompleted>false</IsStartupWizardCompleted>
+      <EnableMetrics>true</EnableMetrics>
+      <EnableNormalizedItemByNameIds>true</EnableNormalizedItemByNameIds>
+      <IsPortAuthorized>true</IsPortAuthorized>
+      <QuickConnectAvailable>true</QuickConnectAvailable>
+      <EnableCaseSensitiveItemIds>true</EnableCaseSensitiveItemIds>
+      <DisableLiveTvChannelUserDataName>true</DisableLiveTvChannelUserDataName>
+      <MetadataPath />
+      <MetadataNetworkPath />
+      <PreferredMetadataLanguage>en</PreferredMetadataLanguage>
+      <MetadataCountryCode>FR</MetadataCountryCode>
+      <MinResumePct>5</MinResumePct>
+      <MaxResumePct>90</MaxResumePct>
+      <MinResumeDurationSeconds>300</MinResumeDurationSeconds>
+      <LibraryMonitorDelay>60</LibraryMonitorDelay>
+      <ImageSavingConvention>Legacy</ImageSavingConvention>
+      <SkipDeserializationForBasicTypes>true</SkipDeserializationForBasicTypes>
+      <ServerName>jellyfin-k8s</ServerName>
+      <UICulture>en-US</UICulture>
+      <EnableFolderView>true</EnableFolderView>
+      <PluginRepositories>
+        <RepositoryInfo>
+          <Name>Jellyfin Stable</Name>
+          <Url>https://repo.jellyfin.org/releases/plugin/manifest-stable.json</Url>
+          <Enabled>true</Enabled>
+        </RepositoryInfo>
+      </PluginRepositories>
+      <PathSubstitutions />
+      <CorsHosts>
+        <string>*</string>
+      </CorsHosts>
+      <ActivityLogRetentionDays>30</ActivityLogRetentionDays>
+      <RemoveOldPlugins>false</RemoveOldPlugins>
+      <AllowClientLogUpload>true</AllowClientLogUpload>
+    </ServerConfiguration>
+
+{{- end }}

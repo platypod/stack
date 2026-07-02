@@ -1,0 +1,81 @@
+{{- if .Values.jellyfinK8s.enable }}
+
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.jellyfinK8s.label .Values.k8s.names.pods.suffix }}
+{{- $configVolume := "config-volume" }}
+{{- $mediaVolume := "media-volume" }}
+{{- $configMap := "config-map" }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/jellyfin-k8s/config-map.yaml") . | sha256sum }}
+    spec:
+      initContainers:
+      # Seed system.xml from ConfigMap into the PVC on first start (read-only
+      # ConfigMap mount; Jellyfin needs to write system.xml afterwards).
+      - name: seed-config
+        image: busybox:1
+        command:
+        - sh
+        - -c
+        - |
+          DEST=/config/config/system.xml
+          mkdir -p /config/config
+          if [ ! -f "$DEST" ]; then
+            echo "Seeding system.xml from ConfigMap..."
+            cp /seed/settings.json "$DEST"
+          else
+            echo "system.xml already exists, skipping seed."
+          fi
+        volumeMounts:
+        - mountPath: /config
+          name: {{ $configVolume }}
+          subPath: jellyfin-k8s
+        - mountPath: /seed
+          name: {{ $configMap }}
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.jellyfinK8s.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.jellyfinK8s.image }}
+        resources:
+          {{- toYaml .Values.jellyfinK8s.resources | nindent 10 }}
+        ports:
+        - name: {{ .Values.jellyfinK8s.ports.http.name }}
+          containerPort: {{ .Values.jellyfinK8s.ports.http.targetPort }}
+        volumeMounts:
+        # /config is Jellyfin's default config directory (JELLYFIN_ConfigDir) —
+        # local (non-NFS) volume, see values/default/media/jellyfin-k8s.yaml.
+        - mountPath: /config
+          name: {{ $configVolume }}
+          subPath: jellyfin-k8s
+        # Same NFS media share as jellyfin(-proxy), mounted read-only: this
+        # instance must see identical content for the comparison to be fair.
+        - mountPath: /media
+          name: {{ $mediaVolume }}
+          readOnly: true
+      volumes:
+      - name: {{ $configVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.jellyfinK8s.pvc.config . }}
+      - name: {{ $mediaVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.jellyfinK8s.pvc.media . }}
+      - name: {{ $configMap }}
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.jellyfinK8s.label }}{{ .Values.k8s.names.configMaps.suffix }}
+
+{{- end }}

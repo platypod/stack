@@ -1,0 +1,40 @@
+{{- if .Values.jellyswarrm.enable }}
+{{- /*
+  Jellyswarrm reads config from a TOML file at $JELLYSWARRM_DATA_DIR/jellyswarrm.toml,
+  layered under env var overrides (see crates/jellyswarrm-proxy/src/config.rs in
+  github.com/LLukas22/Jellyswarrm). `preconfigured_servers` is a Vec<struct> —
+  the documented JELLYSWARRM_PRECONFIGURED_SERVERS env var has no working list
+  syntax for a struct array against the `config` crate's Environment source as
+  wired here (no list_separator configured), so this seeds the two backends
+  declaratively via the TOML file instead — no manual UI step, no custom
+  setup-Job guessing at an unconfirmed API.
+
+  merge_libraries is set false: it's a GLOBAL (not per-user) setting that
+  merges same-collection_type libraries across ALL registered servers into one
+  virtual library. jellyfin-k8s scans the identical NFS media as jellyfin-proxy,
+  so leaving the default (true) would duplicate every title for real users.
+*/ -}}
+
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.jellyswarrm.label }}{{ .Values.k8s.names.configMaps.suffix }}
+
+data:
+  jellyswarrm.toml: |
+    merge_libraries = false
+
+    [[preconfigured_servers]]
+    url = "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.jellyfin.ports.http.targetPort }}"
+    name = "jellyfin-proxy"
+    priority = 10
+    media_streaming_mode = "{{ .Values.jellyswarrm.streamingMode }}"
+
+    [[preconfigured_servers]]
+    url = "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.jellyfinK8s.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.jellyfinK8s.ports.http.targetPort }}"
+    name = "jellyfin-k8s"
+    priority = 5
+    media_streaming_mode = "{{ .Values.jellyswarrm.streamingMode }}"
+
+{{- end }}

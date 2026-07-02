@@ -18,6 +18,13 @@ spec:
     metadata:
       labels:
         app: {{ $pod }}
+      annotations:
+        # The file-provider ConfigMap is mounted via subPath, which Kubernetes
+        # never live-updates (a hard subPath limitation — unlike whole-directory
+        # ConfigMap mounts, no symlink swap happens). Without this checksum,
+        # jellyfin.proxy.enable-driven changes to the file-provider rule/target
+        # are silently never picked up until something else restarts the pod.
+        checksum/config: {{ include (print $.Template.BasePath "/traefik/traefik--config-map.yaml") . | sha256sum }}
     spec:
       {{- with .Values.traefik.nodeSelector }}
       nodeSelector:
