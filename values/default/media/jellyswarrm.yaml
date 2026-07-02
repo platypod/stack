@@ -1,10 +1,15 @@
 jellyswarrm:
   enable: false
   label: jellyswarrm
-  # Deliberately NOT derived from .label — jellyswarrm takes over the exact
-  # hostname the host-native Jellyfin used to own (jellyfin.<domain>), so
-  # existing bookmarks/apps/users see no change: same URL, same login.
-  host: "{{ .Values.k8s.names.urls.prefix }}jellyfin{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  # Own dedicated hostname — does NOT take over jellyfin.<domain> anymore.
+  # It used to (hardcoded to reuse the "jellyfin" segment) so real users would
+  # see no URL change; reverted after it broke real-user sessions in
+  # production (a jellyswarrm-side bug: session/mapping race when the same
+  # physical user logs in from multiple clients under different username
+  # casing — see stack/docs/media/jellyswarrm.md). Not in the path of real
+  # traffic until that's actually fixed/worked around; reachable here only for
+  # the benchmark comparison itself.
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyswarrm.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: ghcr.io/llukas22/jellyswarrm:latest
   credentials:
     username: admin

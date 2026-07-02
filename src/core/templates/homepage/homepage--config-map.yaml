@@ -55,10 +55,7 @@ data:
 {{- if .Values.jellyfin.enable }}
       - Jellyfin:
           icon: jellyfin.png
-          # When jellyswarrm is enabled it owns the public "jellyfin" hostname
-          # (see values/default/media/jellyswarrm.yaml) — link there so the
-          # dashboard bookmark matches what real users actually hit.
-          href: https://{{ if .Values.jellyswarrm.enable }}{{ tpl .Values.jellyswarrm.host . }}{{ else }}{{ tpl .Values.jellyfin.host . }}{{ end }}
+          href: https://{{ tpl .Values.jellyfin.host . }}
           description: Media server with streaming capacities.
           widget:
             type: jellyfin

@@ -32,8 +32,8 @@ refers to the model described in [authentication.md](authentication.md).
 ## media
 | Service | Role | Auth |
 |---------|------|------|
-| Jellyswarrm | Federation proxy in front of Jellyfin backends (prod only) | own auth (bypass ingress); owns `jellyfin.<domain>` |
-| Jellyfin (`jellyfin-proxy` on prod) | Media server, host-native on mini4 (GPU transcode) | own auth (bypass ingress); direct route at `jellyfin-proxy.<domain>` |
+| Jellyswarrm | Federation proxy in front of Jellyfin backends, benchmark-only (prod only) | own auth (bypass ingress); own hostname (`jellyswarrm.<domain>`), NOT in the path of real Jellyfin traffic — see [docs/media/jellyswarrm.md](media/jellyswarrm.md) |
+| Jellyfin | Media server, host-native on mini4 (GPU transcode) | own auth (bypass ingress) |
 | jellyfin-k8s | In-cluster Jellyfin, benchmark-only (prod only) | not exposed — internal, jellyswarrm backend only |
 | Jellyseerr | Request manager | own auth (bypass ingress) |
 | Radarr / Sonarr / Readarr | *arr automation | own auth (`group:media`) |

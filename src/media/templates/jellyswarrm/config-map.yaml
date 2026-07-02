@@ -27,7 +27,7 @@ data:
 
     [[preconfigured_servers]]
     url = "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.jellyfin.ports.http.targetPort }}"
-    name = "jellyfin-proxy"
+    name = "{{ .Values.jellyfin.label }}"
     priority = 10
     media_streaming_mode = "{{ .Values.jellyswarrm.streamingMode }}"
 
