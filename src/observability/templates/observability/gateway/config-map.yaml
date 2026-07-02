@@ -252,6 +252,28 @@ data:
           statements:
           - set(attributes["owner"], attributes["user_name"]) where attributes["owner"] == nil and attributes["user_name"] != nil
           - set(attributes["owner"], "_shared") where attributes["owner"] == nil
+      # The gateway's single `otlp` receiver carries THREE unrelated sources:
+      # prompt-meter's ai_tx_*, native Claude Code CLI's claude_code_*, and the
+      # node-collector DaemonSet's forwarded infra metrics (hostmetrics/
+      # kubeletstats/k8s_cluster, all stamped `node-collector-receiver` by that
+      # DaemonSet's own attributes/* processors — see nodes-collectors/
+      # config-map.yaml). They need different tenants (ai vs anonymous), so the
+      # metrics/otlp pipeline is split into two below, each dropping the other
+      # half via these filters, rather than picking one exporter for everyone.
+      # Matches on the metric name prefix rather than the node-collector-
+      # receiver attribute's presence/absence — that version worked on dev but
+      # left node-collector metrics leaking into the ai tenant on prod despite
+      # identical config (no errors logged; root cause not pinned down). Name
+      # matching is a simpler, more standard OTTL pattern, and every source
+      # here has a fixed, known prefix (ai_tx_*, claude_code_*, or neither).
+      filter/keep_ai_telemetry:
+        metrics:
+          metric:
+            - not IsMatch(metric.name, "^(ai_tx_|claude_code_)")
+      filter/keep_node_collector:
+        metrics:
+          metric:
+            - IsMatch(metric.name, "^(ai_tx_|claude_code_)")
 
     exporters:
       debug/verbose:
@@ -321,10 +343,19 @@ data:
           processors: [memory_limiter, batch/logs]
           exporters: [otlphttp/loki]
 
-        metrics/otlp:
+        # Split by source (see filter/keep_ai_telemetry above) — prompt-meter +
+        # native Claude CLI go to the ai tenant (hardcoded, reliable); the
+        # node-collector DaemonSet's forwarded infra metrics keep going to
+        # whatever otlphttp/mimir's context-based default resolves to
+        # (anonymous, since node-collector never claims a tenant).
+        metrics/otlp_ai:
           receivers: [otlp]
-          processors: [memory_limiter, attributes/otlp, transform/owner, batch/otlp_metrics]
+          processors: [memory_limiter, filter/keep_ai_telemetry, attributes/otlp, transform/owner, batch/otlp_metrics]
           exporters: [otlphttp/mimir_ai]
+        metrics/otlp_infra:
+          receivers: [otlp]
+          processors: [memory_limiter, filter/keep_node_collector, attributes/otlp, transform/owner, batch]
+          exporters: [otlphttp/mimir]
         {{- if .Values.observability.otelCollector.receivers.jellyfinCustom.enable }}
         metrics/jellyfinCustom:
           receivers: [prometheus/jellyfinCustom]
