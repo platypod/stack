@@ -202,6 +202,20 @@ data:
         - key: gateway-receiver
           value: otlp
           action: insert
+      # Native Claude Code CLI telemetry (claude_code_*) has no client-side
+      # owner concept the way prompt-meter does — it always landed in _shared,
+      # visible to every non-admin. Stamp the authenticated identity (the same
+      # Remote-User Authelia's forward-auth-basic already sets, that
+      # tenant-guard trusts for logs) onto a datapoint attribute here so
+      # transform/owner below can use it as a fallback. No-op for prompt-meter
+      # (it already sets its own owner before this) and for node-collector's
+      # traffic (direct in-cluster connection, never goes through Authelia, so
+      # there's no Remote-User context to read).
+      attributes/remote_user:
+        actions:
+        - key: remote-user
+          action: insert
+          from_context: remote-user
       attributes/prometheus:
         actions:
         - key: gateway-receiver
@@ -243,14 +257,55 @@ data:
             value: reivi_value
       # Per-user dashboard isolation: every metric must carry an `owner` label so
       # prom-label-proxy (which rejects empty-matching regexes) can scope it.
-      # Jellyfin's per-user `user_name` becomes the owner; everything else is
-      # "_shared" (visible to all). Claude metrics keep any owner the shipper set.
-      # See docs/observability/dashboard-multitenancy.md.
+      # Jellyfin's per-user `user_name` becomes the owner; Pod Detail/Workloads/
+      # Transmission/Synology NAS's k8s-internals, download-activity, and NAS
+      # hardware metrics get "_admin" (excluded by non-admins'
+      # owner=~"^(user|_shared)$" regex, no shim change needed — this is
+      # enforced at the label level so it can't be bypassed via Explore or a
+      # custom panel the way a per-dashboard datasource swap could be);
+      # everything else is "_shared" (visible to all). Claude metrics keep
+      # any owner the shipper set. k8s_pod_phase/k8s_container_restarts (open
+      # Cluster Overview) and ifHCInOctets/ifHCOutOctets (open Jellyfin) stay
+      # "_shared" despite otherwise belonging to an admin-only dashboard too —
+      # there's no way to split the same metric name two ways by owner label
+      # alone; both overlaps are low-stakes (pod status/restart counts and
+      # NAS network throughput, similar sensitivity to what those open
+      # dashboards already show). Native Claude Code CLI
+      # telemetry (claude_code_*) has no client-side owner concept, so it
+      # falls to the server-stamped `remote-user` (see attributes/remote_user
+      # above) before the generic fallbacks — this is metrics only; the
+      # equivalent per-user Loki tenant for native CLI logs is a harder,
+      # separate problem (headers_setter can't add the "claude-" prefix the
+      # read-side shim expects — see the "stamp vs guard" ADR section) and is
+      # intentionally not addressed here. See
+      # docs/observability/dashboard-multitenancy.md.
       transform/owner:
         metric_statements:
         - context: datapoint
           statements:
           - set(attributes["owner"], attributes["user_name"]) where attributes["owner"] == nil and attributes["user_name"] != nil
+          - set(attributes["owner"], attributes["remote-user"]) where attributes["owner"] == nil and attributes["remote-user"] != nil
+          # Matched against the RAW OTel metric name, not Mimir's normalized
+          # (dots -> underscores) form the dashboards query — hostmetrics/
+          # kubeletstats/k8s_cluster emit dot-separated names at this point in
+          # the pipeline (confirmed via debug/verbose: container.cpu.usage,
+          # k8s.pod.memory.working_set, etc; only Mimir normalizes them on
+          # ingest). "." here is a genuine regex wildcard standing in for
+          # "either . or _", since the exact split between hierarchy dots and
+          # compound-word underscores isn't the same for every metric
+          # (confirmed working_set/major_page_faults keep their underscore;
+          # not verified for every k8s.container.* name here, so this is
+          # deliberately tolerant rather than an exact match).
+          - set(attributes["owner"], "_admin") where attributes["owner"] == nil and IsMatch(metric.name, "^(container.cpu.usage|container.memory.working.set|k8s.container.cpu.limit|k8s.container.cpu.request|k8s.container.memory.limit|k8s.container.memory.request|k8s.container.ready|k8s.pod.cpu.usage|k8s.pod.filesystem.available|k8s.pod.filesystem.usage|k8s.pod.memory.working.set|k8s.pod.network.errors|k8s.pod.network.io|transmission.torrent..*)$")
+          # Synology NAS dashboard — every SNMP-scraped metric is admin-only
+          # except ifHCInOctets/ifHCOutOctets, which Jellyfin's (open) "Synology
+          # Network IO" panel also reads from the same SNMP source; same
+          # shared-metric-name exception pattern as k8s_pod_phase above.
+          # attributes/snmp (upstream in this same pipeline) stamps
+          # gateway-receiver="snmp" on every datapoint from this receiver and
+          # nothing else does, so this doesn't need the ~80-name enumeration
+          # the k8s/container rule above needed.
+          - set(attributes["owner"], "_admin") where attributes["owner"] == nil and attributes["gateway-receiver"] == "snmp" and metric.name != "ifHCInOctets" and metric.name != "ifHCOutOctets"
           - set(attributes["owner"], "_shared") where attributes["owner"] == nil
       # The gateway's single `otlp` receiver carries THREE unrelated sources:
       # prompt-meter's ai_tx_*, native Claude Code CLI's claude_code_*, and the
@@ -350,7 +405,7 @@ data:
         # (anonymous, since node-collector never claims a tenant).
         metrics/otlp_ai:
           receivers: [otlp]
-          processors: [memory_limiter, filter/keep_ai_telemetry, attributes/otlp, transform/owner, batch/otlp_metrics]
+          processors: [memory_limiter, filter/keep_ai_telemetry, attributes/otlp, attributes/remote_user, transform/owner, batch/otlp_metrics]
           exporters: [otlphttp/mimir_ai]
         metrics/otlp_infra:
           receivers: [otlp]

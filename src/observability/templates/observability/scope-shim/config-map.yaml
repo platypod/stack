@@ -116,7 +116,13 @@ data:
             tenants = SHARED + [tenant_id(u) for u in all_users()]
             return ".+", "|".join(dict.fromkeys(tenants))
         # See own series + shared infra (SHARED_OWNER); own Loki tenant only.
-        owner = "^(" + re.escape(user) + "|" + re.escape(SHARED_OWNER) + ")$"
+        # Case-insensitive: owner values that come from a source with its own
+        # identity casing (e.g. Jellyfin profile names) won't always match the
+        # authenticated (LLDAP-cased) username byte-for-byte — a Jellyfin
+        # profile "Reivi" vs Authelia login "reivi" made her own data invisible
+        # to everyone, herself included, until this was added. prom-label-proxy
+        # forwards (?i) to Go's RE2, which supports it as an inline flag.
+        owner = "(?i)^(" + re.escape(user) + "|" + re.escape(SHARED_OWNER) + ")$"
         return owner, tenant_id(user)
 
     # Hop-by-hop headers (+ ones we recompute) not forwarded verbatim.
