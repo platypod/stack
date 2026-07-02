@@ -7,7 +7,7 @@
     "transcripts"
   ],
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "time": {
     "from": "now-90d",
@@ -21,6 +21,7 @@
         "name": "currency",
         "type": "custom",
         "label": "Currency",
+        "description": "Currency to convert notional USD costs into, via live FX rates (frankfurter.dev).",
         "query": "\u20ac : EUR,$ : USD,\u00a5 : JPY,\u00a3 : GBP,CHF : CHF,C$ : CAD,A$ : AUD",
         "current": {
           "text": "\u20ac",
@@ -29,9 +30,32 @@
         "options": []
       },
       {
+        "name": "owner",
+        "type": "query",
+        "label": "Owner",
+        "description": "Filters to transcripts shipped under this Claude user/account.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "metrics-ai"
+        },
+        "query": {
+          "query": "label_values(ai_tx_event_epoch_seconds, user)",
+          "refId": "A"
+        },
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": false,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "refresh": 2
+      },
+      {
         "name": "project",
         "type": "query",
         "label": "Project",
+        "description": "Filters to the project (repo) the session ran in.",
         "datasource": {
           "type": "prometheus",
           "uid": "metrics-ai"
@@ -53,12 +77,13 @@
         "name": "session",
         "type": "query",
         "label": "Session",
+        "description": "Filters to one or more sessions by title.",
         "datasource": {
           "type": "prometheus",
           "uid": "metrics-ai"
         },
         "query": {
-          "query": "label_values(ai_tx_event_epoch_seconds{project=~\"$project\"}, session_title)",
+          "query": "label_values(ai_tx_event_epoch_seconds{project=~\"$project\", user=~\"$owner\"}, session_title)",
           "refId": "A"
         },
         "includeAll": true,
@@ -74,6 +99,7 @@
         "name": "tool",
         "type": "query",
         "label": "Tool",
+        "description": "Filters tool-usage panels and the transcript log to a specific tool_name. See the tool reference panel in the Reference row for what each one does.",
         "datasource": {
           "type": "prometheus",
           "uid": "metrics-ai"
@@ -160,10 +186,11 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "sum(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
+          "expr": "sum(sum_over_time(ai_tx_cost_usd{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
           "instant": true
         }
-      ]
+      ],
+      "description": "Notional API-equivalent cost: tokens × Anthropic API list price, summed over the selected range and converted to $currency. Not what you paid on a Pro/Max subscription — see the Reference row below."
     },
     {
       "id": 3,
@@ -218,10 +245,11 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "(sum(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))) / clamp_min(count(count by (session_id)(sum_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))),1)",
+          "expr": "(sum(sum_over_time(ai_tx_cost_usd{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))) / clamp_min(count(count by (session_id)(sum_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range]))),1)",
           "instant": true
         }
-      ]
+      ],
+      "description": "Total notional cost (see the Cost panel) divided by the number of distinct sessions in range. A quick way to spot whether a period had a few expensive sessions or many cheap ones."
     },
     {
       "id": 4,
@@ -275,10 +303,11 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "sum(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
+          "expr": "sum(sum_over_time(ai_tx_tokens{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range]))",
           "instant": true
         }
-      ]
+      ],
+      "description": "Total token volume across all kinds — input, output, cache_read, cache_write — summed over the range. Usually dominated by cache_read, since every turn resends prior conversation as cached context. See the Token kinds panel in Reference for what each kind means."
     },
     {
       "id": 5,
@@ -333,10 +362,11 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "sum(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\", kind=\"cache_read\"}[$__range])) / clamp_min(sum(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\", kind=~\"input|cache_read\"}[$__range])),1)",
+          "expr": "sum(sum_over_time(ai_tx_tokens{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\", kind=\"cache_read\"}[$__range])) / clamp_min(sum(sum_over_time(ai_tx_tokens{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\", kind=~\"input|cache_read\"}[$__range])),1)",
           "instant": true
         }
-      ]
+      ],
+      "description": "Share of input-side tokens served from Anthropic's prompt cache instead of freshly processed: cache_read / (input + cache_read). Higher is cheaper — cache_read bills at 0.1x the input rate."
     },
     {
       "id": 6,
@@ -390,10 +420,11 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "count(count by (session_id)(sum_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])))",
+          "expr": "count(count by (session_id)(sum_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range])))",
           "instant": true
         }
-      ]
+      ],
+      "description": "Count of distinct Claude Code sessions (by session_id) with any activity in the selected range."
     },
     {
       "id": 7,
@@ -447,10 +478,11 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "sum(sum_over_time(ai_tx_turns{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
+          "expr": "sum(sum_over_time(ai_tx_turns{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range]))",
           "instant": true
         }
-      ]
+      ],
+      "description": "Count of human turns — user messages that are an actual prompt, not just a tool_result being fed back after a tool call."
     },
     {
       "id": 8,
@@ -504,10 +536,11 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "sum(sum_over_time(ai_tx_tool_calls{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
+          "expr": "sum(sum_over_time(ai_tx_tool_calls{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range]))",
           "instant": true
         }
-      ]
+      ],
+      "description": "Total tool invocations — every tool_use block the assistant emitted, counted per call. See the Tool usage panel and the tool reference in the Reference row for what each tool_name does."
     },
     {
       "id": 9,
@@ -562,10 +595,11 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "sum(sum_over_time(ai_tx_tool_errors{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) / clamp_min(sum(sum_over_time(ai_tx_tool_calls{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])),1)",
+          "expr": "sum(sum_over_time(ai_tx_tool_errors{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range])) / clamp_min(sum(sum_over_time(ai_tx_tool_calls{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range])),1)",
           "instant": true
         }
-      ]
+      ],
+      "description": "Share of tool calls whose result came back flagged is_error: tool_errors / tool_calls."
     },
     {
       "id": 10,
@@ -627,10 +661,11 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "sum by (model)(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__interval])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
+          "expr": "sum by (model)(sum_over_time(ai_tx_cost_usd{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__interval])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
           "legendFormat": "{{model}}"
         }
-      ]
+      ],
+      "description": "Notional cost per time bucket, stacked by model — useful for spotting a spend spike after switching models (e.g. Sonnet to Opus) for a task."
     },
     {
       "id": 12,
@@ -679,10 +714,11 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "sum by (kind)(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__interval]))",
+          "expr": "sum by (kind)(sum_over_time(ai_tx_tokens{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__interval]))",
           "legendFormat": "{{kind}}"
         }
-      ]
+      ],
+      "description": "Token volume per time bucket by kind — input (fresh prompt tokens), output (generated tokens), cache_read (served from cache), cache_write (written to cache for later reuse). Full definitions in the Token kinds panel, Reference row."
     },
     {
       "id": 13,
@@ -728,11 +764,12 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "sum by (model)(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
+          "expr": "sum by (model)(sum_over_time(ai_tx_cost_usd{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
           "legendFormat": "{{model}}",
           "instant": true
         }
-      ]
+      ],
+      "description": "Share of total notional cost attributable to each model over the selected range."
     },
     {
       "id": 14,
@@ -777,11 +814,12 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "sum by (project)(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
+          "expr": "sum by (project)(sum_over_time(ai_tx_cost_usd{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
           "legendFormat": "{{project}}",
           "instant": true
         }
-      ]
+      ],
+      "description": "Notional cost attributed to each project (repo) over the selected range — compares how much Claude Code work went into each one."
     },
     {
       "id": 15,
@@ -827,11 +865,12 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "sum by (kind)(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
+          "expr": "sum by (kind)(sum_over_time(ai_tx_tokens{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range]))",
           "legendFormat": "{{kind}}",
           "instant": true
         }
-      ]
+      ],
+      "description": "Raw token volume by kind. cache_read typically dominates this pie because every turn resends prior conversation as cached context — compare with the cost-weighted pie to the right, where it barely registers."
     },
     {
       "id": 31,
@@ -877,7 +916,7 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "sum by (kind)(sum_over_time(ai_tx_cost_usd_by_kind{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
+          "expr": "sum by (kind)(sum_over_time(ai_tx_cost_usd_by_kind{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))",
           "legendFormat": "{{kind}}",
           "instant": true
         }
@@ -941,11 +980,12 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "sum by (tool_name)(sum_over_time(ai_tx_tool_calls{project=~\"$project\", session_title=~\"${session:regex}\", tool_name=~\"$tool\"}[$__range]))",
+          "expr": "sum by (tool_name)(sum_over_time(ai_tx_tool_calls{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\", tool_name=~\"$tool\"}[$__range]))",
           "legendFormat": "{{tool_name}}",
           "instant": true
         }
-      ]
+      ],
+      "description": "Share of tool calls by tool_name — built-in tools (Bash, Read, Edit, Write, Grep, Glob, WebFetch, WebSearch, Task, ...) plus any mcp__<server>__<tool> calls from connected MCP servers. See the tool reference panel in the Reference row for what each one does."
     },
     {
       "id": 18,
@@ -990,11 +1030,12 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "sum by (tool_name)(sum_over_time(ai_tx_tool_latency_seconds{project=~\"$project\", session_title=~\"${session:regex}\", tool_name=~\"$tool\"}[$__range])) / clamp_min(sum by (tool_name)(count_over_time(ai_tx_tool_latency_seconds{project=~\"$project\", session_title=~\"${session:regex}\", tool_name=~\"$tool\"}[$__range])),1)",
+          "expr": "sum by (tool_name)(sum_over_time(ai_tx_tool_latency_seconds{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\", tool_name=~\"$tool\"}[$__range])) / clamp_min(sum by (tool_name)(count_over_time(ai_tx_tool_latency_seconds{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\", tool_name=~\"$tool\"}[$__range])),1)",
           "legendFormat": "{{tool_name}}",
           "instant": true
         }
-      ]
+      ],
+      "description": "Average wall-clock time between a tool_use call and its tool_result, per tool. High latency here usually means an external call (WebFetch, an MCP server) rather than a local op (Read, Edit)."
     },
     {
       "id": 19,
@@ -1040,11 +1081,12 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "sum by (stop_reason)(sum_over_time(ai_tx_stop_reason{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
+          "expr": "sum by (stop_reason)(sum_over_time(ai_tx_stop_reason{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range]))",
           "legendFormat": "{{stop_reason}}",
           "instant": true
         }
-      ]
+      ],
+      "description": "Why each assistant turn ended: end_turn (finished normally), tool_use (paused to call a tool), max_tokens (hit the output cap), stop_sequence, or similar. A large max_tokens share can mean responses are getting truncated."
     },
     {
       "id": 20,
@@ -1089,11 +1131,12 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "max by (tool_name)(max_over_time(ai_tx_tool_latency_seconds{project=~\"$project\", session_title=~\"${session:regex}\", tool_name=~\"$tool\"}[$__range]))",
+          "expr": "max by (tool_name)(max_over_time(ai_tx_tool_latency_seconds{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\", tool_name=~\"$tool\"}[$__range]))",
           "legendFormat": "{{tool_name}}",
           "instant": true
         }
-      ]
+      ],
+      "description": "Slowest single tool call per tool_name in the range — good for spotting one-off hangs that the average latency panel above smooths out."
     },
     {
       "id": 21,
@@ -1138,11 +1181,12 @@
             "type": "prometheus",
             "uid": "metrics-ai"
           },
-          "expr": "sum by (tool_name)(sum_over_time(ai_tx_tool_errors{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))",
+          "expr": "sum by (tool_name)(sum_over_time(ai_tx_tool_errors{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range]))",
           "legendFormat": "{{tool_name}}",
           "instant": true
         }
-      ]
+      ],
+      "description": "Count of tool results flagged is_error, broken down by tool_name — where failures are concentrated."
     },
     {
       "id": 23,
@@ -1270,7 +1314,7 @@
           },
           "format": "table",
           "instant": true,
-          "expr": "(sum by (session_id, project)(sum_over_time(ai_tx_cost_usd{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))) * on(session_id, project) group_left(session_title) (topk by (session_id, project) (1, max by (session_id, project, session_title)(max_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))) * 0 + 1)"
+          "expr": "(sum by (session_id, project)(sum_over_time(ai_tx_cost_usd{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range])) * on() group_left() (sum(usd_fx_rate{currency=\"$currency\"}) or vector(1))) * on(session_id, project) group_left(session_title) (topk by (session_id, project) (1, max by (session_id, project, session_title)(max_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range]))) * 0 + 1)"
         },
         {
           "refId": "B",
@@ -1280,7 +1324,7 @@
           },
           "format": "table",
           "instant": true,
-          "expr": "(sum by (session_id, project)(sum_over_time(ai_tx_tool_calls{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))) * on(session_id, project) group_left(session_title) (topk by (session_id, project) (1, max by (session_id, project, session_title)(max_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))) * 0 + 1)"
+          "expr": "(sum by (session_id, project)(sum_over_time(ai_tx_tool_calls{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range]))) * on(session_id, project) group_left(session_title) (topk by (session_id, project) (1, max by (session_id, project, session_title)(max_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range]))) * 0 + 1)"
         },
         {
           "refId": "C",
@@ -1290,7 +1334,7 @@
           },
           "format": "table",
           "instant": true,
-          "expr": "((max by (session_id, project)(max_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])) - min by (session_id, project)(min_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range])))) * on(session_id, project) group_left(session_title) (topk by (session_id, project) (1, max by (session_id, project, session_title)(max_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))) * 0 + 1)"
+          "expr": "((max by (session_id, project)(max_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range])) - min by (session_id, project)(min_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range])))) * on(session_id, project) group_left(session_title) (topk by (session_id, project) (1, max by (session_id, project, session_title)(max_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range]))) * 0 + 1)"
         },
         {
           "refId": "D",
@@ -1300,7 +1344,7 @@
           },
           "format": "table",
           "instant": true,
-          "expr": "(sum by (session_id, project)(sum_over_time(ai_tx_tokens{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))) * on(session_id, project) group_left(session_title) (topk by (session_id, project) (1, max by (session_id, project, session_title)(max_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", session_title=~\"${session:regex}\"}[$__range]))) * 0 + 1)"
+          "expr": "(sum by (session_id, project)(sum_over_time(ai_tx_tokens{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range]))) * on(session_id, project) group_left(session_title) (topk by (session_id, project) (1, max by (session_id, project, session_title)(max_over_time(ai_tx_event_epoch_seconds{project=~\"$project\", user=~\"$owner\", session_title=~\"$session\"}[$__range]))) * 0 + 1)"
         }
       ],
       "description": "Grouped by session_id, not session_title \u2014 a session's title can change mid-flight (Claude Code refines it, or a shipper bug briefly mislabeled some), and grouping by the label itself used to split one session into several rows. The join always shows the most-recently-seen title."
@@ -1347,9 +1391,10 @@
             "type": "loki",
             "uid": "logs"
           },
-          "expr": "{service_name=~\"claude-code-transcripts|promptmeter\", project=~\"$project\", session_title=~\"${session:regex}\"} | tool_name=~\"$tool\""
+          "expr": "{service_name=~\"claude-code-transcripts|promptmeter\", project=~\"$project\", session_title=~\"$session\", __tenant_id__=~\"(claude-$owner|^$)\"} | tool_name=~\"$tool\""
         }
-      ]
+      ],
+      "description": "Raw transcript lines from Loki for the selected Session/Project/Tool filters — the actual prompts, responses, and tool I/O behind the metrics above. Pick a single Session to make this readable."
     },
     {
       "id": 27,
@@ -1409,6 +1454,38 @@
       "options": {
         "mode": "markdown",
         "content": "| Plan | Price | Billing |\n|---|--:|---|\n| Pro | ~$20/mo | flat fee |\n| Max 5\u00d7 | ~$100/mo | flat fee |\n| Max 20\u00d7 | ~$200/mo | flat fee |\n| API | metered | per token (table \u2192 left) |\n\n_Reference only \u2014 verify current plan pricing at anthropic.com. Subscriptions are flat-fee within usage limits; the panels above do **not** reflect plan cost._"
+      },
+      "transparent": false
+    },
+    {
+      "id": 32,
+      "type": "text",
+      "title": "Token kinds",
+      "gridPos": {
+        "x": 0,
+        "y": 78,
+        "w": 12,
+        "h": 9
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "| Kind | Meaning |\n|---|---|\n| `input` | Fresh prompt tokens sent to the model this turn (not served from cache) |\n| `output` | Tokens the model generated in its response |\n| `cache_read` | Prior context served from Anthropic's prompt cache instead of being reprocessed \u2014 bills at **0.1x** the input rate |\n| `cache_write` | Tokens written into the prompt cache for reuse on a later turn \u2014 bills at **1.25x** (5m TTL) or **2x** (1h TTL) the input rate |\n\n_These are the `kind` label values on `ai_tx_tokens` and `ai_tx_cost_usd_by_kind`, computed in `bin/ship-transcripts`._"
+      },
+      "transparent": false
+    },
+    {
+      "id": 33,
+      "type": "text",
+      "title": "Tool reference",
+      "gridPos": {
+        "x": 12,
+        "y": 78,
+        "w": 12,
+        "h": 9
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "| Tool | What it does |\n|---|---|\n| `Bash` | Runs a shell command |\n| `Read` | Reads a file |\n| `Edit` | Makes a targeted find-and-replace edit to a file |\n| `Write` | Creates or overwrites a file |\n| `Glob` | Finds files by name pattern |\n| `Grep` | Searches file contents by pattern |\n| `WebFetch` | Fetches and reads a URL |\n| `WebSearch` | Searches the web |\n| `Task` | Delegates work to a subagent |\n| `TodoWrite` | Tracks a task checklist for the session |\n| `NotebookEdit` | Edits a Jupyter notebook cell |\n| `ExitPlanMode` | Exits planning mode to start executing |\n| `SlashCommand` | Invokes a project-defined `/command` |\n| `BashOutput` / `KillShell` | Reads output from / stops a background shell |\n| `mcp__<server>__<tool>` | A tool from a connected MCP server, named `<server>__<tool>` |\n\n_Not exhaustive \u2014 new tools ship over time. Use the **Tool** filter above to isolate one and read what it actually did in the transcript panel._"
       },
       "transparent": false
     }

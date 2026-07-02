@@ -149,18 +149,34 @@ data:
     - name: Mimir (AI)
       # Dedicated datasource for Claude dashboards (claude-custom/claude-native),
       # pinned to the "ai" tenant — see the theme-tenant split in
-      # mimir/config-map.yaml + dashboard-multitenancy.md. Direct to Mimir for
-      # now (not per-user scoped within the tenant); add scope-shim routing here
-      # later if/when that matters.
+      # mimir/config-map.yaml + dashboard-multitenancy.md.
       uid: metrics-ai
       type: prometheus
       access: proxy
-      url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.metrics.ports.http.targetPort }}/prometheus
+      {{- if .Values.observability.scopeShim.scopeMetrics }}
+      # Routed through the scope shim for per-user `owner` scoping, same as the
+      # "Metrics" datasource above. The shim never touches X-Scope-OrgID for the
+      # metrics instance (see scope-shim/config-map.yaml handle_req) — it passes
+      # this datasource's own "ai" tenant header through untouched, while
+      # injecting X-Owner on top.
+      url: http://{{ range $.Values.observability.scopeShim.instances }}{{ if eq .name "metrics" }}{{ $.Values.k8s.names.services.prefix }}{{ .label }}{{ $.Values.k8s.names.services.suffix }}{{ end }}{{ end }}:{{ $.Values.observability.scopeShim.ports.http.targetPort }}
+      editable: false
+      jsonData:
+        httpHeaderName1: '{{ .Values.observability.scopeShim.secretHeader }}'
+        httpHeaderName2: 'X-Scope-OrgID'
+      secureJsonData:
+        httpHeaderValue1: '{{ .Values.observability.scopeShim.secret }}'
+        httpHeaderValue2: 'ai'
+      {{- else }}
+      # scopeMetrics=false: query Mimir directly, same as this datasource's
+      # original behavior.
+      url: http://{{ $.Values.k8s.names.services.prefix }}{{ $.Values.observability.metrics.label }}{{ $.Values.k8s.names.services.suffix }}:{{ $.Values.observability.metrics.ports.http.targetPort }}/prometheus
       editable: false
       jsonData:
         httpHeaderName1: 'X-Scope-OrgID'
       secureJsonData:
         httpHeaderValue1: 'ai'
+      {{- end }}
 
   jellyfin.json: |
     {

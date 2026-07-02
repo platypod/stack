@@ -17,12 +17,18 @@ observability:
       # Code telemetry) that send Authorization: Basic, not a session cookie.
       grpcHost: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.otelCollector.label }}-grpc{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       label: "{{ .Values.observability.otelCollector.label }}-gateway"
+      # Bumped from 256Mi/512Mi: the gateway was OOMKilling repeatedly (~5x/24h)
+      # under normal load (jellyfin/k8s_cluster/traefik/authelia/fx scrapes +
+      # AI metrics/logs/traces all funnel through this one pod), losing
+      # in-flight metric exports while already-flushed logs survived. See
+      # memory_limiter sizing in gateway/config-map.yaml — its thresholds must
+      # stay comfortably under these.
       resources:
         requests:
           cpu: 100m
-          memory: 256Mi
-        limits:
           memory: 512Mi
+        limits:
+          memory: 1Gi
       ports:
         grpc:
           name: otel-grpc

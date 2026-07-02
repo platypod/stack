@@ -189,10 +189,14 @@ data:
         send_batch_size: 512
         send_batch_max_size: 2048
         metadata_keys: [x-scope-orgid]
+      # Thresholds must stay under the pod's real k8s memory limit (see
+      # otel-collectors.yaml) with headroom — they used to be set at 4000/800
+      # while the pod's actual limit was 512Mi, so this safety valve could
+      # never trigger before the kernel OOM-killed the container outright.
       memory_limiter:
         check_interval: 1s
-        limit_mib: 4000
-        spike_limit_mib: 800
+        limit_mib: 800
+        spike_limit_mib: 200
       attributes/otlp:
         actions:
         - key: gateway-receiver
@@ -267,9 +271,32 @@ data:
         # normalized names.
         metrics_endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.metrics.ports.http.targetPort }}/otlp/v1/metrics
         # Per-tenant X-Scope-OrgID injected from request metadata (Mimir
-        # multitenancy_enabled). See headers_setter/metrics above.
+        # multitenancy_enabled). See headers_setter/metrics above. Used by every
+        # metrics pipeline EXCEPT metrics/otlp — see otlphttp/mimir_ai below for
+        # why that one doesn't go through context extraction.
         auth:
           authenticator: headers_setter/metrics
+        tls:
+          insecure: true
+      # Dedicated exporter for metrics/otlp (prompt-meter's ai_tx_* pipeline) with
+      # a hardcoded tenant header instead of headers_setter/metrics' from_context
+      # extraction. Found 2026-07-02: external (Traefik+Authelia+tenant-guard)
+      # OTLP metric exports consistently landed in the "anonymous" tenant instead
+      # of "ai" — reproduced identically via a direct-to-gateway export (bypassing
+      # Traefik) succeeding while the same client's external export didn't, so the
+      # collector's own from_context propagation for this pipeline is the
+      # suspect, not the client or the external auth chain. "ai" is a fixed,
+      # compile-time-known value for this one pipeline (unlike the other metric
+      # pipelines below, which genuinely have no client to derive a tenant from,
+      # or the per-user Loki tenant, which is dynamic) — there was never a real
+      # need to route it through dynamic context extraction. See
+      # docs/observability/dashboard-multitenancy.md.
+      otlphttp/mimir_ai:
+        compression: gzip
+        encoding: proto
+        metrics_endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.metrics.ports.http.targetPort }}/otlp/v1/metrics
+        headers:
+          X-Scope-OrgID: "ai"
         tls:
           insecure: true
       otlphttp/loki:
@@ -291,55 +318,55 @@ data:
       pipelines:
         logs:
           receivers: [otlp]
-          processors: [batch/logs, memory_limiter]
+          processors: [memory_limiter, batch/logs]
           exporters: [otlphttp/loki]
 
         metrics/otlp:
           receivers: [otlp]
-          processors: [attributes/otlp, transform/owner, batch/otlp_metrics, memory_limiter]
-          exporters: [otlphttp/mimir]
+          processors: [memory_limiter, attributes/otlp, transform/owner, batch/otlp_metrics]
+          exporters: [otlphttp/mimir_ai]
         {{- if .Values.observability.otelCollector.receivers.jellyfinCustom.enable }}
         metrics/jellyfinCustom:
           receivers: [prometheus/jellyfinCustom]
-          processors: [attributes/prometheus, transform/owner, batch, memory_limiter]
+          processors: [memory_limiter, attributes/prometheus, transform/owner, batch]
           exporters: [otlphttp/mimir]
         {{- end }}
         {{- if .Values.observability.otelCollector.receivers.jellyfinNative.enable }}
         metrics/jellyfinNative:
           receivers: [prometheus/jellyfinNative]
-          processors: [attributes/prometheus, transform/owner, batch, memory_limiter]
+          processors: [memory_limiter, attributes/prometheus, transform/owner, batch]
           exporters: [otlphttp/mimir]
         {{- end }}
         {{- if .Values.observability.otelCollector.receivers.synologySnmp.enable }}
         metrics/synologySnmp:
           receivers: [prometheus/synologySnmp]
-          processors: [attributes/snmp, transform/owner, batch, memory_limiter]
+          processors: [memory_limiter, attributes/snmp, transform/owner, batch]
           exporters: [otlphttp/mimir]
         {{- end }}
         metrics/transmission:
           receivers: [prometheus/transmission]
-          processors: [attributes/prometheus, transform/owner, batch, memory_limiter]
+          processors: [memory_limiter, attributes/prometheus, transform/owner, batch]
           exporters: [otlphttp/mimir]
         metrics/fx:
           receivers: [prometheus/fx]
-          processors: [attributes/prometheus, transform/owner, batch, memory_limiter]
+          processors: [memory_limiter, attributes/prometheus, transform/owner, batch]
           exporters: [otlphttp/mimir]
         metrics/k8s_cluster:
           receivers: [k8s_cluster]
-          processors: [transform/k8s_cluster, attributes/k8s_cluster, transform/owner, batch, memory_limiter]
+          processors: [memory_limiter, transform/k8s_cluster, attributes/k8s_cluster, transform/owner, batch]
           exporters: [otlphttp/mimir]
         metrics/traefik:
           receivers: [prometheus/traefik]
-          processors: [attributes/prometheus, transform/owner, batch, memory_limiter]
+          processors: [memory_limiter, attributes/prometheus, transform/owner, batch]
           exporters: [otlphttp/mimir]
         metrics/authelia:
           receivers: [prometheus/authelia]
-          processors: [attributes/prometheus, transform/owner, batch, memory_limiter]
+          processors: [memory_limiter, attributes/prometheus, transform/owner, batch]
           exporters: [otlphttp/mimir]
 
         traces:
           receivers: [otlp]
-          processors: [batch, memory_limiter]
+          processors: [memory_limiter, batch]
           exporters: [otlphttp/tempo]
 
       telemetry:
