@@ -51,4 +51,6 @@ reclaimerr:
       cpu: 50m
       memory: 128Mi
     limits:
-      memory: 256Mi
+      # 256Mi was too tight: the IMDb/AniList ratings refresh loads ~1.7M rows
+      # into SQLite and was OOMKilling the pod every ~2h.
+      memory: 512Mi
