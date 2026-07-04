@@ -29,3 +29,30 @@ BookStack, Wiki.js and Outline each have their own DB (and Outline a Redis). The
 
 Debug echo service (`group:dev`) — useful for verifying forward-auth headers and
 routing without touching a real app.
+
+## Headroom — **disabled** (CLI-only, no working client yet)
+
+[headroomlabs-ai/headroom](https://github.com/headroomlabs-ai/headroom), an LLM
+context-compression proxy. Chart is in place
+(`values/default/dev-tools/headroom.yaml`, `headroom.enable: false`) but not
+deployed. Runs in **proxy mode only** (`headroom proxy`, the image's default
+entrypoint) — no qdrant/neo4j (those back the cross-agent memory feature) and
+no persistent volume for `~/.headroom`, so its savings/memory stats would reset
+on pod restart. Bypasses Authelia like IT-Tools/CyberChef: it'd be called by
+CLI/agent traffic carrying an upstream API key, not a browser session.
+
+**Only the terminal `claude` CLI can be pointed at it.** `ANTHROPIC_BASE_URL`
+has to be set in `~/.claude/settings.json`'s `env` block (`make proxy-on
+ENV=dev` / `make proxy-off`, via `bin/set-claude-proxy.sh`) — a shell `export`
+doesn't work, since Claude Desktop doesn't inherit terminal environment.
+**Claude Desktop cannot be routed through it at all**: it hardcodes
+`ANTHROPIC_BASE_URL=https://api.anthropic.com` for every embedded `claude`
+process it spawns, regardless of `settings.json` or even a session-wide
+`launchctl setenv`. Confirmed by process tree: both a resumed and a brand-new
+Desktop session, launched *after* the env var was set, still showed the
+hardcoded default, and Headroom's own `/stats` request counter never moved for
+either. There's no known way to override this from outside the app.
+
+To pick this back up: flip `headroom.enable: true`, `make deploy ENV=dev
+MODULE=dev-tools`, then use the terminal CLI only. See
+[docs/make-targets.md](../../docs/make-targets.md).

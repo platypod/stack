@@ -28,6 +28,7 @@ refers to the model described in [authentication.md](authentication.md).
 | IT-Tools | Dev utilities | bypass |
 | CyberChef | Data-format swiss-army knife | bypass |
 | whoami | Debug echo endpoint | forwardauth (`group:dev`) |
+| ~~Headroom~~ | LLM context-compression proxy ([headroomlabs-ai/headroom](https://github.com/headroomlabs-ai/headroom)) | **disabled** — CLI-only, no working client; see [src/dev-tools/README.md](../src/dev-tools/README.md#headroom--disabled-cli-only-no-working-client-yet) |
 
 ## media
 | Service | Role | Auth |

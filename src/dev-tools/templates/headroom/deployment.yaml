@@ -1,0 +1,36 @@
+{{- if .Values.headroom.enable }}
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.headroom.label .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.headroom.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.headroom.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.headroom.image }}
+        resources:
+          {{- toYaml .Values.headroom.resources | nindent 10 }}
+        ports:
+        - name: {{ .Values.headroom.ports.http.name }}
+          containerPort: {{ .Values.headroom.ports.http.targetPort }}
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ .Values.headroom.ports.http.targetPort }}
+          initialDelaySeconds: 10
+          periodSeconds: 10
+{{- end }}

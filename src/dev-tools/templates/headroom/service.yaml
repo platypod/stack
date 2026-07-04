@@ -1,0 +1,15 @@
+{{- if .Values.headroom.enable }}
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.headroom.label }}{{ .Values.k8s.names.services.suffix }}
+
+spec:
+  ports:
+  - protocol: TCP
+    name: {{ .Values.headroom.ports.http.name }}
+    port: {{ .Values.headroom.ports.http.targetPort }}
+  selector:
+    app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.headroom.label }}{{ .Values.k8s.names.pods.suffix }}
+{{- end }}

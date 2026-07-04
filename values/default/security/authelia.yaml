@@ -130,6 +130,10 @@ authelia:
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.lldap.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.itTools.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.cyberChef.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      # Proxy mode is called by CLI/agent traffic (Authorization carries the
+      # upstream Anthropic/OpenAI key), not a browser session — forward-auth's
+      # login redirect would break it. Same bypass rationale as IT-Tools/CyberChef.
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.headroom.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyswarrm.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
