@@ -132,6 +132,21 @@ ship-transcripts: ## [retired → prompt-meter submodule] Ship AI usage telemetr
 	@$(MAKE) --no-print-directory -C ../prompt-meter install >/dev/null
 	@$(MAKE) --no-print-directory -C ../prompt-meter ship ARGS="$(ARGS)"
 
+# ---------------------------------------------------------------------------
+# Headroom proxy (dev-tools module)
+# ---------------------------------------------------------------------------
+
+# Mirrors the dev/prd domains set in values/{dev,prd}/values.yaml.
+DOMAIN_dev := platypod.local
+DOMAIN_prd := platypod.ovh
+
+.PHONY: proxy-on proxy-off
+proxy-on:      ## Route Claude Code (terminal + Desktop) through the Headroom proxy: sets ANTHROPIC_BASE_URL in ~/.claude/settings.json  (ENV=dev)
+	@sh bin/set-claude-proxy.sh on https://headroom.$(DOMAIN_$(ENV))
+
+proxy-off:     ## Stop routing through the Headroom proxy: removes ANTHROPIC_BASE_URL from ~/.claude/settings.json
+	@sh bin/set-claude-proxy.sh off
+
 .PHONY: help
 help:          ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) \

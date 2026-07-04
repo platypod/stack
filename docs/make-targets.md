@@ -56,6 +56,35 @@ hood). `make help` prints this list live. Default goal is `help`.
 |--------|--------------|
 | `make build IMAGE=<name> VERSION=<tag>` | Build and push a custom image to `ghcr.io/platypod/<name>:<tag>` |
 
+## Headroom proxy (dev-tools module) — **disabled**
+
+[Headroom](https://github.com/headroomlabs-ai/headroom) is currently
+**disabled** (`headroom.enable: false`) — see
+[src/dev-tools/README.md](../src/dev-tools/README.md#headroom--disabled-cli-only-no-working-client-yet)
+for why. Only the terminal `claude` CLI can ever be pointed at it;
+**Claude Desktop hardcodes its own `ANTHROPIC_BASE_URL` and can't be
+overridden** (verified — neither `settings.json` nor a session-wide
+`launchctl setenv` reached it). These targets still work once the service is
+re-enabled: they edit `~/.claude/settings.json`'s `env` block
+(`bin/set-claude-proxy.sh`) — the same mechanism already used there for the
+OTEL vars. A shell `export` alone doesn't work for the terminal CLI either
+across restarts unless it's actually in that same shell — `settings.json` is
+the durable, restart-proof way to set it.
+
+| Target | What it does |
+|--------|--------------|
+| `make proxy-on` | Set `env.ANTHROPIC_BASE_URL = https://headroom.<domain>` in `~/.claude/settings.json`, for `ENV` |
+| `make proxy-off` | Remove `env.ANTHROPIC_BASE_URL` from `~/.claude/settings.json` |
+
+```bash
+make proxy-on ENV=dev   # then quit + relaunch the terminal `claude` CLI
+make proxy-off          # then quit + relaunch again to stop routing through the proxy
+```
+
+settings.json is only read at process startup, so the change has no effect
+until you restart — merely clearing/continuing a conversation in an
+already-running process isn't enough.
+
 ## Examples
 
 ```bash
@@ -64,4 +93,5 @@ make deploy ENV=dev MODULE=core         # redeploy just the core module on dev
 make deploy ENV=prd                     # deploy the full stack to prod
 make diff ENV=prd MODULE=security       # preview a prod change
 make build IMAGE=pokeclicker VERSION=v0.10.25
+make deploy ENV=dev MODULE=dev-tools    # redeploy dev-tools (Headroom currently disabled)
 ```
