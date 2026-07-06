@@ -64,13 +64,13 @@ spec:
         env:
         - name: SERVER_PORT
           value: "{{ .Values.komga.ports.http.targetPort }}"
-        # OpenJDK's container-aware default is MaxRAMPercentage=25 — far too
-        # conservative for a PDF/image-rendering app with a memory limit this
-        # small. Raise the JVM's share of the container limit so it actually
-        # gets to use most of what komga.resources.limits.memory grants it
-        # (see values/default/media/komga.yaml for why the OOMs happened).
+        # OpenJDK's container-aware default (MaxRAMPercentage=25) leaves the
+        # heap too small; but going too high (75) leaves too little room for
+        # the PDF renderer's off-heap/native memory and gets the whole
+        # container OOMKilled instead (see values/default/media/komga.yaml).
+        # 50% of the limit is the sweet spot found so far.
         - name: JDK_JAVA_OPTIONS
-          value: "-XX:MaxRAMPercentage=75.0"
+          value: "-XX:MaxRAMPercentage=50.0"
         # Komga hard-refuses to start with its SQLite DBs on a remote filesystem
         # (/config lives on the apps NFS PVC). We accept the same SQLite-on-NFS
         # trade-off as the *arr apps; single replica, single writer.
