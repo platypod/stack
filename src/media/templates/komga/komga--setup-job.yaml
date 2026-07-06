@@ -30,6 +30,13 @@
        match is a best-effort skip, not a failure — it's picked up on the next
        deploy once they've logged in at least once. Only ever adds roles,
        never removes any (e.g. ones granted later from the admin UI).
+    6. If OIDC is configured, hide the local login form and auto-redirect
+       into it. These are NOT server settings (checked /api/v1/settings —
+       nothing there) — they're free-form "global client settings"
+       (webui.oauth2.hide_login / webui.oauth2.auto_login, boolean strings),
+       a separate key-value store the webui itself reads
+       (komga-webui/src/views/LoginView.vue). Both need allowUnauthorized:true
+       since the (unauthenticated) login page is what reads them.
 */ -}}
 {{- $svc := print .Values.k8s.names.services.prefix .Values.komga.label .Values.k8s.names.services.suffix }}
 {{- /* .root is a template-valued string (e.g. "{{ .Values.media.system.data.path }}/manga/bd")
@@ -75,6 +82,8 @@ spec:
           value: {{ $libraries | toJson | quote }}
         - name: ADMIN_EMAILS
           value: {{ $adminEmails | toJson | quote }}
+        - name: OIDC_ENABLED
+          value: "{{ if .Values.komga.oidc.clientId }}true{{ else }}false{{ end }}"
         command:
         - python3
         - -c
@@ -87,6 +96,7 @@ spec:
           CONVERT_TO_CBZ = os.environ["CONVERT_TO_CBZ"].lower() == "true"
           LIBRARIES = json.loads(os.environ["LIBRARIES"])
           ADMIN_EMAILS = json.loads(os.environ["ADMIN_EMAILS"])
+          OIDC_ENABLED = os.environ["OIDC_ENABLED"].lower() == "true"
           FULL_ADMIN_ROLES = {"ADMIN", "FILE_DOWNLOAD", "KOBO_SYNC", "KOREADER_SYNC", "PAGE_STREAMING", "USER"}
           BASIC_AUTH = "Basic " + base64.b64encode(f"{EMAIL}:{PASSWORD}".encode()).decode()
 
@@ -201,5 +211,30 @@ spec:
                       print(f"  granted admin roles to '{email}': {new_roles}")
                   else:
                       print(f"  WARN: failed to grant admin roles to '{email}' [{s}]: {b}")
+
+          # 6. hide local login + auto-redirect into OIDC, only when OIDC is configured
+          if OIDC_ENABLED:
+              s, current = call("GET", "/api/v1/client-settings/global/list")
+              if s != 200 or not isinstance(current, dict):
+                  print(f"  WARN: GET client-settings failed [{s}]: {current} — skipping.")
+              else:
+                  wanted = {
+                      "webui.oauth2.hide_login": "true",
+                      "webui.oauth2.auto_login": "true",
+                  }
+                  patch = {
+                      k: {"value": v, "allowUnauthorized": True}
+                      for k, v in wanted.items()
+                      if current.get(k, {}).get("value") != v
+                  }
+                  if not patch:
+                      print("  OIDC hide-login/auto-login already set, skipping.")
+                  else:
+                      s, b = call("PATCH", "/api/v1/client-settings/global", patch,
+                                  headers={"Authorization": BASIC_AUTH})
+                      if s == 204:
+                          print(f"  set client settings: {list(patch)}")
+                      else:
+                          print(f"  WARN: failed to set client settings [{s}]: {b}")
           print("Komga setup complete.")
 {{- end }}
