@@ -16,9 +16,12 @@ shared with the *arrs.
 
 ## OIDC
 
-Reclaimerr and Kavita delegate login to Authelia. Both use the `hostAliases`
-discovery trick (public Authelia host → `traefik.loadBalancerIP`). See
-[docs/authentication.md](../../docs/authentication.md).
+Reclaimerr, Komga, and Kavita all delegate login to Authelia and use the
+`hostAliases` discovery trick (public Authelia host → `traefik.loadBalancerIP`).
+See [docs/authentication.md](../../docs/authentication.md).
+
+Komga's OIDC client is registered directly via env (`SPRING_APPLICATION_JSON`
+in its Deployment) — no setup Job needed for that part.
 
 Kavita stores its OIDC config in the DB, not env — the **`kavita-setup` Job**
 (post-install/upgrade hook, weight 15) registers the admin and pushes the OIDC
@@ -26,19 +29,27 @@ config via the settings API. It's idempotent and best-effort: OIDC failures don'
 fail the release (retried next deploy). Kavita validates the issuer cert at
 save-time, so OIDC can't be configured on dev (mkcert self-signed) — prod only.
 
-## Komga → Kavita
+## Komga vs Kavita
 
-Komga is **disabled** (`enable: false`); Kavita replaces it. Komga's data is
-preserved (not deleted), so it can be re-enabled if needed.
+Kavita (.NET) is **disabled** (`enable: false`) — it intermittently SIGILL-crashes
+on the ARM guest, with no workaround found. **Komga (JVM) is the active
+comics/manga reader** instead. Kavita's data/config is preserved (not deleted),
+so it can be re-enabled if a future .NET build or vfkit fix resolves the SIGILL.
+
+Komga library roots must each contain one subfolder per Series — books sitting
+directly in a library's root all collapse into a single series named after the
+root folder. The **komga-setup** Job (post-install/upgrade hook, weight 15)
+creates the libraries declared in `komga.libraries` (idempotent,
+create-if-missing only — see [docs/media/komga-setup-job.md](../../docs/media/komga-setup-job.md)).
 
 ## Suwayomi (manga downloader)
 
-Feeds Kavita: downloads land as **CBZ** in the media share's `manga` subfolder
-(`suwayomi.mangaSubPath`), which Kavita serves as a library.
+Feeds Komga: downloads land as **CBZ** in the media share's `manga` subfolder
+(`suwayomi.mangaSubPath`), which Komga serves as a library.
 
 - Runs as its **native uid 1000** — the bundled JAR at `/home/suwayomi/startup`
   is mode `0750` (owner-only), so custom uids can't launch it. Downloads end up
-  `1000:1000` but world-readable, so Kavita (media user) still serves them.
+  `1000:1000` but world-readable, so Komga (media user) still serves them.
 - `AUTH_MODE=none` — gated solely by Authelia forward-auth.
 - Reuses the shared **Flaresolverr** to bypass Cloudflare.
 
@@ -55,7 +66,8 @@ Extensions page and install the sources you want.
 
 Several services bootstrap via post-install/post-upgrade hook Jobs (idempotent,
 exit 0 on partial so the release succeeds): `jellyfin-setup` (w10),
-`kavita-setup` (w15), `jellyseerr-setup` (w20), `reclaimerr-setup` (w30).
+`komga-setup` / `kavita-setup` (w15, whichever's enabled), `jellyseerr-setup`
+(w20), `reclaimerr-setup` (w30).
 
 ## Flaresolverr
 

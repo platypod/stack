@@ -6,7 +6,11 @@ Ebook/digital library server.
 - **Auth:** on the Authelia **`bypass`** list (its own auth) and integrates OIDC.
 - **Storage:** SQLite DB on the **local `config` volume** — critical: WAL on NFS caused
   lag/locks/crashes ([[sqlite-on-nfs-localconfig]]).
-- **History:** Kavita (.NET) once **SIGILL-crashed on the ARM guest**, which drove a
-  temporary switch to Komga; it's back on this pinned build. See
-  [[kavita-sigill-use-komga]].
+- **Status:** currently **disabled** (`enable: false`) — Kavita (.NET) SIGILL-crashes
+  (exit 132) intermittently on the Apple Virtualization/Talos ARM guest.
+  No container-level workaround eliminated it (W^X, HWIntrinsic, ReadyToRun,
+  OpenSSL armcap all only reduced frequency). Reverted to
+  [komga](komga.md) (JVM, unaffected). Kept configured (OIDC, local config
+  volume) to revisit after a .NET version bump or a vfkit CPU-feature fix.
+  See [[kavita-sigill-use-komga]].
 - **Setup:** [kavita-setup](kavita-setup-job.md).

@@ -11,6 +11,25 @@ komga:
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.komga.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: gotson/komga:1.24.4
   label: komga
+  # First-boot admin, claimed by the komga-setup Job (POST /api/v1/claim) if the
+  # server isn't already claimed. If Komga was already claimed by hand (e.g. from
+  # before this Job existed), set these to match the REAL existing admin login —
+  # the Job authenticates every run with HTTP Basic using this email/password, so
+  # a mismatch means it can't create/inspect libraries (it logs a warning and
+  # exits 0 rather than crash-looping on a bad password).
+  credentials:
+    email: ""
+    password: ""
+  # Libraries the komga-setup Job ensures exist (create-if-missing by name, never
+  # overwrites — same philosophy as Kavita: library tweaks made from the admin UI
+  # afterward are left alone). See komga--setup-job.yaml for the rest of each
+  # library's scan settings.
+  convertToCbz: true
+  libraries:
+  - name: bd
+    root: "{{ .Values.media.system.data.path }}/manga/bd"
+  - name: manga
+    root: "{{ .Values.media.system.data.path }}/manga/mangas"
   ports:
     http:
       name: komga-http
@@ -19,9 +38,6 @@ komga:
     # config/SQLite → dedicated local volume (NFS can't host SQLite WAL).
     app: "{{ .Values.storage.defaultVolumes.config }}"
     media: "{{ .Values.storage.defaultVolumes.media }}"
-  # Library root inside the media share; create/point Komga libraries under
-  # this path from its admin UI (Server settings -> Libraries).
-  librarySubPath: books
   replicasNb: 1
   resources:
     requests:

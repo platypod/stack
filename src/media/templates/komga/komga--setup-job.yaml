@@ -1,0 +1,205 @@
+{{- if and .Values.komga.enable .Values.komga.credentials.email .Values.komga.credentials.password }}
+{{- /*
+  Komga first-boot setup Job.
+
+  Komga has no login/token endpoint — every API call is authenticated with
+  HTTP Basic (email:password) or an API key. So unlike Kavita/Suwayomi this
+  Job needs the REAL admin credentials up front:
+    - If the server has never been claimed, it claims it with these
+      credentials (POST /api/v1/claim, admin = first claim).
+    - If it was already claimed by hand (e.g. before this Job existed),
+      .Values.komga.credentials must match that existing admin, or every
+      Basic-Auth call below 401s. That's a config problem for a human to
+      fix (or re-claim isn't possible once claimed) — not something to
+      crash-loop on, so an auth failure is logged and the Job exits 0.
+
+  Flow (idempotent — safe on every deploy):
+    1. Wait for the (unauthenticated) claim-status endpoint.
+    2. Claim the server if unclaimed. No-op if already claimed.
+    3. GET libraries (Basic Auth). 401 here means the credentials don't
+       match the real admin — warn and stop (exit 0, release still succeeds).
+    4. Create any library in .Values.komga.libraries whose name doesn't
+       already exist. Never touches/updates existing libraries — manual
+       tweaks made from the admin UI afterward are left alone.
+    5. Grant full admin roles to any Komga user whose email matches an LLDAP
+       seed user in the "admins" group. Komga's OIDC auto-provisioning gives
+       new SSO accounts only baseline roles (USER/FILE_DOWNLOAD/PAGE_STREAMING)
+       — it does not inherit admin-ness from the identity provider, the same
+       gap [[jellyseerr-admin-via-db]] worked around for Jellyseerr. The
+       account only exists after that person's first OIDC login, so a missing
+       match is a best-effort skip, not a failure — it's picked up on the next
+       deploy once they've logged in at least once. Only ever adds roles,
+       never removes any (e.g. ones granted later from the admin UI).
+*/ -}}
+{{- $svc := print .Values.k8s.names.services.prefix .Values.komga.label .Values.k8s.names.services.suffix }}
+{{- /* .root is a template-valued string (e.g. "{{ .Values.media.system.data.path }}/manga/bd")
+   — resolve it with tpl before it goes anywhere near toJson, or it ships as literal text. */ -}}
+{{- $libraries := list }}
+{{- range .Values.komga.libraries }}
+{{- $libraries = append $libraries (dict "name" .name "root" (tpl .root $)) }}
+{{- end }}
+{{- $adminEmails := list }}
+{{- range .Values.lldap.seed.users }}
+{{- if has "admins" .groups }}
+{{- $adminEmails = append $adminEmails .email }}
+{{- end }}
+{{- end }}
+apiVersion: batch/v1
+kind: Job
+
+metadata:
+  name: komga-setup
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "15"
+    "helm.sh/hook-delete-policy": before-hook-creation
+
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: komga-setup
+        image: python:3-alpine
+        env:
+        - name: KOMGA_URL
+          value: "http://{{ $svc }}:{{ .Values.komga.ports.http.targetPort }}"
+        - name: ADMIN_EMAIL
+          value: "{{ .Values.komga.credentials.email }}"
+        - name: ADMIN_PASSWORD
+          value: "{{ .Values.komga.credentials.password }}"
+        - name: CONVERT_TO_CBZ
+          value: "{{ .Values.komga.convertToCbz }}"
+        - name: LIBRARIES
+          value: {{ $libraries | toJson | quote }}
+        - name: ADMIN_EMAILS
+          value: {{ $adminEmails | toJson | quote }}
+        command:
+        - python3
+        - -c
+        - |
+          import base64, json, os, time, urllib.request, urllib.error
+
+          BASE  = os.environ["KOMGA_URL"]
+          EMAIL = os.environ["ADMIN_EMAIL"]
+          PASSWORD = os.environ["ADMIN_PASSWORD"]
+          CONVERT_TO_CBZ = os.environ["CONVERT_TO_CBZ"].lower() == "true"
+          LIBRARIES = json.loads(os.environ["LIBRARIES"])
+          ADMIN_EMAILS = json.loads(os.environ["ADMIN_EMAILS"])
+          FULL_ADMIN_ROLES = {"ADMIN", "FILE_DOWNLOAD", "KOBO_SYNC", "KOREADER_SYNC", "PAGE_STREAMING", "USER"}
+          BASIC_AUTH = "Basic " + base64.b64encode(f"{EMAIL}:{PASSWORD}".encode()).decode()
+
+          def call(method, path, body=None, headers=None):
+              data = json.dumps(body).encode() if body is not None else None
+              h = {"Content-Type": "application/json", **(headers or {})}
+              req = urllib.request.Request(f"{BASE}{path}", data=data, method=method, headers=h)
+              def parse(raw):
+                  try:    return json.loads(raw) if raw else None
+                  except Exception: return raw
+              try:
+                  with urllib.request.urlopen(req, timeout=20) as r:
+                      return r.status, parse(r.read().decode())
+              except urllib.error.HTTPError as e:
+                  return e.code, parse(e.read().decode())
+
+          # 1. wait for the API (claim-status is unauthenticated)
+          for i in range(60):
+              try:
+                  s, b = call("GET", "/api/v1/claim")
+                  if s == 200:
+                      print(f"  [{i}] Komga is up."); break
+              except Exception as e:
+                  print(f"  [{i}] not ready: {e}")
+              time.sleep(5)
+          else:
+              raise SystemExit("Komga never became ready")
+
+          # 2. claim if unclaimed
+          s, claim = call("GET", "/api/v1/claim")
+          if s == 200 and isinstance(claim, dict) and not claim.get("isClaimed"):
+              s, b = call("POST", "/api/v1/claim", headers={
+                  "X-Komga-Email": EMAIL, "X-Komga-Password": PASSWORD,
+              })
+              if s == 200:
+                  print(f"Server claimed, admin = {EMAIL}.")
+              else:
+                  print(f"WARN: claim failed [{s}]: {b} — continuing, maybe a race with another run.")
+          else:
+              print("Server already claimed, skipping.")
+
+          # 3. authenticate as admin
+          s, existing = call("GET", "/api/v1/libraries", headers={"Authorization": BASIC_AUTH})
+          if s == 401:
+              print("WARN: 401 on GET /api/v1/libraries — komga.credentials doesn't match "
+                    "the real admin login (likely claimed by hand before this Job existed). "
+                    "Fix komga.credentials.email/password in values, or nothing below runs.")
+              raise SystemExit(0)
+          if s != 200 or not isinstance(existing, list):
+              raise SystemExit(f"GET /api/v1/libraries failed [{s}]: {existing}")
+          existing_names = {lib["name"] for lib in existing}
+          print(f"Existing libraries: {sorted(existing_names) or '(none)'}")
+
+          # 4. create missing libraries (never touch ones that already exist)
+          for lib in LIBRARIES:
+              if lib["name"] in existing_names:
+                  print(f"  '{lib['name']}' already exists, skipping.")
+                  continue
+              body = {
+                  "name": lib["name"],
+                  "root": lib["root"],
+                  "convertToCbz": CONVERT_TO_CBZ,
+                  "analyzeDimensions": True,
+                  "emptyTrashAfterScan": True,
+                  "hashFiles": True,
+                  "hashKoreader": False,
+                  "hashPages": False,
+                  "importBarcodeIsbn": False,
+                  "importComicInfoBook": True,
+                  "importComicInfoCollection": True,
+                  "importComicInfoReadList": True,
+                  "importComicInfoSeries": True,
+                  "importComicInfoSeriesAppendVolume": False,
+                  "importEpubBook": False,
+                  "importEpubSeries": False,
+                  "importLocalArtwork": True,
+                  "importMylarSeries": False,
+                  "repairExtensions": True,
+                  "scanCbx": True,
+                  "scanDirectoryExclusions": [],
+                  "scanEpub": False,
+                  "scanForceModifiedTime": False,
+                  "scanInterval": "EVERY_6H",
+                  "scanOnStartup": True,
+                  "scanPdf": True,
+                  "seriesCover": "FIRST",
+              }
+              s, b = call("POST", "/api/v1/libraries", body, headers={"Authorization": BASIC_AUTH})
+              if s in (200, 201):
+                  print(f"  created library '{lib['name']}' -> {lib['root']}")
+              else:
+                  print(f"  WARN: failed to create '{lib['name']}' [{s}]: {b}")
+
+          # 5. grant full admin roles to LLDAP "admins"-group users, matched by email
+          s, users = call("GET", "/api/v2/users", headers={"Authorization": BASIC_AUTH})
+          if s != 200 or not isinstance(users, list):
+              print(f"  WARN: GET /api/v2/users failed [{s}]: {users} — skipping admin sync.")
+          else:
+              by_email = {u["email"]: u for u in users}
+              for email in ADMIN_EMAILS:
+                  user = by_email.get(email)
+                  if user is None:
+                      print(f"  '{email}' has no Komga account yet (no OIDC login so far) — skipping, will retry next deploy.")
+                      continue
+                  new_roles = sorted(set(user["roles"]) | FULL_ADMIN_ROLES)
+                  if set(user["roles"]) >= FULL_ADMIN_ROLES:
+                      print(f"  '{email}' already has full admin roles, skipping.")
+                      continue
+                  s, b = call("PATCH", f"/api/v2/users/{user['id']}", {"roles": new_roles},
+                              headers={"Authorization": BASIC_AUTH})
+                  if s == 204:
+                      print(f"  granted admin roles to '{email}': {new_roles}")
+                  else:
+                      print(f"  WARN: failed to grant admin roles to '{email}' [{s}]: {b}")
+          print("Komga setup complete.")
+{{- end }}
