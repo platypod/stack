@@ -15,7 +15,7 @@ requests (Jellyseerr), and housekeeping. Many apps use SQLite on the **local
 | [readarr](arr-stack.md) | `ghcr.io/pennydreadful/bookshelf:hardcover-v0.4.20.129` | books (Bookshelf fork — Readarr is EOL) |
 | [bazarr](arr-stack.md) | `linuxserver/bazarr:latest` | subtitles; Authelia bypass |
 | [flaresolverr](arr-stack.md) | `flaresolverr/flaresolverr:latest` | CF solver; Authelia bypass |
-| [komga](komga.md) | `gotson/komga:1.24.4` | comics/manga (JVM) |
+| [komga](komga.md) | `gotson/komga:1.25.0` | comics/manga (JVM) |
 | [kavita](kavita.md) | `jvmilazz0/kavita:0.9.0.2` | ebooks; Authelia bypass; OIDC |
 | [audiobookshelf](audiobookshelf.md) | `ghcr.io/advplyr/audiobookshelf:2.35.1` | audiobooks/podcasts; OIDC (manual setup, no setup Job) |
 | [suwayomi](suwayomi.md) | `ghcr.io/suwayomi/suwayomi-server:v2.2.2100` | manga; setup Job |

@@ -2,7 +2,7 @@
 
 Comics/manga server (JVM-based).
 
-- **Image:** `gotson/komga:1.24.4` (pinned).
+- **Image:** `gotson/komga:1.25.0` (pinned).
 - **Status:** currently **enabled** (`enable: true`) and the active comics/manga
   reader — Kavita (.NET) SIGILL-crashes on the ARM guest, so the stack reverted
   to Komga (JVM, unaffected). See [[kavita-sigill-use-komga]] and

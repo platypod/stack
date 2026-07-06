@@ -9,7 +9,7 @@ komga:
       plain: ""
       hashed: ""
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.komga.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: gotson/komga:1.24.4
+  image: gotson/komga:1.25.0
   label: komga
   # First-boot admin, claimed by the komga-setup Job (POST /api/v1/claim) if the
   # server isn't already claimed. If Komga was already claimed by hand (e.g. from
