@@ -39,10 +39,18 @@ komga:
     app: "{{ .Values.storage.defaultVolumes.config }}"
     media: "{{ .Values.storage.defaultVolumes.media }}"
   replicasNb: 1
+  # OpenJDK's container-aware default is MaxRAMPercentage=25 — on the old 1Gi
+  # limit that capped the actual heap at 256Mi, far too small to rasterize
+  # pages from large scanned-PDF comics (some of these BD are 300-400MB+),
+  # causing OutOfMemoryError on read (see komga--deployment.yaml). Bumping the
+  # limit to 2Gi + raising the JVM's share of it to 75% gives ~1.5Gi of real
+  # heap. Requests stay put — mini4-w1 is already at ~92% memory *requests*,
+  # so growing that would risk scheduling; limits are elastic/bursty and this
+  # node already runs well over 100% limit-overcommit.
   resources:
     requests:
       cpu: 100m
       # JVM app — leaner requests starve it at startup.
       memory: 512Mi
     limits:
-      memory: 1Gi
+      memory: 2Gi
