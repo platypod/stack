@@ -17,7 +17,7 @@ requests (Jellyseerr), and housekeeping. Many apps use SQLite on the **local
 | [flaresolverr](arr-stack.md) | `flaresolverr/flaresolverr:latest` | CF solver; Authelia bypass |
 | [komga](komga.md) | `gotson/komga:1.25.0` | comics/manga (JVM) |
 | [kavita](kavita.md) | `jvmilazz0/kavita:0.9.0.2` | ebooks; Authelia bypass; OIDC |
-| [audiobookshelf](audiobookshelf.md) | `ghcr.io/advplyr/audiobookshelf:2.35.1` | audiobooks/podcasts; OIDC (manual setup, no setup Job) |
+| [audiobookshelf](audiobookshelf.md) | `ghcr.io/advplyr/audiobookshelf:2.35.1` | audiobooks/podcasts; setup Job; OIDC |
 | [suwayomi](suwayomi.md) | `ghcr.io/suwayomi/suwayomi-server:v2.2.2100` | manga; setup Job |
 | [reclaimerr](reclaimerr.md) | `ghcr.io/jessielw/reclaimerr:latest` | disk reclaim; setup Job |
 | [mediarvester](mediarvester.md) | `ghcr.io/platypod/mediarvester:v1.0.0` | **custom** image |
@@ -25,5 +25,6 @@ requests (Jellyseerr), and housekeeping. Many apps use SQLite on the **local
 
 ## Jobs
 [jellyfin-setup](jellyfin-setup-job.md), [jellyseerr-setup](jellyseerr-setup-job.md),
-[kavita-setup](kavita-setup-job.md), [suwayomi-setup](suwayomi-setup-job.md),
-[reclaimerr-setup](reclaimerr-setup-job.md) — post-install hooks (admin/config seeding).
+[kavita-setup](kavita-setup-job.md), [audiobookshelf-setup](audiobookshelf-setup-job.md),
+[suwayomi-setup](suwayomi-setup-job.md), [reclaimerr-setup](reclaimerr-setup-job.md) —
+post-install hooks (admin/config seeding).

@@ -1,0 +1,139 @@
+{{- if .Values.audiobookshelf.enable }}
+{{- /*
+  Audiobookshelf first-boot setup Job.
+
+  Audiobookshelf has a fixed root user created via POST /init (unlike Kavita's
+  "first registered user is admin"), and no documented settings API — the
+  PATCH /api/auth-settings route below was found by reading the app's own
+  source in-cluster (server/controllers/MiscController.js + Server.js), not
+  from public docs.
+
+  A raw DB write is NOT viable here: Database.userModel caches users in memory
+  after first lookup (server/models/User.js), so a row updated directly in
+  SQLite is invisible to the running process until it restarts — going through
+  the real HTTP API avoids that entirely.
+
+  Flow (idempotent — safe on every deploy):
+    1. Wait for the Audiobookshelf API (/status).
+    2. If not yet initialized, POST /init to create the root user. No-op once
+       one exists.
+    3. POST /login -> accessToken.
+    4. If oidc.clientId: PATCH /api/auth-settings with the OIDC provider
+       config (merge — untouched keys keep their server-side value). Requires
+       audiobookshelf.credentials to keep matching whatever the root user's
+       actual password is (see values/default/media/audiobookshelf.yaml) —
+       Audiobookshelf caches users in memory, so an out-of-band password reset
+       needs a pod restart to take effect, same as the DB-write case above.
+*/ -}}
+{{- $svc := print .Values.k8s.names.services.prefix .Values.audiobookshelf.label .Values.k8s.names.services.suffix }}
+apiVersion: batch/v1
+kind: Job
+
+metadata:
+  name: audiobookshelf-setup
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "17"
+    "helm.sh/hook-delete-policy": before-hook-creation
+
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: audiobookshelf-setup
+        image: python:3-alpine
+        env:
+        - name: ABS_URL
+          value: "http://{{ $svc }}:{{ .Values.audiobookshelf.ports.http.targetPort }}"
+        - name: ADMIN_USER
+          value: "{{ .Values.audiobookshelf.credentials.username }}"
+        - name: ADMIN_PASS
+          value: "{{ .Values.audiobookshelf.credentials.password }}"
+        {{- if .Values.audiobookshelf.oidc.clientId }}
+        - name: OIDC_ISSUER
+          value: "https://{{ tpl .Values.authelia.host . }}"
+        - name: OIDC_CLIENT_ID
+          value: "{{ .Values.audiobookshelf.oidc.clientId }}"
+        - name: OIDC_CLIENT_SECRET
+          value: "{{ .Values.audiobookshelf.oidc.clientSecret.plain }}"
+        {{- end }}
+        command:
+        - python3
+        - -c
+        - |
+          import json, os, time, urllib.request, urllib.error
+
+          BASE = os.environ["ABS_URL"]
+          USER = os.environ["ADMIN_USER"]
+          PASS = os.environ["ADMIN_PASS"]
+
+          def call(method, path, body=None, token=None):
+              data = json.dumps(body).encode() if body is not None else None
+              h = {"Content-Type": "application/json"}
+              if token:
+                  h["Authorization"] = f"Bearer {token}"
+              req = urllib.request.Request(f"{BASE}{path}", data=data, method=method, headers=h)
+              def parse(raw):
+                  try:    return json.loads(raw) if raw else None
+                  except Exception: return raw
+              try:
+                  with urllib.request.urlopen(req, timeout=20) as r:
+                      return r.status, parse(r.read().decode())
+              except urllib.error.HTTPError as e:
+                  return e.code, parse(e.read().decode())
+
+          # 1. wait
+          for i in range(60):
+              try:
+                  s, b = call("GET", "/status")
+                  if s == 200:
+                      print(f"  [{i}] Audiobookshelf is up (isInit={b.get('isInit')})."); break
+              except Exception as e:
+                  print(f"  [{i}] not ready: {e}")
+              time.sleep(5)
+          else:
+              raise SystemExit("Audiobookshelf never became ready")
+
+          # 2. create root user if needed
+          s, b = call("GET", "/status")
+          if not b.get("isInit"):
+              s, b2 = call("POST", "/init", {"newRoot": {"username": USER, "password": PASS}})
+              print("Root user created." if s == 200 else f"Root init failed [{s}]: {b2}")
+          else:
+              print("Root user already exists.")
+
+          # 3. login
+          s, b = call("POST", "/login", {"username": USER, "password": PASS})
+          if s != 200 or not isinstance(b, dict) or "accessToken" not in b.get("user", {}):
+              raise SystemExit(f"login failed [{s}]: {b}")
+          token = b["user"]["accessToken"]
+          print(f"Logged in as {USER}.")
+
+          # 4. OIDC (PATCH merges — untouched keys keep their server-side value)
+          issuer = os.environ.get("OIDC_ISSUER")
+          if issuer:
+              payload = {
+                  "authActiveAuthMethods": ["local", "openid"],
+                  "authOpenIDIssuerURL": issuer,
+                  "authOpenIDAuthorizationURL": f"{issuer}/api/oidc/authorization",
+                  "authOpenIDTokenURL": f"{issuer}/api/oidc/token",
+                  "authOpenIDUserInfoURL": f"{issuer}/api/oidc/userinfo",
+                  "authOpenIDJwksURL": f"{issuer}/jwks.json",
+                  "authOpenIDClientID": os.environ["OIDC_CLIENT_ID"],
+                  "authOpenIDClientSecret": os.environ["OIDC_CLIENT_SECRET"],
+                  "authOpenIDTokenSigningAlgorithm": "RS256",
+                  "authOpenIDButtonText": "Login with Authelia",
+                  "authOpenIDMatchExistingBy": "username",
+              }
+              for attempt in range(3):
+                  s, b = call("PATCH", "/api/auth-settings", payload, token=token)
+                  if s == 200:
+                      print(f"  OIDC configured (issuer: {issuer})"); break
+                  print(f"  OIDC attempt {attempt+1} failed [{s}]: {str(b)[:200]}")
+                  time.sleep(10)
+              else:
+                  print("  WARN: OIDC config failed (will retry on next deploy)")
+          print("Audiobookshelf setup complete.")
+{{- end }}

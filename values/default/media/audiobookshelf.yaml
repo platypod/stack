@@ -5,12 +5,17 @@ audiobookshelf:
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.audiobookshelf.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image: ghcr.io/advplyr/audiobookshelf:2.35.1
   label: audiobookshelf
-  # No first-boot admin API/env (unlike Kavita) — Audiobookshelf's initial setup
-  # wizard (create the first/admin user) has to be completed once in the browser.
-  # OIDC via Authelia. Audiobookshelf configures OIDC through its own Settings ->
-  # Authentication screen (paste Issuer/Client ID/Secret — no documented
-  # non-interactive settings API like Kavita's, so no setup Job pushes this).
-  # Empty clientId disables the Authelia client block below.
+  # First-boot admin, created by the audiobookshelf-setup Job via POST /init
+  # (Audiobookshelf's root user is fixed at first-init, unlike Kavita's "first
+  # registered user"). Local login is a break-glass fallback behind Authelia
+  # forward-auth — OIDC (below) is the intended path once configured.
+  credentials:
+    username: pittinic
+    password: 6WHXS1jvoHQdxNc7o3sqhIDF
+  # OIDC via Authelia, pushed by the setup Job through the authenticated
+  # PATCH /api/auth-settings API (reverse-engineered from the app's own source —
+  # there's no public docs for it). Empty clientId disables both the Authelia
+  # client block below and the OIDC step in the setup Job.
   oidc:
     clientId: ""
     clientSecret:

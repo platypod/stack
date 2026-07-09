@@ -95,9 +95,9 @@ Keep `lldap.adminPassword` in values in sync with the actual DB password.
 Services needing out-of-band init (admin creation, API keys, wiring) use Helm
 post-install/post-upgrade **hook Jobs** — they run on every `make deploy` and are
 idempotent (exit 0 on partial so the release still succeeds). Examples:
-`jellyfin-setup` (w10), `kavita-setup` (w15), `jellyseerr-setup` (w20),
-`reclaimerr-setup` (w30), `suwayomi-setup` (w25), `uptime-kuma-setup` (w20). Hook
-weights order dependent jobs.
+`jellyfin-setup` (w10), `kavita-setup` (w15), `audiobookshelf-setup` (w17),
+`jellyseerr-setup` (w20), `reclaimerr-setup` (w30), `suwayomi-setup` (w25),
+`uptime-kuma-setup` (w20). Hook weights order dependent jobs.
 
 **Homepage API key injection.** The Jellyfin API key lives in the
 `jellyfin-apikey` Secret (`HOMEPAGE_VAR_JELLYFIN_API_KEY`); Homepage mounts it via

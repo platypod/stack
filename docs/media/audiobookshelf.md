@@ -8,12 +8,13 @@ Audiobook/podcast server.
   Kavita/Komga ([[sqlite-on-nfs-localconfig]]); `/metadata` (covers, backups,
   logs) is also on the local volume. The whole NFS media share is mounted at
   `/data` — add a library in the UI pointing at a sub-folder (e.g.
-  `/data/audiobooks`), same minimal-config pattern as Kavita.
-- **First boot:** no admin API/env (unlike Kavita) — complete the one-time setup
-  wizard in the browser to create the initial admin account.
-- **OIDC:** finished by hand in Settings -> Authentication (Issuer/Client
-  ID/Secret) once `audiobookshelf.oidc.clientId` is set per-env — Audiobookshelf
-  has no documented non-interactive settings API, so (unlike Kavita) no setup Job
-  pushes this automatically. Requires PKCE (`S256`); redirect URIs are
-  `/auth/openid/callback` (web) and `/auth/openid/mobile-redirect` (mobile app).
-- **Setup:** none (no hook Job).
+  `/data/audio-books`), same minimal-config pattern as Kavita.
+- **First boot:** root user created by the [audiobookshelf-setup](audiobookshelf-setup-job.md)
+  Job via `POST /init` — no manual setup wizard needed.
+- **OIDC:** pushed by the same setup Job via `PATCH /api/auth-settings`, once
+  `audiobookshelf.oidc.clientId` is set per-env. That endpoint isn't publicly
+  documented — reverse-engineered from the app's own source
+  (`server/controllers/MiscController.js`) in-cluster. Requires PKCE (`S256`);
+  redirect URIs are `/auth/openid/callback` (web) and `/auth/openid/mobile-redirect`
+  (mobile app).
+- **Setup:** [audiobookshelf-setup](audiobookshelf-setup-job.md).
