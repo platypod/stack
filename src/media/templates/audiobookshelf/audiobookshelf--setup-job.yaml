@@ -126,6 +126,12 @@ spec:
                   "authOpenIDTokenSigningAlgorithm": "RS256",
                   "authOpenIDButtonText": "Login with Authelia",
                   "authOpenIDMatchExistingBy": "username",
+                  # Left unset (undefined), this gets string-interpolated straight
+                  # into the redirect_uri Audiobookshelf sends to the IdP
+                  # (".../undefined/auth/openid/callback"), which then can't match
+                  # any registered redirect_uris. We serve at the domain root, not
+                  # a subfolder, so this must be an explicit empty string.
+                  "authOpenIDSubfolderForRedirectURLs": "",
               }
               for attempt in range(3):
                   s, b = call("PATCH", "/api/auth-settings", payload, token=token)
