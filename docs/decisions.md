@@ -40,3 +40,25 @@ rename + re-ship. Guard also tightens the metric `owner` for honest clients.
 stops a custom tool forging metric owner (low-sensitivity — counts, not content).
 
 → Detail in the *Ingest hardening* section of [observability/dashboard-multitenancy.md](observability/dashboard-multitenancy.md).
+
+## Docmost not deployed (no free OIDC)
+
+Considered Docmost as a 4th wiki/docs app to compare against Outline, BookStack, and
+Wiki.js (dev-tools). **Not deployed** — every other dev-tools wiki gets Authelia OIDC;
+Docmost can't, so it wouldn't fit the module's pattern.
+
+Docmost's self-hosted OSS edition has no OIDC/SAML/LDAP at all — SSO lives entirely in
+their closed-source `ee/` submodule, gated behind the paid Business plan
+($3.50/seat/mo). A maintainer closed the one community PR that tried to add free OIDC
+([docmost/docmost#1740](https://github.com/docmost/docmost/pull/1740)) with "SSO is
+already available in the Docmost enterprise edition." The only known workaround is
+patching the compiled license-decryption code to fake an Enterprise license — a
+licensing crack, not a config trick.
+
+Rejected: deploying with local login behind Authelia forward-auth only (breaks the
+"every dev-tool here is OIDC'd" consistency for no clear benefit), the license-patch
+workaround (circumvents paid licensing, out of bounds regardless of context), buying
+the Business license (real option if this gets revisited, just not taken now).
+
+If revisited: re-check whether OIDC has been open-sourced upstream before assuming
+this is still accurate.
