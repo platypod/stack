@@ -54,6 +54,7 @@ refers to the model described in [authentication.md](authentication.md).
 | Transmission | Torrent client | own auth (`group:download`) |
 | qBittorrent | Torrent client | own auth (`group:download`) |
 | Deluge | Torrent client | own auth (`group:download`) |
+| SABnzbd | Usenet client, auto-wired into Sonarr/Radarr/Readarr/Prowlarr | own auth (`group:download`) |
 
 ## games
 | Service | Role | Auth |

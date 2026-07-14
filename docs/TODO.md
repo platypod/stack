@@ -98,8 +98,11 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
   vfkit + Talos can pass through the Apple Silicon VideoToolbox engine; if so,
   expose `/dev/dri` and switch to the hardware-accelerated image variant.
 
-- **Usenet download client (SABnzbd / NZBGet)** if usenet indexers are used via
-  Prowlarr. Module: `files`.
+- **Pick a Usenet block-account (NNTP) provider** and fill in
+  `sabnzbd.provider.*` in `values/dev/values.yaml` / `values/prd/values.yaml`.
+  SABnzbd + the Prowlarr/*arr auto-wiring are in place (`files` module,
+  `sabnzbd-setup` Job); althub.co.za is a Newznab indexer only, not a Usenet
+  server, so SABnzbd currently has nothing to fetch articles with.
 
 - **Talos / Kubernetes in-place upgrade path.** Bumping `talos_version` forces VM
   recreation (loses etcd). Add a `make upgrade` target running `talosctl upgrade`

@@ -1,0 +1,30 @@
+{{- if .Values.sabnzbd.enable }}
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.sabnzbd.label }}{{ .Values.k8s.names.configMaps.suffix }}
+
+data:
+  # Minimal seed — SABnzbd merges this with its defaults on first start.
+  # host_whitelist is left blank on purpose: SABnzbd 403s any request whose
+  # Host header isn't on the whitelist, which would otherwise block Traefik
+  # the same way the undocumented Transmission RPC-whitelist default does.
+  sabnzbd.ini: |
+    __version__ = 22
+    __encoding__ = utf-8
+    [misc]
+    host = 0.0.0.0
+    port = {{ .Values.sabnzbd.ports.http.targetPort }}
+    enable_https = 0
+    username = {{ .Values.sabnzbd.credentials.username }}
+    password = {{ .Values.sabnzbd.credentials.password }}
+    api_key = {{ .Values.sabnzbd.apiKey }}
+    host_whitelist =
+    inet_exposure = 3
+    download_dir = {{ tpl .Values.sabnzbd.download.ongoing . }}
+    complete_dir = {{ tpl .Values.sabnzbd.download.finished . }}
+    permissions = 775
+    check_new_rel = 0
+    [categories]
+{{- end }}

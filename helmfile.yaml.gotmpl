@@ -37,6 +37,7 @@
   "values/default/dev-tools/headroom.yaml"
   "values/default/files/deluge.yaml"
   "values/default/files/qbittorrent.yaml"
+  "values/default/files/sabnzbd.yaml"
   "values/default/files/transmission.yaml"
   "values/default/media/bazarr.yaml"
   "values/default/media/flaresolverr.yaml"
@@ -106,6 +107,7 @@ environments:
   "values/default/dev-tools/headroom.yaml"
   "values/default/files/deluge.yaml"
   "values/default/files/qbittorrent.yaml"
+  "values/default/files/sabnzbd.yaml"
   "values/default/files/transmission.yaml"
   "values/default/media/bazarr.yaml"
   "values/default/media/flaresolverr.yaml"
@@ -177,6 +179,9 @@ releases:
       - "{{ .Environment.Name }}--platypod--core"
       - "{{ .Environment.Name }}--platypod--security"
       - "{{ .Environment.Name }}--platypod--persistence"
+      # sabnzbd-setup wires itself into Sonarr/Radarr/Readarr/Prowlarr via their
+      # APIs — needs their Services (and thus DNS) to exist first.
+      - "{{ .Environment.Name }}--platypod--media"
     values:
 {{ $releaseValues | toYaml | indent 6 }}
 

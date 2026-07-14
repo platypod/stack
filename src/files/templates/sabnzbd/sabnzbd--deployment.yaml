@@ -1,0 +1,95 @@
+{{- if .Values.sabnzbd.enable }}
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.sabnzbd.label .Values.k8s.names.pods.suffix }}
+{{- $configMap := "config-map" }}
+{{- $appVolume := "app-volume" }}
+{{- $mediaVolume := "media-volume" }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.sabnzbd.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      initContainers:
+      # Seed sabnzbd.ini from the ConfigMap on first start so SABnzbd uses the
+      # predefined credentials/api_key from values instead of generating its
+      # own, and so host_whitelist stays blank (same guard as Bazarr's seed).
+      - name: seed-config
+        image: busybox:1
+        command:
+        - sh
+        - -c
+        - |
+          DEST=/config/sabnzbd.ini
+          if [ ! -f "$DEST" ]; then
+            echo "Seeding sabnzbd.ini from ConfigMap..."
+            cp /seed/sabnzbd.ini "$DEST"
+          else
+            echo "sabnzbd.ini already exists, skipping seed."
+          fi
+        volumeMounts:
+        - mountPath: /config
+          name: {{ $appVolume }}
+          subPath: sabnzbd/config
+        - mountPath: /seed
+          name: {{ $configMap }}
+      # Create the ongoing/finished dirs on the media volume — a fresh dev PVC
+      # is empty and SABnzbd doesn't create missing parents on its own.
+      - name: init-download-dirs
+        image: busybox:1
+        command:
+        - sh
+        - -c
+        - |
+          mkdir -p "{{ tpl .Values.sabnzbd.download.ongoing . }}" "{{ tpl .Values.sabnzbd.download.finished . }}"
+          chown {{ .Values.media.system.userId }}:{{ .Values.media.system.groupId }} \
+            "{{ tpl .Values.sabnzbd.download.ongoing . }}" "{{ tpl .Values.sabnzbd.download.finished . }}"
+        volumeMounts:
+        - mountPath: {{ .Values.media.system.data.path }}
+          name: {{ $mediaVolume }}
+          subPath: downloads/sabnzbd
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.sabnzbd.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.sabnzbd.image }}
+        resources:
+          {{- toYaml .Values.sabnzbd.resources | nindent 10 }}
+        ports:
+        - name: {{ .Values.sabnzbd.ports.http.name }}
+          containerPort: {{ .Values.sabnzbd.ports.http.targetPort }}
+        env:
+        - name: PUID
+          value: "{{ .Values.media.system.userId }}"
+        - name: PGID
+          value: "{{ .Values.media.system.groupId }}"
+        - name: UMASK
+          value: "{{ .Values.media.system.umask }}"
+        volumeMounts:
+        - mountPath: /config
+          name: {{ $appVolume }}
+          subPath: sabnzbd/config
+        - mountPath: {{ .Values.media.system.data.path }}
+          name: {{ $mediaVolume }}
+          subPath: downloads/sabnzbd
+      volumes:
+      - name: {{ $mediaVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.sabnzbd.pvc.media . }}
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.sabnzbd.pvc.app . }}
+      - name: {{ $configMap }}
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.sabnzbd.label }}{{ .Values.k8s.names.configMaps.suffix }}
+{{- end }}

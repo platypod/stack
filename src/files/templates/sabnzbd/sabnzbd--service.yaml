@@ -1,0 +1,15 @@
+{{- if .Values.sabnzbd.enable }}
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.sabnzbd.label }}{{ .Values.k8s.names.services.suffix }}
+
+spec:
+  ports:
+  - protocol: TCP
+    name: {{ .Values.sabnzbd.ports.http.name }}
+    port: {{ .Values.sabnzbd.ports.http.targetPort }}
+  selector:
+    app: {{ .Values.k8s.names.services.prefix }}{{ .Values.sabnzbd.label }}{{ .Values.k8s.names.pods.suffix }}
+{{- end }}

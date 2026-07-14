@@ -8,6 +8,13 @@ prowlarr:
     http:
       name: prowlarr-http
       targetPort: 9696
+  # Newznab indexers auto-wired by the sabnzbd-setup Job. apiKey empty = skip
+  # (real key comes from the user's althub.co.za profile → Integrations tab,
+  # set only in values/dev or values/prd, never committed here).
+  indexers:
+    althub:
+      baseUrl: "https://www.althub.co.za"
+      apiKey: ""
   replicasNb: 1
   resources:
     requests:

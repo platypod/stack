@@ -1,0 +1,38 @@
+sabnzbd:
+  enable: true
+  apiKey: "66666666666666666666666666666666"
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.sabnzbd.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image: linuxserver/sabnzbd:latest
+  label: sabnzbd
+  credentials:
+    username: admin
+    password: password
+  download:
+    ongoing: "{{ .Values.media.system.data.path }}/ongoing"
+    finished: "{{ .Values.media.system.data.path }}/finished"
+  ports:
+    http:
+      name: webui
+      targetPort: 8080
+  pvc:
+    # config/SQLite history db → dedicated local volume (NFS can't host SQLite WAL).
+    app: "{{ .Values.storage.defaultVolumes.config }}"
+    media: "{{ .Values.storage.defaultVolumes.media }}"
+  replicasNb: 1
+  # Usenet block-account (NNTP) server — SABnzbd needs one to actually fetch
+  # articles; althub.co.za is an indexer only, not a server provider. Left
+  # empty until a provider is chosen; the setup Job skips server wiring while
+  # host is blank. See stack/docs/TODO.md.
+  provider:
+    host: ""
+    port: 563
+    ssl: true
+    username: ""
+    password: ""
+    connections: 20
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
