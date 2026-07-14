@@ -229,9 +229,17 @@ spec:
               if not tmpl:
                   print("  WARN: no generic Newznab indexer in schema")
                   return
+              # appProfileId is a required top-level field (not in `fields`) —
+              # Prowlarr rejects 0/unset. Use whatever App Sync Profile already
+              # exists (Prowlarr ships one, "Standard", on first install).
+              s, profiles = call("GET", f"{PROWLARR_URL}/api/v1/appprofile", headers=arr_headers(PROWLARR_KEY))
+              if s != 200 or not profiles:
+                  print(f"  WARN: could not fetch an App Sync Profile ({s}) — skipping indexer wiring.")
+                  return
               payload = dict(tmpl)
               payload["name"] = "althub"
               payload["enable"] = True
+              payload["appProfileId"] = profiles[0]["id"]
               field_values = {"baseUrl": ALTHUB_URL, "apiKey": ALTHUB_KEY}
               for f in payload.get("fields", []):
                   if f["name"] in field_values:
