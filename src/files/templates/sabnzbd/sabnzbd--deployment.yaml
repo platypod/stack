@@ -21,6 +21,8 @@ spec:
     metadata:
       labels:
         app: {{ $pod }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/sabnzbd/sabnzbd--config-map.yaml") . | sha256sum }}
     spec:
       initContainers:
       # Seed sabnzbd.ini from the ConfigMap on first start so SABnzbd uses the
@@ -38,6 +40,10 @@ spec:
             cp /seed/sabnzbd.ini "$DEST"
           else
             echo "sabnzbd.ini already exists, skipping seed."
+            # Repair a stale/invalid __version__ header from an earlier broken
+            # seed — SABnzbd treats a bad version stamp as a fatal parse error
+            # and refuses to start at all.
+            sed -i '/^__version__/d; /^__encoding__/d' "$DEST"
           fi
         volumeMounts:
         - mountPath: /config

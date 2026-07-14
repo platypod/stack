@@ -85,6 +85,7 @@ spec:
             ]
         command:
         - python3
+        - -u
         - -c
         - |
           import json, os, time, urllib.request, urllib.error, urllib.parse

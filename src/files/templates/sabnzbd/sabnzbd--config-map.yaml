@@ -11,8 +11,6 @@ data:
   # Host header isn't on the whitelist, which would otherwise block Traefik
   # the same way the undocumented Transmission RPC-whitelist default does.
   sabnzbd.ini: |
-    __version__ = 22
-    __encoding__ = utf-8
     [misc]
     host = 0.0.0.0
     port = {{ .Values.sabnzbd.ports.http.targetPort }}
