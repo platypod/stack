@@ -75,7 +75,7 @@ data:
           widget:
             type: jellyseerr
             url: http://{{ .Values.jellyseerr.label }}:{{ .Values.jellyseerr.ports.http.targetPort }}
-            key: {{ .Values.jellyseerr.apiKey }}
+            key: "{{ .Values.jellyseerr.apiKey }}"
 {{- end }}
 {{- if .Values.mediarvester.enable }}
       - Mediarvester:
@@ -109,7 +109,7 @@ data:
           widget:
             type: deluge
             url: http://{{ .Values.deluge.label }}:{{ .Values.deluge.ports.http.targetPort }}
-            password: {{ .Values.deluge.credentials.password }}
+            password: "{{ .Values.deluge.credentials.password }}"
             enableLeechProgress: true
 {{- end }}
 {{- if .Values.qbittorrent.enable }}
@@ -120,8 +120,8 @@ data:
           widget:
             type: qbittorrent
             url: http://{{ .Values.qbittorrent.label }}:{{ .Values.qbittorrent.ports.http.targetPort }}
-            username: {{ .Values.qbittorrent.credentials.username }}
-            password: {{ .Values.qbittorrent.credentials.password }}
+            username: "{{ .Values.qbittorrent.credentials.username }}"
+            password: "{{ .Values.qbittorrent.credentials.password }}"
             enableLeechProgress: true
 {{- end }}
 {{- end }}
@@ -141,8 +141,8 @@ data:
           widget:
             type: adguard
             url: http://{{ .Values.adguard.label }}:{{ .Values.adguard.ports.http.targetPort }}
-            username: {{ .Values.adguard.credentials.username }}
-            password: {{ .Values.adguard.credentials.password }}
+            username: "{{ .Values.adguard.credentials.username }}"
+            password: "{{ .Values.adguard.credentials.password }}"
 {{- end }}
 {{- if .Values.observability.enable }}
       - Grafana:
@@ -244,7 +244,7 @@ data:
           widget:
             type: prowlarr
             url: http://{{ .Values.prowlarr.label }}:{{ .Values.prowlarr.ports.http.targetPort }}
-            key: {{ .Values.prowlarr.apiKey }}
+            key: "{{ .Values.prowlarr.apiKey }}"
 {{- end }}
 {{- if .Values.transmission.enable }}
       - Transmission:
@@ -254,8 +254,8 @@ data:
           widget:
             type: transmission
             url: http://{{ .Values.transmission.label }}:{{ .Values.transmission.ports.http.targetPort }}
-            username: {{ .Values.transmission.credentials.username }}
-            password: {{ .Values.transmission.credentials.password }}
+            username: "{{ .Values.transmission.credentials.username }}"
+            password: "{{ .Values.transmission.credentials.password }}"
             rpcUrl: /transmission/
 {{- end }}
 {{- if .Values.sabnzbd.enable }}
@@ -266,7 +266,7 @@ data:
           widget:
             type: sabnzbd
             url: http://{{ .Values.sabnzbd.label }}:{{ .Values.sabnzbd.ports.http.targetPort }}
-            key: {{ .Values.sabnzbd.apiKey }}
+            key: "{{ .Values.sabnzbd.apiKey }}"
 {{- end }}
 {{- if .Values.suwayomi.enable }}
       - Suwayomi:
@@ -282,7 +282,7 @@ data:
           widget:
             type: radarr
             url: http://{{ .Values.radarr.label }}:{{ .Values.radarr.ports.http.targetPort }}
-            key: {{ .Values.radarr.apiKey }}
+            key: "{{ .Values.radarr.apiKey }}"
 {{- end }}
 {{- if .Values.sonarr.enable }}
       - Sonarr:
@@ -292,7 +292,7 @@ data:
           widget:
             type: sonarr
             url: http://{{ .Values.sonarr.label }}:{{ .Values.sonarr.ports.http.targetPort }}
-            key: {{ .Values.sonarr.apiKey }}
+            key: "{{ .Values.sonarr.apiKey }}"
 {{- end }}
 {{- if .Values.readarr.enable }}
       - Readarr:
@@ -302,7 +302,7 @@ data:
           widget:
             type: readarr
             url: http://{{ .Values.readarr.label }}:{{ .Values.readarr.ports.http.targetPort }}
-            key: {{ .Values.readarr.apiKey }}
+            key: "{{ .Values.readarr.apiKey }}"
 {{- end }}
 {{- if .Values.bazarr.enable }}
       - Bazarr:
@@ -312,7 +312,7 @@ data:
           widget:
             type: bazarr
             url: http://{{ .Values.bazarr.label }}:{{ .Values.bazarr.ports.http.targetPort }}
-            key: {{ .Values.bazarr.apiKey }}
+            key: "{{ .Values.bazarr.apiKey }}"
 {{- end }}
 {{- if .Values.flaresolverr.enable }}
       - FlareSolverr:
