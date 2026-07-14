@@ -102,6 +102,7 @@ authelia:
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.deluge.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.qbittorrent.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.sabnzbd.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
 
     - subject:
       - group:dev
