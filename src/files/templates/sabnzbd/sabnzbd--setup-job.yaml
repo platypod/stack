@@ -10,17 +10,21 @@
   rather than assuming so.
 
   Flow (idempotent — safe on every deploy, mirrors reclaimerr-setup):
-    1. Wait for SABnzbd's API.
-    2. For each of Sonarr/Radarr/Readarr: upsert a "SABnzbd" Download Client
-       via the Servarr v3 API, using the live /downloadclient/schema template
-       so we only set the fields we know about (host/port/apiKey/category)
-       and leave everything else at the app's own defaults.
-    3. Upsert Prowlarr "Applications" entries for Sonarr/Radarr/Readarr, so
+    1. Wait for SABnzbd's API (note: SABnzbd's API root is /api, not /sabnzbd/api).
+    2. Create SABnzbd categories for sonarr/radarr/readarr — a download client
+       referencing a category SABnzbd doesn't have yet gets a 400.
+    3. For each of Sonarr/Radarr/Readarr: upsert a "SABnzbd" Download Client
+       via the app's Servarr API, using the live /downloadclient/schema
+       template so we only set the fields we know about
+       (host/port/apiKey/category) and leave everything else at the app's own
+       defaults. Note: Sonarr/Radarr are on API v3, Readarr is still v1 — each
+       app in ARR_APPS_JSON carries its own apiVersion.
+    4. Upsert Prowlarr "Applications" entries for Sonarr/Radarr/Readarr, so
        indexers added to Prowlarr auto-sync to all three (no manual "sync to
        app" step).
-    4. If .Values.prowlarr.indexers.althub.apiKey is set: upsert althub as a
+    5. If .Values.prowlarr.indexers.althub.apiKey is set: upsert althub as a
        generic Newznab indexer in Prowlarr.
-    5. If .Values.sabnzbd.provider.host is set: upsert the Usenet block-account
+    6. If .Values.sabnzbd.provider.host is set: upsert the Usenet block-account
        NNTP server into SABnzbd itself via its own config API. Skipped until a
        provider is chosen — see stack/docs/TODO.md.
 
@@ -79,9 +83,9 @@ spec:
         - name: ARR_APPS_JSON
           value: |-
             [
-              {"name": "Sonarr", "baseUrl": "http://{{ $sonarrSvc }}:{{ .Values.sonarr.ports.http.targetPort }}", "apiKey": "{{ .Values.sonarr.apiKey }}", "category": "sonarr"},
-              {"name": "Radarr", "baseUrl": "http://{{ $radarrSvc }}:{{ .Values.radarr.ports.http.targetPort }}", "apiKey": "{{ .Values.radarr.apiKey }}", "category": "radarr"},
-              {"name": "Readarr", "baseUrl": "http://{{ $readarrSvc }}:{{ .Values.readarr.ports.http.targetPort }}", "apiKey": "{{ .Values.readarr.apiKey }}", "category": "readarr"}
+              {"name": "Sonarr", "baseUrl": "http://{{ $sonarrSvc }}:{{ .Values.sonarr.ports.http.targetPort }}", "apiKey": "{{ .Values.sonarr.apiKey }}", "category": "sonarr", "apiVersion": "v3"},
+              {"name": "Radarr", "baseUrl": "http://{{ $radarrSvc }}:{{ .Values.radarr.ports.http.targetPort }}", "apiKey": "{{ .Values.radarr.apiKey }}", "category": "radarr", "apiVersion": "v3"},
+              {"name": "Readarr", "baseUrl": "http://{{ $readarrSvc }}:{{ .Values.readarr.ports.http.targetPort }}", "apiKey": "{{ .Values.readarr.apiKey }}", "category": "readarr", "apiVersion": "v1"}
             ]
         command:
         - python3
@@ -130,11 +134,24 @@ spec:
           def arr_headers(api_key):
               return {"X-Api-Key": api_key}
 
+          def ensure_sabnzbd_category(name):
+              # SABnzbd 400s a download client whose category isn't defined yet.
+              # set_config upserts by `name` — safe to call every run.
+              params = {
+                  "mode": "set_config", "section": "categories", "name": name,
+                  "dir": name, "pp": "3", "priority": "0",
+                  "apikey": SABNZBD_KEY, "output": "json",
+              }
+              url = f"{SABNZBD_URL}/api?{urllib.parse.urlencode(params)}"
+              s, b = call("GET", url)
+              print(f"  SABnzbd category '{name}' upsert -> {s}" if s == 200
+                    else f"  WARN: SABnzbd category '{name}' upsert failed [{s}]: {str(b)[:160]}")
+
           def upsert_download_client(app):
-              base, key = app["baseUrl"], app["apiKey"]
-              if not wait_for(app["name"], f"{base}/api/v3/system/status", arr_headers(key)):
+              base, key, ver = app["baseUrl"], app["apiKey"], app["apiVersion"]
+              if not wait_for(app["name"], f"{base}/api/{ver}/system/status", arr_headers(key)):
                   return
-              s, schema = call("GET", f"{base}/api/v3/downloadclient/schema", headers=arr_headers(key))
+              s, schema = call("GET", f"{base}/api/{ver}/downloadclient/schema", headers=arr_headers(key))
               if s != 200:
                   print(f"  WARN: {app['name']}: could not fetch downloadclient schema ({s})")
                   return
@@ -155,13 +172,13 @@ spec:
                   if f["name"] in field_values:
                       f["value"] = field_values[f["name"]]
 
-              s, existing = call("GET", f"{base}/api/v3/downloadclient", headers=arr_headers(key))
+              s, existing = call("GET", f"{base}/api/{ver}/downloadclient", headers=arr_headers(key))
               match = next((c for c in existing if c.get("name") == "SABnzbd"), None) if s == 200 else None
               if match:
                   payload["id"] = match["id"]
-                  s, b = call("PUT", f"{base}/api/v3/downloadclient/{match['id']}", payload, arr_headers(key))
+                  s, b = call("PUT", f"{base}/api/{ver}/downloadclient/{match['id']}", payload, arr_headers(key))
               else:
-                  s, b = call("POST", f"{base}/api/v3/downloadclient", payload, arr_headers(key))
+                  s, b = call("POST", f"{base}/api/{ver}/downloadclient", payload, arr_headers(key))
               print(f"  {app['name']}: download client upsert -> {s}" if s in (200, 201)
                     else f"  WARN: {app['name']}: download client upsert failed [{s}]: {str(b)[:160]}")
 
@@ -238,7 +255,7 @@ spec:
                   "connections": os.environ.get("PROVIDER_CONNECTIONS", "20"),
                   "enable": "1", "apikey": SABNZBD_KEY, "output": "json",
               }
-              url = f"{SABNZBD_URL}/sabnzbd/api?{urllib.parse.urlencode(params)}"
+              url = f"{SABNZBD_URL}/api?{urllib.parse.urlencode(params)}"
               s, b = call("GET", url)
               print(f"Usenet provider server upsert -> {s}" if s == 200
                     else f"WARN: provider server upsert failed [{s}]: {str(b)[:160]}")
@@ -246,11 +263,18 @@ spec:
           # 1. wait for SABnzbd
           sab_ready = wait_for(
               "SABnzbd",
-              f"{SABNZBD_URL}/sabnzbd/api?mode=version&apikey={SABNZBD_KEY}&output=json")
+              f"{SABNZBD_URL}/api?mode=version&apikey={SABNZBD_KEY}&output=json")
           if not sab_ready:
               raise SystemExit(0)  # heal on next deploy, don't fail the release
 
-          # 2. download clients
+          # 2. SABnzbd categories (must exist before the *arrs can reference them)
+          for app in ARR_APPS:
+              try:
+                  ensure_sabnzbd_category(app["category"])
+              except Exception as e:
+                  print(f"  WARN: category '{app['category']}' raised: {e}")
+
+          # 3. download clients
           for app in ARR_APPS:
               for attempt in range(3):
                   try:
@@ -260,7 +284,7 @@ spec:
                       print(f"  [{app['name']}] attempt {attempt+1} raised: {e}")
                       time.sleep(10)
 
-          # 3. Prowlarr <-> *arr app sync
+          # 4. Prowlarr <-> *arr app sync
           if wait_for("Prowlarr", f"{PROWLARR_URL}/api/v1/system/status", arr_headers(PROWLARR_KEY)):
               for app in ARR_APPS:
                   for attempt in range(3):
@@ -271,13 +295,13 @@ spec:
                           print(f"  [{app['name']}] Prowlarr app attempt {attempt+1} raised: {e}")
                           time.sleep(10)
 
-              # 4. althub indexer
+              # 5. althub indexer
               try:
                   upsert_althub_indexer()
               except Exception as e:
                   print(f"WARN: althub indexer wiring raised: {e}")
 
-          # 5. Usenet block-account server (no-op until a provider is chosen)
+          # 6. Usenet block-account server (no-op until a provider is chosen)
           try:
               upsert_provider_server()
           except Exception as e:
