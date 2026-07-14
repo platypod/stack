@@ -26,6 +26,11 @@
   deployed on prod today, so TORRENT_CLIENTS_JSON only contains Transmission
   there; this activates automatically once qbittorrent.enable flips true.
 
+  Also upserts a remote path mapping (host=<client>) per app/client pair —
+  same /data subPath-scoping mismatch as sabnzbd-setup (see its header
+  comment). Transmission already had this configured by hand; this makes
+  it declarative instead of tribal knowledge on a PVC.
+
   Idempotent, best-effort per client/app pair — same contract as
   sabnzbd-setup (partial failures logged, not fatal; next deploy heals it).
 */ -}}
@@ -166,6 +171,26 @@ spec:
               print(f"  {app['name']}/{client['name']}: download client upsert -> {s}" if ok(s)
                     else f"  WARN: {app['name']}/{client['name']}: download client upsert failed [{s}]: {str(b)[:160]}")
 
+          def upsert_remote_path_mapping(app, client):
+              # Same subPath-scoping mismatch as sabnzbd-setup: the client's
+              # own /data is scoped to its media PVC slice (downloads/<client>),
+              # but the *arr mounts the whole share unscoped at /data. Without
+              # this, completed grabs sit forever as "no files eligible for
+              # import". Transmission already had this set up by hand before
+              # this Job existed (found live) — this makes it declarative.
+              base, key, ver = app["baseUrl"], app["apiKey"], app["apiVersion"]
+              host = client["host"]
+              payload = {"host": host, "remotePath": "/data/", "localPath": f"/data/downloads/{host}/"}
+              s, existing = call("GET", f"{base}/api/{ver}/remotepathmapping", headers=arr_headers(key))
+              match = next((m for m in existing if m.get("host") == host), None) if s == 200 else None
+              if match:
+                  payload["id"] = match["id"]
+                  s, b = call("PUT", f"{base}/api/{ver}/remotepathmapping/{match['id']}", payload, arr_headers(key))
+              else:
+                  s, b = call("POST", f"{base}/api/{ver}/remotepathmapping", payload, arr_headers(key))
+              print(f"  {app['name']}/{client['name']}: remote path mapping upsert -> {s}" if ok(s)
+                    else f"  WARN: {app['name']}/{client['name']}: remote path mapping upsert failed [{s}]: {str(b)[:160]}")
+
           if not CLIENTS:
               print("No torrent clients enabled — nothing to wire.")
 
@@ -180,6 +205,10 @@ spec:
                       except Exception as e:
                           print(f"  [{app['name']}/{client['name']}] attempt {attempt+1} raised: {e}")
                           time.sleep(10)
+                  try:
+                      upsert_remote_path_mapping(app, client)
+                  except Exception as e:
+                      print(f"  [{app['name']}/{client['name']}] remote path mapping raised: {e}")
 
           print("torrent-clients-setup complete.")
           # exit 0 regardless of partial failures — logged above, next deploy heals it.

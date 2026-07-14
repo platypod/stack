@@ -19,12 +19,18 @@
        (host/port/apiKey/category) and leave everything else at the app's own
        defaults. Note: Sonarr/Radarr are on API v3, Readarr is still v1 — each
        app in ARR_APPS_JSON carries its own apiVersion.
-    4. Upsert Prowlarr "Applications" entries for Sonarr/Radarr/Readarr, so
+    4. Upsert a remote path mapping (host=sabnzbd) on each *arr. SABnzbd's own
+       /data is subPath-scoped to its media PVC slice (downloads/sabnzbd), but
+       the *arrs mount the whole share unscoped at /data — without this, every
+       completed grab sits forever as "no files eligible for import" (the
+       Servarr download-client path SABnzbd reports doesn't exist inside the
+       *arr's own container). Found live via a real stuck Radarr import.
+    5. Upsert Prowlarr "Applications" entries for Sonarr/Radarr/Readarr, so
        indexers added to Prowlarr auto-sync to all three (no manual "sync to
        app" step).
-    5. If .Values.prowlarr.indexers.althub.apiKey is set: upsert althub as a
+    6. If .Values.prowlarr.indexers.althub.apiKey is set: upsert althub as a
        generic Newznab indexer in Prowlarr.
-    6. If .Values.sabnzbd.provider.host is set: upsert the Usenet block-account
+    7. If .Values.sabnzbd.provider.host is set: upsert the Usenet block-account
        NNTP server into SABnzbd itself via its own config API. Skipped until a
        provider is chosen — see stack/docs/TODO.md.
 
@@ -188,6 +194,27 @@ spec:
               print(f"  {app['name']}: download client upsert -> {s}" if ok(s)
                     else f"  WARN: {app['name']}: download client upsert failed [{s}]: {str(b)[:160]}")
 
+          def upsert_remote_path_mapping(app, host, remote_path, local_path):
+              # SABnzbd's own /data is subPath-scoped to its media PVC slice
+              # (downloads/sabnzbd), but Sonarr/Radarr/Readarr mount the whole
+              # media share unscoped at /data. So the path SABnzbd reports for
+              # a finished download (e.g. /data/finished/radarr/Movie/x.mkv)
+              # doesn't exist inside the *arr's own container — it's really at
+              # /data/downloads/sabnzbd/finished/radarr/Movie/x.mkv from the
+              # *arr's point of view. Without this mapping every completed
+              # SABnzbd grab sits forever as "no files eligible for import".
+              base, key, ver = app["baseUrl"], app["apiKey"], app["apiVersion"]
+              payload = {"host": host, "remotePath": remote_path, "localPath": local_path}
+              s, existing = call("GET", f"{base}/api/{ver}/remotepathmapping", headers=arr_headers(key))
+              match = next((m for m in existing if m.get("host") == host), None) if s == 200 else None
+              if match:
+                  payload["id"] = match["id"]
+                  s, b = call("PUT", f"{base}/api/{ver}/remotepathmapping/{match['id']}", payload, arr_headers(key))
+              else:
+                  s, b = call("POST", f"{base}/api/{ver}/remotepathmapping", payload, arr_headers(key))
+              print(f"  {app['name']}: remote path mapping ({host}) upsert -> {s}" if ok(s)
+                    else f"  WARN: {app['name']}: remote path mapping ({host}) upsert failed [{s}]: {str(b)[:160]}")
+
           def upsert_prowlarr_app(app):
               s, schema = call("GET", f"{PROWLARR_URL}/api/v1/applications/schema", headers=arr_headers(PROWLARR_KEY))
               if s != 200:
@@ -298,7 +325,15 @@ spec:
                       print(f"  [{app['name']}] attempt {attempt+1} raised: {e}")
                       time.sleep(10)
 
-          # 4. Prowlarr <-> *arr app sync
+          # 4. remote path mapping — without this, every completed SABnzbd
+          # grab is stuck "no files eligible for import" (see above).
+          for app in ARR_APPS:
+              try:
+                  upsert_remote_path_mapping(app, "sabnzbd", "/data/", "/data/downloads/sabnzbd/")
+              except Exception as e:
+                  print(f"  [{app['name']}] remote path mapping raised: {e}")
+
+          # 5. Prowlarr <-> *arr app sync
           if wait_for("Prowlarr", f"{PROWLARR_URL}/api/v1/system/status", arr_headers(PROWLARR_KEY)):
               for app in ARR_APPS:
                   for attempt in range(3):
@@ -309,13 +344,13 @@ spec:
                           print(f"  [{app['name']}] Prowlarr app attempt {attempt+1} raised: {e}")
                           time.sleep(10)
 
-              # 5. althub indexer
+              # 6. althub indexer
               try:
                   upsert_althub_indexer()
               except Exception as e:
                   print(f"WARN: althub indexer wiring raised: {e}")
 
-          # 6. Usenet block-account server (no-op until a provider is chosen)
+          # 7. Usenet block-account server (no-op until a provider is chosen)
           try:
               upsert_provider_server()
           except Exception as e:
