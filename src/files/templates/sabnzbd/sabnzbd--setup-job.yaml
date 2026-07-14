@@ -83,9 +83,9 @@ spec:
         - name: ARR_APPS_JSON
           value: |-
             [
-              {"name": "Sonarr", "baseUrl": "http://{{ $sonarrSvc }}:{{ .Values.sonarr.ports.http.targetPort }}", "apiKey": "{{ .Values.sonarr.apiKey }}", "category": "sonarr", "apiVersion": "v3"},
-              {"name": "Radarr", "baseUrl": "http://{{ $radarrSvc }}:{{ .Values.radarr.ports.http.targetPort }}", "apiKey": "{{ .Values.radarr.apiKey }}", "category": "radarr", "apiVersion": "v3"},
-              {"name": "Readarr", "baseUrl": "http://{{ $readarrSvc }}:{{ .Values.readarr.ports.http.targetPort }}", "apiKey": "{{ .Values.readarr.apiKey }}", "category": "readarr", "apiVersion": "v1"}
+              {"name": "Sonarr", "baseUrl": "http://{{ $sonarrSvc }}:{{ .Values.sonarr.ports.http.targetPort }}", "apiKey": "{{ .Values.sonarr.apiKey }}", "category": "sonarr", "categoryField": "tvCategory", "apiVersion": "v3"},
+              {"name": "Radarr", "baseUrl": "http://{{ $radarrSvc }}:{{ .Values.radarr.ports.http.targetPort }}", "apiKey": "{{ .Values.radarr.apiKey }}", "category": "radarr", "categoryField": "movieCategory", "apiVersion": "v3"},
+              {"name": "Readarr", "baseUrl": "http://{{ $readarrSvc }}:{{ .Values.readarr.ports.http.targetPort }}", "apiKey": "{{ .Values.readarr.apiKey }}", "category": "readarr", "categoryField": "musicCategory", "apiVersion": "v1"}
             ]
         command:
         - python3
@@ -134,6 +134,12 @@ spec:
           def arr_headers(api_key):
               return {"X-Api-Key": api_key}
 
+          def ok(status):
+              # Prowlarr's Applications endpoint returns 202 (async test) on
+              # success, not 200/201 — treat any 2xx as success, and guard
+              # against `call()`'s None status on a transport-level exception.
+              return status is not None and 200 <= status < 300
+
           def ensure_sabnzbd_category(name):
               # SABnzbd 400s a download client whose category isn't defined yet.
               # set_config upserts by `name` — safe to call every run.
@@ -166,7 +172,7 @@ spec:
               field_values = {
                   "host": url.hostname, "port": url.port,
                   "apiKey": SABNZBD_KEY, "useSsl": False, "urlBase": "",
-                  "category": app["category"],
+                  app["categoryField"]: app["category"],
               }
               for f in payload.get("fields", []):
                   if f["name"] in field_values:
@@ -179,7 +185,7 @@ spec:
                   s, b = call("PUT", f"{base}/api/{ver}/downloadclient/{match['id']}", payload, arr_headers(key))
               else:
                   s, b = call("POST", f"{base}/api/{ver}/downloadclient", payload, arr_headers(key))
-              print(f"  {app['name']}: download client upsert -> {s}" if s in (200, 201)
+              print(f"  {app['name']}: download client upsert -> {s}" if ok(s)
                     else f"  WARN: {app['name']}: download client upsert failed [{s}]: {str(b)[:160]}")
 
           def upsert_prowlarr_app(app):
@@ -208,7 +214,7 @@ spec:
                   s, b = call("PUT", f"{PROWLARR_URL}/api/v1/applications/{match['id']}", payload, arr_headers(PROWLARR_KEY))
               else:
                   s, b = call("POST", f"{PROWLARR_URL}/api/v1/applications", payload, arr_headers(PROWLARR_KEY))
-              print(f"  Prowlarr app {app['name']} upsert -> {s}" if s in (200, 201)
+              print(f"  Prowlarr app {app['name']} upsert -> {s}" if ok(s)
                     else f"  WARN: Prowlarr app {app['name']} upsert failed [{s}]: {str(b)[:160]}")
 
           def upsert_althub_indexer():
@@ -219,7 +225,7 @@ spec:
               if s != 200:
                   print(f"  WARN: could not fetch indexer schema ({s})")
                   return
-              tmpl = next((i for i in schema if i.get("name") == "Newznab"), None)
+              tmpl = next((i for i in schema if i.get("name") == "Generic Newznab"), None)
               if not tmpl:
                   print("  WARN: no generic Newznab indexer in schema")
                   return
@@ -238,7 +244,7 @@ spec:
                   s, b = call("PUT", f"{PROWLARR_URL}/api/v1/indexer/{match['id']}", payload, arr_headers(PROWLARR_KEY))
               else:
                   s, b = call("POST", f"{PROWLARR_URL}/api/v1/indexer", payload, arr_headers(PROWLARR_KEY))
-              print(f"althub indexer upsert -> {s}" if s in (200, 201)
+              print(f"althub indexer upsert -> {s}" if ok(s)
                     else f"WARN: althub indexer upsert failed [{s}]: {str(b)[:160]}")
 
           def upsert_provider_server():
