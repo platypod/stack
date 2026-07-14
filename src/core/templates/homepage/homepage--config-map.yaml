@@ -234,7 +234,7 @@ data:
           description: Pokémon idle clicker game.
 {{- end }}
 {{- end }}
-{{- if or .Values.prowlarr.enable .Values.transmission.enable .Values.suwayomi.enable .Values.radarr.enable .Values.sonarr.enable .Values.readarr.enable .Values.bazarr.enable .Values.flaresolverr.enable .Values.reclaimerr.enable }}
+{{- if or .Values.prowlarr.enable .Values.transmission.enable .Values.suwayomi.enable .Values.radarr.enable .Values.sonarr.enable .Values.readarr.enable .Values.bazarr.enable .Values.flaresolverr.enable .Values.reclaimerr.enable .Values.sabnzbd.enable }}
     - Media-Maintainer:
 {{- if .Values.prowlarr.enable }}
       - Prowlarr:
@@ -257,6 +257,16 @@ data:
             username: {{ .Values.transmission.credentials.username }}
             password: {{ .Values.transmission.credentials.password }}
             rpcUrl: /transmission/
+{{- end }}
+{{- if .Values.sabnzbd.enable }}
+      - SABnzbd:
+          icon: sabnzbd.png
+          href: https://{{ tpl .Values.sabnzbd.host . }}
+          description: Usenet client.
+          widget:
+            type: sabnzbd
+            url: http://{{ .Values.sabnzbd.label }}:{{ .Values.sabnzbd.ports.http.targetPort }}
+            key: {{ .Values.sabnzbd.apiKey }}
 {{- end }}
 {{- if .Values.suwayomi.enable }}
       - Suwayomi:
