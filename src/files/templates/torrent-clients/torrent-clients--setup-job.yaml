@@ -1,0 +1,186 @@
+{{- if or .Values.transmission.enable .Values.qbittorrent.enable }}
+{{- /*
+  Torrent-client (Transmission / qBittorrent) wiring Job.
+
+  Hook-weight 35 (< sabnzbd-setup's 40, > reclaimerr's 30) — runs before
+  sabnzbd-setup, no ordering dependency between them, just kept sequential
+  rather than racing two Jobs that both PUT/POST each *arr's downloadclient
+  list. Same `files` -> `media` release dependency as sabnzbd-setup (see
+  helmfile.yaml.gotmpl) so Sonarr/Radarr/Readarr Services already exist.
+
+  Field names were NOT guessed — verified live against each app's
+  /downloadclient/schema before writing this (see the sabnzbd-setup saga:
+  wrong field names there cost several redeploy cycles). Confirmed:
+    - category field is tvCategory/movieCategory/musicCategory per app,
+      same as sabnzbd-setup already uses — identical across Transmission
+      and QBittorrent implementations.
+    - Transmission's urlBase defaults to "/transmission/" (its RPC lives
+      under that path) — must NOT be blanked out like SABnzbd's.
+    - Unlike SABnzbd, neither Transmission nor QBittorrent's Servarr
+      integration requires the category to pre-exist on the client side
+      (Transmission has no native category concept at all; QBittorrent's
+      own category API was left untouched here since it isn't deployed on
+      prod and this couldn't be verified live — revisit if that changes).
+
+  qBittorrent is only wired if .Values.qbittorrent.enable — it isn't
+  deployed on prod today, so TORRENT_CLIENTS_JSON only contains Transmission
+  there; this activates automatically once qbittorrent.enable flips true.
+
+  Idempotent, best-effort per client/app pair — same contract as
+  sabnzbd-setup (partial failures logged, not fatal; next deploy heals it).
+*/ -}}
+{{- $sonarrSvc      := print .Values.k8s.names.services.prefix .Values.sonarr.label .Values.k8s.names.services.suffix }}
+{{- $radarrSvc      := print .Values.k8s.names.services.prefix .Values.radarr.label .Values.k8s.names.services.suffix }}
+{{- $readarrSvc     := print .Values.k8s.names.services.prefix .Values.readarr.label .Values.k8s.names.services.suffix }}
+{{- $transmissionSvc := print .Values.k8s.names.services.prefix .Values.transmission.label .Values.k8s.names.services.suffix }}
+{{- $qbittorrentSvc  := print .Values.k8s.names.services.prefix .Values.qbittorrent.label .Values.k8s.names.services.suffix }}
+apiVersion: batch/v1
+kind: Job
+
+metadata:
+  name: torrent-clients-setup
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "35"
+    "helm.sh/hook-delete-policy": before-hook-creation
+
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: torrent-clients-setup
+        image: python:3-alpine
+        env:
+        - name: ARR_APPS_JSON
+          value: |-
+            [
+              {"name": "Sonarr", "baseUrl": "http://{{ $sonarrSvc }}:{{ .Values.sonarr.ports.http.targetPort }}", "apiKey": "{{ .Values.sonarr.apiKey }}", "category": "sonarr", "categoryField": "tvCategory", "apiVersion": "v3"},
+              {"name": "Radarr", "baseUrl": "http://{{ $radarrSvc }}:{{ .Values.radarr.ports.http.targetPort }}", "apiKey": "{{ .Values.radarr.apiKey }}", "category": "radarr", "categoryField": "movieCategory", "apiVersion": "v3"},
+              {"name": "Readarr", "baseUrl": "http://{{ $readarrSvc }}:{{ .Values.readarr.ports.http.targetPort }}", "apiKey": "{{ .Values.readarr.apiKey }}", "category": "readarr", "categoryField": "musicCategory", "apiVersion": "v1"}
+            ]
+        - name: TORRENT_CLIENTS_JSON
+          value: |-
+            [
+            {{- $clients := list }}
+            {{- if .Values.transmission.enable }}
+              {{- $clients = append $clients (dict
+                  "name" "Transmission" "implementation" "Transmission"
+                  "host" $transmissionSvc "port" .Values.transmission.ports.http.targetPort
+                  "urlBase" "/transmission/"
+                  "username" .Values.transmission.credentials.username
+                  "password" .Values.transmission.credentials.password) }}
+            {{- end }}
+            {{- if .Values.qbittorrent.enable }}
+              {{- $clients = append $clients (dict
+                  "name" "QBittorrent" "implementation" "QBittorrent"
+                  "host" $qbittorrentSvc "port" .Values.qbittorrent.ports.http.targetPort
+                  "urlBase" ""
+                  "username" .Values.qbittorrent.credentials.username
+                  "password" .Values.qbittorrent.credentials.password) }}
+            {{- end }}
+            {{- range $i, $c := $clients }}
+              {{- if $i }},{{ end }}
+              {{ $c | toJson }}
+            {{- end }}
+            ]
+        command:
+        - python3
+        - -u
+        - -c
+        - |
+          import json, os, time, urllib.request, urllib.error
+
+          ARR_APPS = json.loads(os.environ["ARR_APPS_JSON"])
+          CLIENTS  = json.loads(os.environ["TORRENT_CLIENTS_JSON"])
+
+          def call(method, url, body=None, headers=None):
+              data = json.dumps(body).encode() if body is not None else None
+              req = urllib.request.Request(url, data=data, method=method,
+                                            headers={"Content-Type": "application/json", **(headers or {})})
+              try:
+                  with urllib.request.urlopen(req, timeout=20) as r:
+                      raw = r.read()
+                      return r.status, (json.loads(raw) if raw else {})
+              except urllib.error.HTTPError as e:
+                  raw = e.read()
+                  try:
+                      return e.code, json.loads(raw)
+                  except Exception:
+                      return e.code, raw.decode(errors="replace")
+              except Exception as e:
+                  return None, str(e)
+
+          def ok(status):
+              return status is not None and 200 <= status < 300
+
+          def arr_headers(api_key):
+              return {"X-Api-Key": api_key}
+
+          def wait_for(name, url, headers=None):
+              for i in range(90):
+                  s, b = call("GET", url, headers=headers)
+                  if s == 200:
+                      print(f"{name} is up.")
+                      return True
+                  print(f"  [{i}] {name} not ready yet ({s}: {str(b)[:120]})")
+                  time.sleep(10)
+              print(f"WARN: {name} never became ready — skipping dependent steps.")
+              return False
+
+          def upsert_download_client(app, client):
+              base, key, ver = app["baseUrl"], app["apiKey"], app["apiVersion"]
+              s, schema = call("GET", f"{base}/api/{ver}/downloadclient/schema", headers=arr_headers(key))
+              if s != 200:
+                  print(f"  WARN: {app['name']}/{client['name']}: could not fetch downloadclient schema ({s})")
+                  return
+              tmpl = next((c for c in schema if c.get("implementation") == client["implementation"]), None)
+              if not tmpl:
+                  print(f"  WARN: {app['name']}: no {client['implementation']} implementation in schema")
+                  return
+              payload = dict(tmpl)
+              payload["name"] = client["name"]
+              payload["enable"] = True
+              field_values = {
+                  "host": client["host"], "port": client["port"],
+                  "username": client["username"], "password": client["password"],
+                  app["categoryField"]: app["category"],
+              }
+              if client["urlBase"]:
+                  # Only override when the client needs a non-default urlBase
+                  # (Transmission's RPC lives at /transmission/); leave
+                  # QBittorrent's schema default alone otherwise.
+                  field_values["urlBase"] = client["urlBase"]
+              for f in payload.get("fields", []):
+                  if f["name"] in field_values:
+                      f["value"] = field_values[f["name"]]
+
+              s, existing = call("GET", f"{base}/api/{ver}/downloadclient", headers=arr_headers(key))
+              match = next((c for c in existing if c.get("name") == client["name"]), None) if s == 200 else None
+              if match:
+                  payload["id"] = match["id"]
+                  s, b = call("PUT", f"{base}/api/{ver}/downloadclient/{match['id']}", payload, arr_headers(key))
+              else:
+                  s, b = call("POST", f"{base}/api/{ver}/downloadclient", payload, arr_headers(key))
+              print(f"  {app['name']}/{client['name']}: download client upsert -> {s}" if ok(s)
+                    else f"  WARN: {app['name']}/{client['name']}: download client upsert failed [{s}]: {str(b)[:160]}")
+
+          if not CLIENTS:
+              print("No torrent clients enabled — nothing to wire.")
+
+          for app in ARR_APPS:
+              if not wait_for(app["name"], f"{app['baseUrl']}/api/{app['apiVersion']}/system/status", arr_headers(app["apiKey"])):
+                  continue
+              for client in CLIENTS:
+                  for attempt in range(3):
+                      try:
+                          upsert_download_client(app, client)
+                          break
+                      except Exception as e:
+                          print(f"  [{app['name']}/{client['name']}] attempt {attempt+1} raised: {e}")
+                          time.sleep(10)
+
+          print("torrent-clients-setup complete.")
+          # exit 0 regardless of partial failures — logged above, next deploy heals it.
+{{- end }}
