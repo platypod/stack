@@ -11,6 +11,6 @@ pokeclicker:
   resources:
     requests:
       cpu: 25m
-      memory: 512Mi
+      memory: 896Mi
     limits:
-      memory: 1Gi
+      memory: 1280Mi
