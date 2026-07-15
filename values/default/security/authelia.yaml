@@ -76,6 +76,7 @@ authelia:
       domain:
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.homepage.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.pokeclicker.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.sphaze.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
 
     - subject:
       - group:media
@@ -164,6 +165,6 @@ authelia:
   resources:
     requests:
       cpu: 50m
-      memory: 128Mi
+      memory: 192Mi
     limits:
-      memory: 256Mi
+      memory: 384Mi

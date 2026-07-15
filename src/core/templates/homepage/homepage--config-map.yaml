@@ -219,7 +219,7 @@ data:
           description: Self-hosted Bitwarden-compatible password manager.
 {{- end }}
 {{- end }}
-{{- if or .Values.rommapp.enable .Values.pokeclicker.enable }}
+{{- if or .Values.rommapp.enable .Values.pokeclicker.enable .Values.sphaze.enable }}
     - Games:
 {{- if .Values.rommapp.enable }}
       - RommApp:
@@ -232,6 +232,12 @@ data:
           icon: mdi-pokeball
           href: https://{{ tpl .Values.pokeclicker.host . }}
           description: Pokémon idle clicker game.
+{{- end }}
+{{- if .Values.sphaze.enable }}
+      - Sphaze:
+          icon: mdi-earth
+          href: https://{{ tpl .Values.sphaze.host . }}
+          description: 3D maze wrapped onto the inside of a sphere.
 {{- end }}
 {{- end }}
 {{- if or .Values.prowlarr.enable .Values.transmission.enable .Values.suwayomi.enable .Values.radarr.enable .Values.sonarr.enable .Values.readarr.enable .Values.bazarr.enable .Values.flaresolverr.enable .Values.reclaimerr.enable .Values.sabnzbd.enable }}

@@ -61,6 +61,7 @@ refers to the model described in [authentication.md](authentication.md).
 |---------|------|------|
 | RomM | ROM library manager | **OIDC** (`group:media`) |
 | PokéClicker | Browser game | forwardauth (`one_factor`) |
+| Sphaze | 3D maze wrapped onto the inside of a sphere, browser game | forwardauth (`one_factor`) |
 
 ## observability
 | Service | Role | Auth |

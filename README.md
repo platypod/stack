@@ -134,6 +134,7 @@
 
 [![RommApp][RommApp]][RommApp-url]
 [![Pokeclicker][Pokeclicker]][Pokeclicker-url]
+[![Sphaze][Sphaze]][Sphaze-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -494,3 +495,5 @@ Project Link: [https://github.com/Pittinic/platypod](https://github.com/Pittinic
 [RommApp-url]: https://github.com/rommapp/romm
 [Pokeclicker]: https://img.shields.io/badge/pokeclicker-%23CC0000?style=for-the-badge&logoColor=FFFFFF
 [Pokeclicker-url]: https://github.com/pokeclicker/pokeclicker
+[Sphaze]: https://img.shields.io/badge/sphaze-%23AA8855?style=for-the-badge
+[Sphaze-url]: https://github.com/platypod/sphaze

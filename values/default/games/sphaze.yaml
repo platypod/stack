@@ -1,0 +1,19 @@
+sphaze:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.sphaze.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  # No tag has been pushed yet (see sphaze's own README "Release build" section
+  # and its .github/workflows/build.yml) — this placeholder won't pull until a
+  # real release is tagged. Bump to match once one exists.
+  image: ghcr.io/platypod/sphaze:v0.1.0
+  label: sphaze
+  ports:
+    http:
+      name: http
+      targetPort: 80
+  replicasNb: 1
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 64Mi

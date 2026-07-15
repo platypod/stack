@@ -61,3 +61,4 @@ uptimeKuma:
     - { name: "Transmission", url: "http://transmission:9091",   enable: "{{ .Values.transmission.enable }}" }
     - { name: "RomM",         url: "http://rommapp:8080",        enable: "{{ .Values.rommapp.enable }}" }
     - { name: "PokeClicker",  url: "http://pokeclicker:3000",    enable: "{{ .Values.pokeclicker.enable }}" }
+    - { name: "Sphaze",       url: "http://sphaze:80",           enable: "{{ .Values.sphaze.enable }}" }
