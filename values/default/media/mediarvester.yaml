@@ -25,6 +25,6 @@ mediarvester:
   resources:
     requests:
       cpu: 100m
-      memory: 256Mi
+      memory: 640Mi
     limits:
-      memory: 768Mi
+      memory: 1Gi

@@ -16,8 +16,9 @@ bazarr:
   resources:
     requests:
       cpu: 50m
-      memory: 384Mi
+      memory: 512Mi
     # Bazarr is memory-hungry (subtitle providers + SignalR feeds to Sonarr/
-    # Radarr); 512Mi OOMKilled it in a restart loop. Bumped to 1Gi.
+    # Radarr); 512Mi OOMKilled it in a restart loop, then 1Gi did too
+    # (26 restarts/17d in prod). Bumped to 1.5Gi.
     limits:
-      memory: 1Gi
+      memory: 1536Mi

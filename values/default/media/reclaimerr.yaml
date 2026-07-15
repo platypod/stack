@@ -49,8 +49,9 @@ reclaimerr:
   resources:
     requests:
       cpu: 50m
-      memory: 128Mi
+      memory: 448Mi
     limits:
       # 256Mi was too tight: the IMDb/AniList ratings refresh loads ~1.7M rows
-      # into SQLite and was OOMKilling the pod every ~2h.
-      memory: 512Mi
+      # into SQLite and was OOMKilling the pod every ~2h. 512Mi held but observed
+      # usage sits at ~84% of it — bumped further for margin.
+      memory: 640Mi

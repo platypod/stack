@@ -25,6 +25,9 @@ suwayomi:
   resources:
     requests:
       cpu: 100m
-      memory: 256Mi
+      memory: 384Mi
+    # Suwayomi spins up an embedded headless Chromium (JCEF/KCEF) per manga
+    # update for JS-heavy sources; 768Mi left it pinned at its cgroup ceiling
+    # (20 restarts/32d in prod, exit 134). Bumped to 1.25Gi.
     limits:
-      memory: 768Mi
+      memory: 1280Mi
