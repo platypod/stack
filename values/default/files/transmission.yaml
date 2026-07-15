@@ -42,7 +42,10 @@ transmission:
   resources:
     requests:
       cpu: 100m
-      memory: 256Mi
+      # Wanted 512Mi (usage regularly hits ~2x the old 256Mi request), but
+      # mini4-w1 was ~7Mi short of that on 2026-07-15 — capped at 480Mi to
+      # fit. Revisit once the node has more headroom.
+      memory: 480Mi
     limits:
       # 256Mi OOMKilled the daemon once the torrent list grew (resume/verification
       # state is held in memory). Raised to give headroom for a large/active set.
