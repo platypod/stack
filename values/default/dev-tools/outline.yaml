@@ -21,9 +21,9 @@ outline:
     resources:
       requests:
         cpu: 50m
-        memory: 128Mi
+        memory: 64Mi
       limits:
-        memory: 256Mi
+        memory: 128Mi
   redis:
     image: redis:7-alpine
     label: "{{ .Values.outline.label }}-redis"
@@ -54,6 +54,6 @@ outline:
   resources:
     requests:
       cpu: 100m
-      memory: 256Mi
+      memory: 448Mi
     limits:
-      memory: 512Mi
+      memory: 768Mi
