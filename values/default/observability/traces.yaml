@@ -8,9 +8,9 @@ observability:
     resources:
       requests:
         cpu: 100m
-        memory: 256Mi
+        memory: 128Mi
       limits:
-        memory: 512Mi
+        memory: 256Mi
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
     ports:
       grpc:

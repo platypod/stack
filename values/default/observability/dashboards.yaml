@@ -7,7 +7,9 @@ observability:
         cpu: 100m
         # Grafana 13 OSS builds an in-memory bleve search index over all
         # provisioned dashboards at startup; 384Mi got OOMKilled (exit 137).
-        memory: 256Mi
+        # limit (below) already carries that fix — request bumped separately
+        # since observed steady-state usage runs well above the old 256Mi.
+        memory: 448Mi
       limits:
         memory: 768Mi
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.dashboard.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
