@@ -23,9 +23,9 @@ lldap:
     resources:
       requests:
         cpu: 50m
-        memory: 128Mi
+        memory: 64Mi
       limits:
-        memory: 256Mi
+        memory: 128Mi
   ports:
     http:
       name: http
