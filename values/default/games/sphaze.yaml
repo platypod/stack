@@ -1,7 +1,7 @@
 sphaze:
   enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.sphaze.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: ghcr.io/platypod/sphaze:v0.2.0
+  image: ghcr.io/platypod/sphaze:v0.3.0
   label: sphaze
   ports:
     http:
