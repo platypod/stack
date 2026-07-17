@@ -9,7 +9,7 @@ traefik:
   label: traefik
   dashboardLabel: traefik-dashboard
   logging:
-    format: common
+    format: json
     level: ERROR
   ports:
     dashboard:

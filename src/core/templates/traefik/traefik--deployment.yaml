@@ -73,6 +73,15 @@ spec:
           - --log.level={{ .Values.traefik.logging.level }}
           - --log.format={{ .Values.traefik.logging.format }}
           - --accesslog
+          # accesslog has its own format flag (--log.format only covers the
+          # app/error log) — without this it silently stays "common" regardless
+          # of traefik.logging.format.
+          - --accesslog.format={{ .Values.traefik.logging.format }}
+          # NOTE: capturing the authelia forwardAuth "Remote-User" response
+          # header here does NOT work — forwardAuth injects it onto the request
+          # proxied to the backend, not onto the request object this access log
+          # inspects. Per-user access is logged by Authelia itself instead (at
+          # debug level): "Check authorization of subject username=... object=...".
           # letsencrypt resolver
           {{ if .Values.acme.challenge.dns.enable }}
           - --certificatesresolvers.{{ .Values.traefik.resolverName }}.acme.dnschallenge=true
