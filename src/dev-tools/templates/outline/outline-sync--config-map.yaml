@@ -27,16 +27,30 @@ data:
     path from the collection root, so a rename is a delete+create. A repo
     with `rooted: true` nests everything under a top-level document named
     after the repo, letting several repos share one collection; the sync
-    then only manages documents under that root. Each file document opens
-    with a banner linking back to its source on GitHub, ending in a
-    `sync:<hash>` token -- Outline normalizes stored markdown, so the hash
-    (which survives normalization) is what detects change. Dot-directories
-    and CLAUDE.md files (agent instructions, not human docs) are skipped.
+    then only manages documents under that root.
+
+    Images: markdown-syntax images (`![alt](path)`) whose path is relative
+    and resolves to a file in the clone are uploaded as Outline attachments
+    and the reference rewritten to the attachment URL; absolute-URL images
+    pass through (title strings are stripped either way -- Outline's
+    importer drops titled images). HTML `<img>` tags are not handled.
+    Change detection hashes the raw body plus the bytes of every resolved
+    image, so an image edit re-publishes its documents; uploads only happen
+    for documents actually being (re)written, keeping the no-op run free.
+    Replaced uploads are orphaned, not deleted -- accepted cost.
+
+    Each file document opens with a banner linking back to its source on
+    GitHub, ending in a `sync:<hash>` token -- Outline normalizes stored
+    markdown, so the hash (which survives normalization) is what detects
+    change. Dot-directories and CLAUDE.md files (agent instructions, not
+    human docs) are skipped.
     """
     import hashlib
     import json
+    import mimetypes
     import os
     import posixpath
+    import re
     import sys
     import time
     import urllib.error
@@ -47,33 +61,34 @@ data:
     REPOS_DIR = os.environ.get("REPOS_DIR", "/work")
     PAGE = 100
     RETRIES_429 = 30
+    IMG_RE = re.compile(r'!\[([^\]]*)\]\(\s*([^)\s]+)(?:\s+"[^"]*")?\s*\)')
 
 
-    def api(endpoint, payload):
-        req = urllib.request.Request(
-            OUTLINE_URL + "/api/" + endpoint,
-            data=json.dumps(payload).encode(),
-            headers={
-                "Authorization": "Bearer " + TOKEN,
-                "Content-Type": "application/json",
-            },
-        )
-        # Outline rate-limits write endpoints; a nightly batch job just
-        # waits the window out rather than failing.
+    def http(url, data, headers):
+        """POST with 429 wait-and-retry; returns the raw response body."""
+        req = urllib.request.Request(url, data=data, headers=headers)
         for attempt in range(RETRIES_429):
             try:
                 with urllib.request.urlopen(req) as resp:
-                    return json.load(resp)
+                    return resp.read()
             except urllib.error.HTTPError as err:
                 if err.code == 429 and attempt < RETRIES_429 - 1:
                     # Retry-After can be fractional (e.g. "57.807").
                     wait = float(err.headers.get("Retry-After") or 65) + 1
-                    print("rate limited on %s; waiting %.0fs" % (endpoint, wait),
+                    print("rate limited on %s; waiting %.0fs" % (url, wait),
                           flush=True)
                     time.sleep(wait)
                     continue
                 body = err.read().decode(errors="replace")
-                sys.exit("%s -> HTTP %d: %s" % (endpoint, err.code, body[:500]))
+                sys.exit("%s -> HTTP %d: %s" % (url, err.code, body[:500]))
+
+
+    def api(endpoint, payload):
+        out = http(OUTLINE_URL + "/api/" + endpoint,
+                   json.dumps(payload).encode(),
+                   {"Authorization": "Bearer " + TOKEN,
+                    "Content-Type": "application/json"})
+        return json.loads(out)
 
 
     def paginate(endpoint, payload):
@@ -99,6 +114,48 @@ data:
         })
         print("created collection %r" % name, flush=True)
         return made["data"]["id"]
+
+
+    def upload_image(rel_path, data):
+        """Upload one image as an Outline attachment; return its URL."""
+        name = os.path.basename(rel_path)
+        ctype = mimetypes.guess_type(name)[0] or "application/octet-stream"
+        made = api("attachments.create", {
+            "name": name, "contentType": ctype, "size": len(data),
+            "preset": "documentAttachment",
+        })["data"]
+        boundary = "outline-sync-" + hashlib.sha256(data).hexdigest()[:24]
+        parts = []
+        for key, value in (made.get("form") or {}).items():
+            parts.append(("--%s\r\nContent-Disposition: form-data; "
+                          'name="%s"\r\n\r\n%s\r\n' % (boundary, key, value))
+                         .encode())
+        parts.append(("--%s\r\nContent-Disposition: form-data; name=\"file\"; "
+                      'filename="%s"\r\nContent-Type: %s\r\n\r\n'
+                      % (boundary, name, ctype)).encode())
+        body = b"".join(parts) + data + ("\r\n--%s--\r\n" % boundary).encode()
+        upload_url = made["uploadUrl"]
+        if upload_url.startswith("/"):
+            upload_url = OUTLINE_URL + upload_url
+        http(upload_url, body,
+             {"Authorization": "Bearer " + TOKEN,
+              "Content-Type": "multipart/form-data; boundary=" + boundary})
+        print("uploaded image %s (%d bytes)" % (rel_path, len(data)),
+              flush=True)
+        return made["attachment"]["url"]
+
+
+    def resolve_image(root, md_rel, target):
+        """Repo-relative path of a relative image target, or None."""
+        if re.match(r"^[a-z][a-z0-9+.-]*:", target) or target.startswith(
+                ("/", "#")):
+            return None
+        cand = os.path.normpath(
+            os.path.join(os.path.dirname(md_rel), target))
+        if cand.startswith(".."):
+            return None
+        full = os.path.join(root, cand)
+        return cand.replace(os.sep, "/") if os.path.isfile(full) else None
 
 
     def keep(name):
@@ -166,8 +223,30 @@ data:
         return url.removesuffix(".git")
 
 
-    def node_text(repo, key, node):
-        """(document text, change marker) for a desired node."""
+    def read_body(root, rel):
+        with open(os.path.join(root, rel), encoding="utf-8",
+                  errors="replace") as handle:
+            return handle.read()
+
+
+    def node_marker(repo, root, node):
+        """Cheap change marker: raw body + resolved image bytes. No uploads."""
+        rel = node["src"]
+        if rel is None:
+            return "sync:dir"
+        body = read_body(root, rel)
+        digest = hashlib.sha256(body.encode())
+        for match in IMG_RE.finditer(body):
+            img = resolve_image(root, rel, match.group(2))
+            if img:
+                with open(os.path.join(root, img), "rb") as handle:
+                    digest.update(handle.read())
+        return "sync:" + digest.hexdigest()[:12]
+
+
+    def node_text(repo, root, key, node, marker):
+        """Final document text. Uploads referenced images -- only call for
+        documents that are actually about to be created or updated."""
         base_url = web_url(repo["url"])
         rel = node["src"]
         if rel is None:
@@ -176,20 +255,26 @@ data:
             tree += "/" + dir_rel if dir_rel else ""
             label = posixpath.join(repo["name"], dir_rel) if dir_rel else repo["name"]
             return ("> Directory [`%s`](%s) -- mirrored read-only; edit in "
-                    "git. `sync:dir`" % (label, tree)), "sync:dir"
+                    "git. `%s`" % (label, tree, marker))
+        body = read_body(root, rel)
+
+        def replace(match):
+            alt, target = match.group(1), match.group(2)
+            img = resolve_image(root, rel, target)
+            if img is None:
+                return "![%s](%s)" % (alt, target)
+            with open(os.path.join(root, img), "rb") as handle:
+                return "![%s](%s)" % (alt, upload_image(img, handle.read()))
+
+        body = IMG_RE.sub(replace, body)
         blob = "%s/blob/%s/%s" % (base_url, repo["branch"], rel)
-        with open(os.path.join(REPOS_DIR, repo["name"], rel),
-                  encoding="utf-8", errors="replace") as handle:
-            body = handle.read()
-        digest = hashlib.sha256(body.encode()).hexdigest()[:12]
-        text = ("> Mirrored from [`%s`](%s) -- read-only; edit in git. "
-                "`sync:%s`\n\n%s"
-                % (posixpath.join(repo["name"], rel), blob, digest, body))
-        return text, "sync:" + digest
+        return ("> Mirrored from [`%s`](%s) -- read-only; edit in git. "
+                "`%s`\n\n%s"
+                % (posixpath.join(repo["name"], rel), blob, marker, body))
 
 
     def existing_by_path(coll):
-        """{title-path tuple: doc} plus a list of duplicate docs to delete."""
+        """{title-path tuple: doc} plus duplicate (path, doc) pairs to delete."""
         docs = list(paginate("documents.list", {"collectionId": coll}))
         by_id = {doc["id"]: doc for doc in docs}
         cache = {}
@@ -229,8 +314,14 @@ data:
         created = updated = unchanged = deleted = 0
         for key in sorted(desired,
                           key=lambda k: (len(k), tuple(s.lower() for s in k))):
-            text, marker = node_text(repo, key, desired[key])
+            node = desired[key]
+            marker = node_marker(repo, root, node)
             doc = existing.pop(key, None)
+            if doc is not None and marker in (doc.get("text") or ""):
+                ids[key] = doc["id"]
+                unchanged += 1
+                continue
+            text = node_text(repo, root, key, node, marker)
             if doc is None:
                 payload = {"title": key[-1], "text": text,
                            "collectionId": coll, "publish": True}
@@ -241,11 +332,8 @@ data:
                 created += 1
             else:
                 ids[key] = doc["id"]
-                if marker in (doc.get("text") or ""):
-                    unchanged += 1
-                else:
-                    api("documents.update", {"id": doc["id"], "text": text})
-                    updated += 1
+                api("documents.update", {"id": doc["id"], "text": text})
+                updated += 1
         # Deepest first, so nothing is deleted twice via parent cascade.
         stale = sorted(existing, key=len, reverse=True)
         for key in stale:
