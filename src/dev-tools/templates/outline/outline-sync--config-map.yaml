@@ -123,23 +123,39 @@ data:
 
 
     def build_desired(repo, root):
-        """Title-path tuple -> {kind: dir|file, src: repo-relative path|None}."""
+        """Title-path tuple -> {kind: dir|file, src: repo-relative path|None}.
+
+        Two passes so collisions resolve deterministically: directories are
+        laid down first, then files -- a `<name>.md` next to a `<name>/`
+        directory maps to the same title path, and the directory wins (its
+        README, if any, is the page); the shadowed file is skipped loudly.
+        """
         prefix = (repo["name"],) if repo.get("rooted") else ()
+        files = repo_files(root, repo["paths"])
         nodes = {}
         if prefix:
             nodes[prefix] = {"kind": "dir", "src": None}
-        for rel in repo_files(root, repo["paths"]):
+        for rel in files:
             segs = rel.split("/")
             for depth in range(1, len(segs)):
                 nodes.setdefault(prefix + tuple(segs[:depth]),
                                  {"kind": "dir", "src": None})
+        for rel in files:
+            segs = rel.split("/")
             base = segs[-1]
             if base == "README.md" and (prefix or len(segs) > 1):
                 nodes[prefix + tuple(segs[:-1])]["src"] = rel
-            else:
-                title = base[:-3] if base.endswith(".md") else base
-                nodes[prefix + tuple(segs[:-1]) + (title,)] = {
-                    "kind": "file", "src": rel}
+                continue
+            title = base[:-3] if base.endswith(".md") else base
+            key = prefix + tuple(segs[:-1]) + (title,)
+            if key in nodes:
+                print("%s: NOT mirrored -- %s shadowed by %s at the same "
+                      "title path" % (repo["name"], rel,
+                                      "directory " + "/".join(key[len(prefix):])
+                                      if nodes[key]["kind"] == "dir"
+                                      else "another file"), flush=True)
+                continue
+            nodes[key] = {"kind": "file", "src": rel}
         return nodes
 
 
