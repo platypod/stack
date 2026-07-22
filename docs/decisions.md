@@ -41,6 +41,34 @@ stops a custom tool forging metric owner (low-sensitivity — counts, not conten
 
 → Detail in the *Ingest hardening* section of [observability/dashboard-multitenancy.md](observability/dashboard-multitenancy.md).
 
+## Git → Outline docs mirror: one-way, pull-based, read-only
+
+Outline is the collaboration/intel surface; the git repos hold the engineering
+docs. They're linked by the **`outline-sync` CronJob** (dev-tools): nightly, it
+clones the configured public repos and pushes their markdown into one
+**read-only collection per repo** via Outline's API (internal Service, token
+from values — nothing leaves the cluster). Git stays the only source of truth
+for mirrored docs; **content authored in Outline stays in Outline** and is
+never synced back to git (explicitly decided — "what happens on Outline stays
+on Outline").
+
+Rejected: **two-way sync** (Outline stores ProseMirror, markdown round-trips
+aren't byte-stable → phantom diffs and a hand-rolled merge engine; community
+2-way tools exist but inherit the same lossiness), **GitHub-Actions push**
+(e.g. `outline-sync-action` — parks an Outline API token on third-party
+infrastructure, same posture violation the org rejects for deploy
+credentials, and would have to thread past the ingress from outside),
+**Wiki.js native git storage** (real built-in two-way git sync, but the
+collaboration/editing experience loses to Outline and collaboration is the
+point), and **an Outline→git export/backup flow** (declined for now with the
+one-way rule; revisit only if Outline-native content ever needs history
+outside Outline's own).
+
+Upstream git sync remains an open discussion
+([outline#9952](https://github.com/outline/outline/discussions/9952)) — if it
+ever lands first-party, revisit the custom job. Details and token setup:
+[dev-tools/outline.md](dev-tools/outline.md).
+
 ## Docmost not deployed (no free OIDC)
 
 Considered Docmost as a 4th wiki/docs app to compare against Outline, BookStack, and

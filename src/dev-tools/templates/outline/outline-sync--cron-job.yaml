@@ -1,0 +1,79 @@
+{{- /*
+  Nightly one-way git -> Outline mirror (companion of
+  outline-sync--config-map.yaml; rationale in docs/decisions.md). Pull-based
+  by design: the repos are public (no git credential) and the Outline API
+  token only ever lives in-cluster, talking to Outline's internal Service --
+  no token on GitHub's side, no Authelia in the path. Gated on the token so
+  merging this is a no-op until a per-env token is provisioned
+  (docs/dev-tools/outline.md has the steps).
+*/ -}}
+{{- if and .Values.outline.enable .Values.outline.sync.enable .Values.outline.sync.apiToken }}
+{{- $s := .Values.outline.sync }}
+apiVersion: batch/v1
+kind: CronJob
+
+metadata:
+  name: outline-sync
+
+spec:
+  schedule: {{ $s.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          initContainers:
+          - name: clone
+            image: {{ $s.gitImage }}
+            command:
+            - sh
+            - -c
+            - |
+              set -e
+              {{- range $s.repos }}
+              git clone --depth 1 --branch {{ .branch }} {{ .url }} /work/{{ .name }}
+              {{- end }}
+            volumeMounts:
+            - name: work
+              mountPath: /work
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
+          containers:
+          - name: outline-sync
+            image: {{ $s.image }}
+            command: ["python", "/sync/sync.py"]
+            env:
+            - name: OUTLINE_URL
+              value: "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.outline.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.outline.ports.http.targetPort }}"
+            - name: OUTLINE_API_TOKEN
+              value: {{ $s.apiToken | quote }}
+            - name: REPOS_DIR
+              value: /work
+            volumeMounts:
+            - name: work
+              mountPath: /work
+              readOnly: true
+            - name: sync
+              mountPath: /sync
+              readOnly: true
+            resources:
+              requests:
+                cpu: 25m
+                memory: 64Mi
+              limits:
+                memory: 128Mi
+          volumes:
+          - name: work
+            emptyDir: {}
+          - name: sync
+            configMap:
+              name: outline-sync
+{{- end }}

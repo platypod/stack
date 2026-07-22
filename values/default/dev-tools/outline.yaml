@@ -44,6 +44,22 @@ outline:
       plain: 5b384522d84b06b25416238f9d79ae6989ac10c81e00217e07c5153c34c1812c
       hashed: "$argon2id$v=19$m=65536,t=3,p=4$ZpeRbwdDPPMXHoqmLYQiyg$jqRM6FQI481hJMb4uL/VUoEpu0X/B2bGoE8mOX5OJVQ"
     displayName: Authelia
+  sync:
+    enable: true
+    # No-op until apiToken is set per env (created by an admin in Outline:
+    # Settings -> API -> New token). The CronJob template gates on it.
+    apiToken: ""
+    schedule: "23 4 * * *"
+    gitImage: alpine/git:latest
+    image: python:3.12-alpine
+    repos:
+    - name: stack
+      url: https://github.com/platypod/stack.git
+      branch: dev
+      collection: "git: stack"
+      paths:
+      - README.md
+      - docs
   ports:
     http:
       name: http

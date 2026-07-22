@@ -1,0 +1,148 @@
+{{- /*
+  One-way git -> Outline mirror (see docs/dev-tools/outline.md and the
+  decision record in docs/decisions.md). The CronJob clones the configured
+  public repos, then this script pushes their markdown into one read-only
+  Outline collection per repo via the API. Git is the source of truth:
+  documents are created/updated/deleted to match the repo exactly; human
+  edits belong in git, never in the mirror.
+*/ -}}
+{{- if and .Values.outline.enable .Values.outline.sync.enable }}
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: outline-sync
+
+data:
+  repos.json: {{ .Values.outline.sync.repos | toJson | quote }}
+  sync.py: |-
+    """One-way git -> Outline mirror. Stdlib only; config via env + repos.json.
+
+    For each configured repo (already cloned under REPOS_DIR by the init
+    container): ensure a read-only collection exists, then make its documents
+    match the repo's markdown files exactly (create/update/delete). Titles are
+    repo-relative paths -- the stable key the sync matches on, so renaming a
+    file is a delete+create. Each document gets a banner linking back to the
+    source file on GitHub.
+    """
+    import json
+    import os
+    import posixpath
+    import sys
+    import urllib.error
+    import urllib.request
+
+    OUTLINE_URL = os.environ["OUTLINE_URL"].rstrip("/")
+    TOKEN = os.environ["OUTLINE_API_TOKEN"]
+    REPOS_DIR = os.environ.get("REPOS_DIR", "/work")
+    PAGE = 100
+
+
+    def api(endpoint, payload):
+        req = urllib.request.Request(
+            OUTLINE_URL + "/api/" + endpoint,
+            data=json.dumps(payload).encode(),
+            headers={
+                "Authorization": "Bearer " + TOKEN,
+                "Content-Type": "application/json",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError as err:
+            body = err.read().decode(errors="replace")
+            sys.exit("%s -> HTTP %d: %s" % (endpoint, err.code, body[:500]))
+
+
+    def paginate(endpoint, payload):
+        offset = 0
+        while True:
+            page = api(endpoint, dict(payload, offset=offset, limit=PAGE))
+            data = page["data"]
+            for item in data:
+                yield item
+            if len(data) < PAGE:
+                return
+            offset += PAGE
+
+
+    def collection_id(name, source_url):
+        for coll in paginate("collections.list", {}):
+            if coll["name"] == name:
+                return coll["id"]
+        made = api("collections.create", {
+            "name": name,
+            "permission": "read",
+            "description": "Read-only mirror of " + source_url
+            + " -- edit in git, not here.",
+        })
+        print("created collection %r" % name)
+        return made["data"]["id"]
+
+
+    def repo_files(root, paths):
+        """Repo-relative posix paths of the markdown files to mirror."""
+        found = []
+        for path in paths:
+            full = os.path.join(root, path)
+            if os.path.isfile(full):
+                found.append(path)
+            elif os.path.isdir(full):
+                for base, _dirs, names in os.walk(full):
+                    for name in sorted(names):
+                        if name.endswith(".md"):
+                            rel = os.path.relpath(os.path.join(base, name), root)
+                            found.append(rel.replace(os.sep, "/"))
+        return sorted(set(found))
+
+
+    def desired_text(repo, rel_path):
+        blob = "%s/blob/%s/%s" % (
+            repo["url"].removesuffix(".git"), repo["branch"], rel_path)
+        with open(os.path.join(REPOS_DIR, repo["name"], rel_path),
+                  encoding="utf-8", errors="replace") as handle:
+            body = handle.read()
+        return ("> Mirrored from [`%s`](%s) -- read-only; edit in git.\n\n%s"
+                % (posixpath.join(repo["name"], rel_path), blob, body))
+
+
+    def sync_repo(repo):
+        root = os.path.join(REPOS_DIR, repo["name"])
+        if not os.path.isdir(root):
+            sys.exit("clone missing for repo %r" % repo["name"])
+        coll = collection_id(repo["collection"], repo["url"])
+        existing = {}  # title -> document (first one wins on duplicates)
+        for doc in paginate("documents.list", {"collectionId": coll}):
+            existing.setdefault(doc["title"], doc)
+        wanted = repo_files(root, repo["paths"])
+        created = updated = deleted = 0
+        for rel_path in wanted:
+            text = desired_text(repo, rel_path)
+            doc = existing.pop(rel_path, None)
+            if doc is None:
+                api("documents.create", {
+                    "title": rel_path, "text": text,
+                    "collectionId": coll, "publish": True,
+                })
+                created += 1
+            elif doc.get("text") != text:
+                api("documents.update", {"id": doc["id"], "text": text})
+                updated += 1
+        for doc in existing.values():
+            api("documents.delete", {"id": doc["id"]})
+            deleted += 1
+        print("%s: %d files -- %d created, %d updated, %d deleted"
+              % (repo["name"], len(wanted), created, updated, deleted))
+
+
+    def main():
+        with open(os.environ.get("REPOS_JSON", "/sync/repos.json")) as handle:
+            repos = json.load(handle)
+        for repo in repos:
+            sync_repo(repo)
+
+
+    if __name__ == "__main__":
+        main()
+{{- end }}
