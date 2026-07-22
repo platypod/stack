@@ -25,10 +25,12 @@ data:
     file is a delete+create. Each document gets a banner linking back to the
     source file on GitHub.
     """
+    import hashlib
     import json
     import os
     import posixpath
     import sys
+    import time
     import urllib.error
     import urllib.request
 
@@ -36,6 +38,7 @@ data:
     TOKEN = os.environ["OUTLINE_API_TOKEN"]
     REPOS_DIR = os.environ.get("REPOS_DIR", "/work")
     PAGE = 100
+    RETRIES_429 = 10
 
 
     def api(endpoint, payload):
@@ -47,12 +50,21 @@ data:
                 "Content-Type": "application/json",
             },
         )
-        try:
-            with urllib.request.urlopen(req) as resp:
-                return json.load(resp)
-        except urllib.error.HTTPError as err:
-            body = err.read().decode(errors="replace")
-            sys.exit("%s -> HTTP %d: %s" % (endpoint, err.code, body[:500]))
+        # Outline rate-limits write endpoints (documents.create especially);
+        # a nightly batch job just waits the window out rather than failing.
+        for attempt in range(RETRIES_429):
+            try:
+                with urllib.request.urlopen(req) as resp:
+                    return json.load(resp)
+            except urllib.error.HTTPError as err:
+                if err.code == 429 and attempt < RETRIES_429 - 1:
+                    wait = int(err.headers.get("Retry-After") or 65)
+                    print("rate limited on %s; waiting %ds" % (endpoint, wait),
+                          flush=True)
+                    time.sleep(wait)
+                    continue
+                body = err.read().decode(errors="replace")
+                sys.exit("%s -> HTTP %d: %s" % (endpoint, err.code, body[:500]))
 
 
     def paginate(endpoint, payload):
@@ -98,13 +110,24 @@ data:
 
 
     def desired_text(repo, rel_path):
+        """Banner + file body, and the content hash embedded in the banner.
+
+        Outline normalizes stored markdown, so comparing our input against
+        the fetched text re-updates every document every run (revision spam,
+        rate-limit stalls). The banner's `sync:<hash>` token survives that
+        normalization: if the fetched text still contains the hash of the
+        current file body, the document is up to date and gets skipped.
+        """
         blob = "%s/blob/%s/%s" % (
             repo["url"].removesuffix(".git"), repo["branch"], rel_path)
         with open(os.path.join(REPOS_DIR, repo["name"], rel_path),
                   encoding="utf-8", errors="replace") as handle:
             body = handle.read()
-        return ("> Mirrored from [`%s`](%s) -- read-only; edit in git.\n\n%s"
-                % (posixpath.join(repo["name"], rel_path), blob, body))
+        digest = hashlib.sha256(body.encode()).hexdigest()[:12]
+        text = ("> Mirrored from [`%s`](%s) -- read-only; edit in git. "
+                "`sync:%s`\n\n%s"
+                % (posixpath.join(repo["name"], rel_path), blob, digest, body))
+        return text, "sync:" + digest
 
 
     def sync_repo(repo):
@@ -116,9 +139,9 @@ data:
         for doc in paginate("documents.list", {"collectionId": coll}):
             existing.setdefault(doc["title"], doc)
         wanted = repo_files(root, repo["paths"])
-        created = updated = deleted = 0
+        created = updated = unchanged = deleted = 0
         for rel_path in wanted:
-            text = desired_text(repo, rel_path)
+            text, marker = desired_text(repo, rel_path)
             doc = existing.pop(rel_path, None)
             if doc is None:
                 api("documents.create", {
@@ -126,14 +149,17 @@ data:
                     "collectionId": coll, "publish": True,
                 })
                 created += 1
-            elif doc.get("text") != text:
+            elif marker in (doc.get("text") or ""):
+                unchanged += 1
+            else:
                 api("documents.update", {"id": doc["id"], "text": text})
                 updated += 1
         for doc in existing.values():
             api("documents.delete", {"id": doc["id"]})
             deleted += 1
-        print("%s: %d files -- %d created, %d updated, %d deleted"
-              % (repo["name"], len(wanted), created, updated, deleted))
+        print("%s: %d files -- %d created, %d updated, %d unchanged, %d deleted"
+              % (repo["name"], len(wanted), created, updated, unchanged,
+                 deleted), flush=True)
 
 
     def main():

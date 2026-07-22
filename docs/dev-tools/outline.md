@@ -18,8 +18,12 @@ decision record in [../decisions.md](../decisions.md). An init container
 internal Service: create/update/delete so the collection matches the repo
 exactly. Document titles are repo-relative paths (the sync's matching key —
 a rename is delete+create); every document opens with a banner linking back
-to its source file on GitHub. Collections are created with `permission:
-read`, so members browse but only git changes content.
+to its source file on GitHub, ending in a `sync:<hash>` token — the change
+detector (Outline normalizes stored markdown, so raw text comparison would
+re-update everything nightly; the hash survives normalization, and unchanged
+files are skipped). Writes that trip Outline's rate limit (429) are retried
+after the window. Collections are created with `permission: read`, so
+members browse but only git changes content.
 
 **Enabling per env (one manual step):** the CronJob renders only when
 `outline.sync.apiToken` is set. Log into Outline as an admin → *Settings →

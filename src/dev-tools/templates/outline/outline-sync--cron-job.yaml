@@ -25,7 +25,10 @@ spec:
       backoffLimit: 2
       template:
         spec:
-          restartPolicy: OnFailure
+          # Never (not OnFailure): each retry gets a fresh pod and failed pods
+          # stick around readable — OnFailure's in-place restarts ended with
+          # the job controller deleting the pod, taking the logs with it.
+          restartPolicy: Never
           initContainers:
           - name: clone
             image: {{ $s.gitImage }}
