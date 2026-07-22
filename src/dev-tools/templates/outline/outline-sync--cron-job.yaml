@@ -38,11 +38,23 @@ spec:
             - |
               set -e
               {{- range $s.repos }}
+              {{- if or (not .private) $s.deployKey }}
               git clone --depth 1 --branch {{ .branch }} {{ .url }} /work/{{ .name }}
               {{- end }}
+              {{- end }}
+            {{- if $s.deployKey }}
+            env:
+            - name: GIT_SSH_COMMAND
+              value: ssh -i /ssh/key -o StrictHostKeyChecking=accept-new
+            {{- end }}
             volumeMounts:
             - name: work
               mountPath: /work
+            {{- if $s.deployKey }}
+            - name: ssh
+              mountPath: /ssh
+              readOnly: true
+            {{- end }}
             resources:
               requests:
                 cpu: 10m
@@ -79,4 +91,11 @@ spec:
           - name: sync
             configMap:
               name: outline-sync
+          {{- if $s.deployKey }}
+          - name: ssh
+            secret:
+              secretName: outline-sync-ssh
+              # 256 decimal = 0400 -- ssh refuses group/world-readable keys.
+              defaultMode: 256
+          {{- end }}
 {{- end }}

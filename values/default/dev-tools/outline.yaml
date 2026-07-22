@@ -52,10 +52,10 @@ outline:
     schedule: "23 4 * * *"
     gitImage: alpine/git:latest
     image: python:3.12-alpine
-    # infra-as-code is missing from this roster because it's a PRIVATE repo:
-    # anonymous clone fails. Adding it needs a read-only git credential
-    # (deploy key or fine-grained PAT) provisioned first — see
-    # docs/dev-tools/outline.md.
+    # SSH private key paired with the read-only deploy key on
+    # platypod/infra-as-code (repos marked `private` clone over SSH with
+    # it). Per-env override, like apiToken; empty = private repos skipped.
+    deployKey: ""
     repos:
     - name: platypod
       url: https://github.com/platypod/platypod.git
@@ -63,6 +63,14 @@ outline:
       collection: "git: platypod"
       paths:
       - README.md
+    - name: infra
+      url: git@github.com:platypod/infra-as-code.git
+      branch: main
+      collection: "git: infra"
+      private: true
+      paths:
+      - README.md
+      - docs
     - name: stack
       url: https://github.com/platypod/stack.git
       branch: dev

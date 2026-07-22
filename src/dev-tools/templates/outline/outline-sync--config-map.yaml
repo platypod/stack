@@ -143,9 +143,16 @@ data:
         return nodes
 
 
+    def web_url(url):
+        """Browser URL for a clone URL (private repos clone over SSH)."""
+        if url.startswith("git@github.com:"):
+            url = "https://github.com/" + url[len("git@github.com:"):]
+        return url.removesuffix(".git")
+
+
     def node_text(repo, key, node):
         """(document text, change marker) for a desired node."""
-        base_url = repo["url"].removesuffix(".git")
+        base_url = web_url(repo["url"])
         rel = node["src"]
         if rel is None:
             dir_rel = "/".join(key[1:] if repo.get("rooted") else key)
@@ -189,6 +196,12 @@ data:
     def sync_repo(repo):
         root = os.path.join(REPOS_DIR, repo["name"])
         if not os.path.isdir(root):
+            if repo.get("private"):
+                # Private repos aren't cloned when no deploy key is
+                # configured; their mirror is simply absent, not an error.
+                print("%s: skipped (private, no deploy key)" % repo["name"],
+                      flush=True)
+                return
             sys.exit("clone missing for repo %r" % repo["name"])
         coll = collection_id(repo["collection"])
         paths, dupes = existing_by_path(coll)

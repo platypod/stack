@@ -36,11 +36,15 @@ that trip Outline's rate limit (429) wait out the `Retry-After` window and
 retry. Collections are created with `permission: read`, so members browse
 but only git changes content.
 
-**Not mirrored: `infra-as-code` — it's a private repo**, and the sync
-clones anonymously. Including it means provisioning a read-only git
-credential (repo deploy key or fine-grained PAT with contents:read) into
-values and teaching the clone init container to use it for that repo.
-Deliberately parked until decided.
+**Private repos (`infra-as-code`):** repos marked `private: true` clone
+over SSH using the key in `outline.sync.deployKey` (per-env, like
+`apiToken`; rendered into the `outline-sync-ssh` Secret). The public half
+is deploy key `158015333` on `platypod/infra-as-code` — **read-only**,
+revocable in that repo's settings. Note: the platypod org had
+`deploy_keys_enabled_for_repositories: false`; it was enabled org-wide
+(2026-07-22) to allow this — re-disabling it kills the key and the infra
+mirror silently. Without a `deployKey` in values, private repos are
+skipped, not failed.
 
 **Enabling per env (one manual step):** the CronJob renders only when
 `outline.sync.apiToken` is set. Log into Outline as an admin → *Settings →
