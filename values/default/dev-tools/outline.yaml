@@ -52,7 +52,17 @@ outline:
     schedule: "23 4 * * *"
     gitImage: alpine/git:latest
     image: python:3.12-alpine
+    # infra-as-code is missing from this roster because it's a PRIVATE repo:
+    # anonymous clone fails. Adding it needs a read-only git credential
+    # (deploy key or fine-grained PAT) provisioned first — see
+    # docs/dev-tools/outline.md.
     repos:
+    - name: platypod
+      url: https://github.com/platypod/platypod.git
+      branch: main
+      collection: "git: platypod"
+      paths:
+      - README.md
     - name: stack
       url: https://github.com/platypod/stack.git
       branch: dev
@@ -60,6 +70,49 @@ outline:
       paths:
       - README.md
       - docs
+      - src
+    - name: sphaze
+      url: https://github.com/platypod/sphaze.git
+      branch: main
+      collection: "git: sphaze"
+      paths:
+      - README.md
+      - docs
+    - name: cyber-chef
+      url: https://github.com/platypod/cyber-chef.git
+      branch: main
+      collection: "git: images"
+      rooted: true
+      paths:
+      - README.md
+    - name: mediarvester
+      url: https://github.com/platypod/mediarvester.git
+      branch: main
+      collection: "git: images"
+      rooted: true
+      paths:
+      - README.md
+    - name: pokeclicker
+      url: https://github.com/platypod/pokeclicker.git
+      branch: main
+      collection: "git: images"
+      rooted: true
+      paths:
+      - README.md
+    - name: prompt-meter
+      url: https://github.com/platypod/prompt-meter.git
+      branch: main
+      collection: "git: images"
+      rooted: true
+      paths:
+      - README.md
+    - name: transmission-exporter
+      url: https://github.com/platypod/transmission-exporter.git
+      branch: main
+      collection: "git: images"
+      rooted: true
+      paths:
+      - README.md
   ports:
     http:
       name: http

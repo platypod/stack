@@ -1,10 +1,11 @@
 {{- /*
   One-way git -> Outline mirror (see docs/dev-tools/outline.md and the
   decision record in docs/decisions.md). The CronJob clones the configured
-  public repos, then this script pushes their markdown into one read-only
-  Outline collection per repo via the API. Git is the source of truth:
-  documents are created/updated/deleted to match the repo exactly; human
-  edits belong in git, never in the mirror.
+  public repos, then this script pushes their markdown into read-only
+  Outline collections via the API, as a nested tree mirroring the repo's
+  directory structure. Git is the source of truth: documents are
+  created/updated/deleted to match the repo exactly; human edits belong in
+  git, never in the mirror.
 */ -}}
 {{- if and .Values.outline.enable .Values.outline.sync.enable }}
 apiVersion: v1
@@ -19,11 +20,18 @@ data:
     """One-way git -> Outline mirror. Stdlib only; config via env + repos.json.
 
     For each configured repo (already cloned under REPOS_DIR by the init
-    container): ensure a read-only collection exists, then make its documents
-    match the repo's markdown files exactly (create/update/delete). Titles are
-    repo-relative paths -- the stable key the sync matches on, so renaming a
-    file is a delete+create. Each document gets a banner linking back to the
-    source file on GitHub.
+    container): ensure a collection exists (created read-only), then make its
+    documents match the repo's markdown as a nested tree -- one document per
+    directory (a directory's own README.md becomes that document's body) and
+    one child document per file. Documents are keyed by their full title
+    path from the collection root, so a rename is a delete+create. A repo
+    with `rooted: true` nests everything under a top-level document named
+    after the repo, letting several repos share one collection; the sync
+    then only manages documents under that root. Each file document opens
+    with a banner linking back to its source on GitHub, ending in a
+    `sync:<hash>` token -- Outline normalizes stored markdown, so the hash
+    (which survives normalization) is what detects change. Dot-directories
+    and CLAUDE.md files (agent instructions, not human docs) are skipped.
     """
     import hashlib
     import json
@@ -38,7 +46,7 @@ data:
     TOKEN = os.environ["OUTLINE_API_TOKEN"]
     REPOS_DIR = os.environ.get("REPOS_DIR", "/work")
     PAGE = 100
-    RETRIES_429 = 10
+    RETRIES_429 = 30
 
 
     def api(endpoint, payload):
@@ -50,16 +58,17 @@ data:
                 "Content-Type": "application/json",
             },
         )
-        # Outline rate-limits write endpoints (documents.create especially);
-        # a nightly batch job just waits the window out rather than failing.
+        # Outline rate-limits write endpoints; a nightly batch job just
+        # waits the window out rather than failing.
         for attempt in range(RETRIES_429):
             try:
                 with urllib.request.urlopen(req) as resp:
                     return json.load(resp)
             except urllib.error.HTTPError as err:
                 if err.code == 429 and attempt < RETRIES_429 - 1:
-                    wait = int(err.headers.get("Retry-After") or 65)
-                    print("rate limited on %s; waiting %ds" % (endpoint, wait),
+                    # Retry-After can be fractional (e.g. "57.807").
+                    wait = float(err.headers.get("Retry-After") or 65) + 1
+                    print("rate limited on %s; waiting %.0fs" % (endpoint, wait),
                           flush=True)
                     time.sleep(wait)
                     continue
@@ -79,86 +88,146 @@ data:
             offset += PAGE
 
 
-    def collection_id(name, source_url):
+    def collection_id(name):
         for coll in paginate("collections.list", {}):
             if coll["name"] == name:
                 return coll["id"]
         made = api("collections.create", {
             "name": name,
             "permission": "read",
-            "description": "Read-only mirror of " + source_url
-            + " -- edit in git, not here.",
+            "description": "Read-only git mirror -- edit in git, not here.",
         })
-        print("created collection %r" % name)
+        print("created collection %r" % name, flush=True)
         return made["data"]["id"]
+
+
+    def keep(name):
+        return not name.startswith(".") and name != "CLAUDE.md"
 
 
     def repo_files(root, paths):
         """Repo-relative posix paths of the markdown files to mirror."""
         found = []
         for path in paths:
-            full = os.path.join(root, path)
+            full = os.path.normpath(os.path.join(root, path))
             if os.path.isfile(full):
-                found.append(path)
+                found.append(os.path.relpath(full, root).replace(os.sep, "/"))
             elif os.path.isdir(full):
-                for base, _dirs, names in os.walk(full):
+                for base, dirs, names in os.walk(full):
+                    dirs[:] = sorted(d for d in dirs if keep(d))
                     for name in sorted(names):
-                        if name.endswith(".md"):
+                        if name.endswith(".md") and keep(name):
                             rel = os.path.relpath(os.path.join(base, name), root)
                             found.append(rel.replace(os.sep, "/"))
         return sorted(set(found))
 
 
-    def desired_text(repo, rel_path):
-        """Banner + file body, and the content hash embedded in the banner.
+    def build_desired(repo, root):
+        """Title-path tuple -> {kind: dir|file, src: repo-relative path|None}."""
+        prefix = (repo["name"],) if repo.get("rooted") else ()
+        nodes = {}
+        if prefix:
+            nodes[prefix] = {"kind": "dir", "src": None}
+        for rel in repo_files(root, repo["paths"]):
+            segs = rel.split("/")
+            for depth in range(1, len(segs)):
+                nodes.setdefault(prefix + tuple(segs[:depth]),
+                                 {"kind": "dir", "src": None})
+            base = segs[-1]
+            if base == "README.md" and (prefix or len(segs) > 1):
+                nodes[prefix + tuple(segs[:-1])]["src"] = rel
+            else:
+                title = base[:-3] if base.endswith(".md") else base
+                nodes[prefix + tuple(segs[:-1]) + (title,)] = {
+                    "kind": "file", "src": rel}
+        return nodes
 
-        Outline normalizes stored markdown, so comparing our input against
-        the fetched text re-updates every document every run (revision spam,
-        rate-limit stalls). The banner's `sync:<hash>` token survives that
-        normalization: if the fetched text still contains the hash of the
-        current file body, the document is up to date and gets skipped.
-        """
-        blob = "%s/blob/%s/%s" % (
-            repo["url"].removesuffix(".git"), repo["branch"], rel_path)
-        with open(os.path.join(REPOS_DIR, repo["name"], rel_path),
+
+    def node_text(repo, key, node):
+        """(document text, change marker) for a desired node."""
+        base_url = repo["url"].removesuffix(".git")
+        rel = node["src"]
+        if rel is None:
+            dir_rel = "/".join(key[1:] if repo.get("rooted") else key)
+            tree = base_url + "/tree/" + repo["branch"]
+            tree += "/" + dir_rel if dir_rel else ""
+            label = posixpath.join(repo["name"], dir_rel) if dir_rel else repo["name"]
+            return ("> Directory [`%s`](%s) -- mirrored read-only; edit in "
+                    "git. `sync:dir`" % (label, tree)), "sync:dir"
+        blob = "%s/blob/%s/%s" % (base_url, repo["branch"], rel)
+        with open(os.path.join(REPOS_DIR, repo["name"], rel),
                   encoding="utf-8", errors="replace") as handle:
             body = handle.read()
         digest = hashlib.sha256(body.encode()).hexdigest()[:12]
         text = ("> Mirrored from [`%s`](%s) -- read-only; edit in git. "
                 "`sync:%s`\n\n%s"
-                % (posixpath.join(repo["name"], rel_path), blob, digest, body))
+                % (posixpath.join(repo["name"], rel), blob, digest, body))
         return text, "sync:" + digest
+
+
+    def existing_by_path(coll):
+        """{title-path tuple: doc} plus a list of duplicate docs to delete."""
+        docs = list(paginate("documents.list", {"collectionId": coll}))
+        by_id = {doc["id"]: doc for doc in docs}
+        cache = {}
+
+        def path_of(doc):
+            if doc["id"] not in cache:
+                parent = by_id.get(doc.get("parentDocumentId") or "")
+                base = path_of(parent) if parent else ()
+                cache[doc["id"]] = base + (doc["title"],)
+            return cache[doc["id"]]
+
+        paths, dupes = {}, []
+        for doc in docs:
+            key = path_of(doc)
+            if paths.setdefault(key, doc) is not doc:
+                dupes.append((key, doc))
+        return paths, dupes
 
 
     def sync_repo(repo):
         root = os.path.join(REPOS_DIR, repo["name"])
         if not os.path.isdir(root):
             sys.exit("clone missing for repo %r" % repo["name"])
-        coll = collection_id(repo["collection"], repo["url"])
-        existing = {}  # title -> document (first one wins on duplicates)
-        for doc in paginate("documents.list", {"collectionId": coll}):
-            existing.setdefault(doc["title"], doc)
-        wanted = repo_files(root, repo["paths"])
+        coll = collection_id(repo["collection"])
+        paths, dupes = existing_by_path(coll)
+        prefix = (repo["name"],) if repo.get("rooted") else ()
+        existing = {key: doc for key, doc in paths.items()
+                    if key[:len(prefix)] == prefix}
+        desired = build_desired(repo, root)
+        ids = {}
         created = updated = unchanged = deleted = 0
-        for rel_path in wanted:
-            text, marker = desired_text(repo, rel_path)
-            doc = existing.pop(rel_path, None)
+        for key in sorted(desired,
+                          key=lambda k: (len(k), tuple(s.lower() for s in k))):
+            text, marker = node_text(repo, key, desired[key])
+            doc = existing.pop(key, None)
             if doc is None:
-                api("documents.create", {
-                    "title": rel_path, "text": text,
-                    "collectionId": coll, "publish": True,
-                })
+                payload = {"title": key[-1], "text": text,
+                           "collectionId": coll, "publish": True}
+                parent = ids.get(key[:-1])
+                if parent:
+                    payload["parentDocumentId"] = parent
+                ids[key] = api("documents.create", payload)["data"]["id"]
                 created += 1
-            elif marker in (doc.get("text") or ""):
-                unchanged += 1
             else:
-                api("documents.update", {"id": doc["id"], "text": text})
-                updated += 1
-        for doc in existing.values():
-            api("documents.delete", {"id": doc["id"]})
+                ids[key] = doc["id"]
+                if marker in (doc.get("text") or ""):
+                    unchanged += 1
+                else:
+                    api("documents.update", {"id": doc["id"], "text": text})
+                    updated += 1
+        # Deepest first, so nothing is deleted twice via parent cascade.
+        stale = sorted(existing, key=len, reverse=True)
+        for key in stale:
+            api("documents.delete", {"id": existing[key]["id"]})
             deleted += 1
-        print("%s: %d files -- %d created, %d updated, %d unchanged, %d deleted"
-              % (repo["name"], len(wanted), created, updated, unchanged,
+        for key, doc in dupes:
+            if key[:len(prefix)] == prefix:
+                api("documents.delete", {"id": doc["id"]})
+                deleted += 1
+        print("%s: %d nodes -- %d created, %d updated, %d unchanged, %d deleted"
+              % (repo["name"], len(desired), created, updated, unchanged,
                  deleted), flush=True)
 
 

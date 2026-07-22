@@ -16,14 +16,31 @@ decision record in [../decisions.md](../decisions.md). An init container
 (public — no git credential), then a stdlib-Python script
 (`outline-sync` ConfigMap) reconciles each repo into its collection over the
 internal Service: create/update/delete so the collection matches the repo
-exactly. Document titles are repo-relative paths (the sync's matching key —
-a rename is delete+create); every document opens with a banner linking back
-to its source file on GitHub, ending in a `sync:<hash>` token — the change
-detector (Outline normalizes stored markdown, so raw text comparison would
-re-update everything nightly; the hash survives normalization, and unchanged
-files are skipped). Writes that trip Outline's rate limit (429) are retried
-after the window. Collections are created with `permission: read`, so
-members browse but only git changes content.
+exactly.
+
+**Layout:** a nested tree mirroring the repo — one document per directory
+(a directory's own `README.md` becomes that document's body; otherwise the
+directory doc is a stub linking to GitHub's tree view) and one child
+document per `.md` file (title = filename without extension). Documents are
+matched by their full title path, so a rename in git is a delete+create in
+Outline. Repos with `rooted: true` nest under a top-level document named
+after the repo, letting several small repos share one collection (`git:
+images`) while each sync run only manages its own subtree. Dot-directories
+and `CLAUDE.md` files (agent instructions, not human docs) are skipped.
+
+**Change detection & limits:** every file document's banner links back to
+its GitHub source and ends in a `sync:<hash>` token — Outline normalizes
+stored markdown, so raw text comparison would re-update everything nightly;
+the hash survives normalization and unchanged files are skipped. Writes
+that trip Outline's rate limit (429) wait out the `Retry-After` window and
+retry. Collections are created with `permission: read`, so members browse
+but only git changes content.
+
+**Not mirrored: `infra-as-code` — it's a private repo**, and the sync
+clones anonymously. Including it means provisioning a read-only git
+credential (repo deploy key or fine-grained PAT with contents:read) into
+values and teaching the clone init container to use it for that repo.
+Deliberately parked until decided.
 
 **Enabling per env (one manual step):** the CronJob renders only when
 `outline.sync.apiToken` is set. Log into Outline as an admin → *Settings →
