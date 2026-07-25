@@ -45,6 +45,18 @@ spec:
             # and refuses to start at all.
             sed -i '/^__version__/d; /^__encoding__/d' "$DEST"
           fi
+          # Enforce the article-cache ceiling on every start, not just on seed.
+          # SABnzbd derives cache_limit from host RAM the first time it runs and
+          # writes it into its own ini, which then survives the seed guard above
+          # — on a ~10 GB node that lands on 1G and OOMKills the container. This
+          # keeps the on-disk value pinned to the chart value either way.
+          CACHE_LIMIT="{{ .Values.sabnzbd.cacheLimit }}"
+          if grep -q '^cache_limit' "$DEST"; then
+            sed -i "s|^cache_limit.*|cache_limit = $CACHE_LIMIT|" "$DEST"
+          else
+            sed -i "/^\[misc\]/a cache_limit = $CACHE_LIMIT" "$DEST"
+          fi
+          echo "cache_limit pinned to $CACHE_LIMIT"
         volumeMounts:
         - mountPath: /config
           name: {{ $appVolume }}

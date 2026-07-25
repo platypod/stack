@@ -19,6 +19,11 @@ sabnzbd:
     app: "{{ .Values.storage.defaultVolumes.config }}"
     media: "{{ .Values.storage.defaultVolumes.media }}"
   replicasNb: 1
+  # Article-cache ceiling. SABnzbd sizes this from *host* RAM on first start and
+  # ignores the cgroup limit, so on a ~10 GB node it picks 1G and gets OOMKilled
+  # inside a smaller container. Pin it well under `resources.limits.memory` to
+  # leave room for the Python runtime, the assembler and post-processing.
+  cacheLimit: 256M
   # Usenet block-account (NNTP) server — SABnzbd needs one to actually fetch
   # articles; althub.co.za is an indexer only, not a server provider. Left
   # empty until a provider is chosen; the setup Job skips server wiring while
@@ -35,4 +40,4 @@ sabnzbd:
       cpu: 100m
       memory: 384Mi
     limits:
-      memory: 512Mi
+      memory: 1Gi

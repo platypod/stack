@@ -24,5 +24,6 @@ data:
     complete_dir = {{ tpl .Values.sabnzbd.download.finished . }}
     permissions = 775
     check_new_rel = 0
+    cache_limit = {{ .Values.sabnzbd.cacheLimit }}
     [categories]
 {{- end }}
