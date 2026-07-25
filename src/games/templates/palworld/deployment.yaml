@@ -1,0 +1,75 @@
+{{- if .Values.palworld.enable }}
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.palworld.label .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      initContainers:
+      - name: {{ .Values.k8s.names.initContainers.prefix }}palworld-data-dir{{ .Values.k8s.names.initContainers.suffix }}
+        image: busybox:1
+        command: ["sh", "-c", "mkdir -p /palworld && chown 1000:1000 /palworld"]
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: data
+          mountPath: /palworld
+          subPath: palworld
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.palworld.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.palworld.image }}
+        resources:
+          {{- toYaml .Values.palworld.resources | nindent 10 }}
+        env:
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        - name: PORT
+          value: {{ .Values.palworld.ports.game.targetPort | quote }}
+        - name: QUERY_PORT
+          value: {{ .Values.palworld.ports.query.targetPort | quote }}
+        - name: SERVER_NAME
+          value: {{ .Values.palworld.server.name | quote }}
+        - name: SERVER_DESCRIPTION
+          value: {{ .Values.palworld.server.description | quote }}
+        - name: SERVER_PASSWORD
+          value: {{ .Values.palworld.server.password | quote }}
+        - name: ADMIN_PASSWORD
+          value: {{ .Values.palworld.server.adminPassword | quote }}
+        - name: PLAYERS
+          value: {{ .Values.palworld.server.maxPlayers | quote }}
+        - name: MULTITHREADING
+          value: {{ .Values.palworld.server.multithreading | quote }}
+        - name: COMMUNITY
+          value: {{ .Values.palworld.server.community | quote }}
+        ports:
+        - name: {{ .Values.palworld.ports.game.name }}
+          containerPort: {{ .Values.palworld.ports.game.targetPort }}
+          protocol: UDP
+        - name: {{ .Values.palworld.ports.query.name }}
+          containerPort: {{ .Values.palworld.ports.query.targetPort }}
+          protocol: UDP
+        volumeMounts:
+        - name: data
+          mountPath: /palworld
+          subPath: palworld
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.palworld.pvc . }}
+{{- end }}

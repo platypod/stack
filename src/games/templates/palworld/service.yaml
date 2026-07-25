@@ -1,0 +1,25 @@
+{{- if .Values.palworld.enable }}
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.palworld.label }}{{ .Values.k8s.names.services.suffix }}
+
+spec:
+  externalTrafficPolicy: Local
+  ports:
+  - protocol: UDP
+    name: {{ .Values.palworld.ports.game.name }}
+    port: {{ .Values.palworld.ports.game.port }}
+    targetPort: {{ .Values.palworld.ports.game.targetPort }}
+  - protocol: UDP
+    name: {{ .Values.palworld.ports.query.name }}
+    port: {{ .Values.palworld.ports.query.port }}
+    targetPort: {{ .Values.palworld.ports.query.targetPort }}
+  selector:
+    app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.palworld.label }}{{ .Values.k8s.names.pods.suffix }}
+  type: LoadBalancer
+  {{- if .Values.palworld.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.palworld.loadBalancerIP }}
+  {{- end }}
+{{- end }}

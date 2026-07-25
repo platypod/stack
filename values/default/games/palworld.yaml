@@ -1,0 +1,29 @@
+palworld:
+  enable: false
+  loadBalancerIP: ""  # override per-env with a MetalLB IP
+  label: palworld
+  image: thijsvanloef/palworld-server-docker:latest
+  ports:
+    game:
+      name: game
+      port: 8211
+      targetPort: 8211
+    query:
+      name: query
+      port: 27015
+      targetPort: 27015
+  server:
+    name: "Platypod Palworld"
+    description: ""
+    password: ""
+    adminPassword: changeme
+    maxPlayers: 16
+    community: false
+    multithreading: false
+  pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  resources:
+    requests:
+      cpu: 500m
+      memory: 4Gi
+    limits:
+      memory: 8Gi
