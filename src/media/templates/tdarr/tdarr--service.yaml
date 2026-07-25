@@ -1,0 +1,18 @@
+{{- if .Values.tdarr.enable }}
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.tdarr.label }}{{ .Values.k8s.names.services.suffix }}
+
+spec:
+  ports:
+  - protocol: TCP
+    name: {{ .Values.tdarr.ports.ui.name }}
+    port: {{ .Values.tdarr.ports.ui.targetPort }}
+  - protocol: TCP
+    name: {{ .Values.tdarr.ports.server.name }}
+    port: {{ .Values.tdarr.ports.server.targetPort }}
+  selector:
+    app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.tdarr.label }}{{ .Values.k8s.names.pods.suffix }}
+{{- end }}

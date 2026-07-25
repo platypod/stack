@@ -1,0 +1,60 @@
+tdarr:
+  enable: false
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.tdarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  image:
+    server: ghcr.io/haveagitgat/tdarr:latest
+    node: ghcr.io/haveagitgat/tdarr_node:latest
+  label: tdarr
+  node:
+    name: tdarr-node-k8s
+  setup:
+    # Seeds one flow + one library through Tdarr's REST API (idempotent).
+    # Use this to codify "watch this folder and normalize to this format".
+    enable: true
+    scanAfterSetup: true
+    updateExistingFlow: true
+    flow:
+      id: replays-normalize
+      name: Replays Normalize
+      # This is the output-format selector in practice: pick a plugin and its inputs.
+      # Example below is CPU HEVC. Swap for another plugin to target another format.
+      pluginSourceId: Community:Tdarr_Plugin_bsh1_Boosh_FFMPEG_CPU_HEVC
+      pluginInputs:
+        container: mkv
+        encoder: libx265
+        enable_10bit: "false"
+        reconvert_hevc: "false"
+    library:
+      id: replays-mrderiv
+      name: Replays - MrDeriv
+      folder: "{{ .Values.media.system.data.path }}/replays/MrDeriv"
+      cache: "{{ .Values.media.system.data.path }}/ongoing/tdarr"
+      output: "."
+      container: ".mkv"
+      folderWatching: true
+      useFsEvents: false
+  ports:
+    ui:
+      name: tdarr-ui
+      targetPort: 8265
+    server:
+      name: tdarr-server
+      targetPort: 8266
+  pvc:
+    # Tdarr server state uses a local sqlite db -> dedicated local config volume.
+    app: "{{ .Values.storage.defaultVolumes.config }}"
+    media: "{{ .Values.storage.defaultVolumes.media }}"
+  replicasNb: 1
+  resources:
+    server:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        memory: 1Gi
+    node:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        memory: 1Gi

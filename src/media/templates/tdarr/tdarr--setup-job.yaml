@@ -1,0 +1,269 @@
+{{- if and .Values.tdarr.enable .Values.tdarr.setup.enable }}
+{{- /*
+  Tdarr setup Job.
+
+  Idempotently upserts:
+    1) one flow (Input -> classic transcode plugin -> Replace Original File)
+    2) one library pointing to a subfolder and bound to that flow
+
+  This makes Tdarr configuration reproducible from values instead of UI clicks.
+*/ -}}
+{{- $svc := print .Values.k8s.names.services.prefix .Values.tdarr.label .Values.k8s.names.services.suffix }}
+apiVersion: batch/v1
+kind: Job
+
+metadata:
+  name: tdarr-setup
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "35"
+    "helm.sh/hook-delete-policy": before-hook-creation
+
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: tdarr-setup
+        image: python:3-alpine
+        env:
+        - name: TDARR_URL
+          value: "http://{{ $svc }}:{{ .Values.tdarr.ports.ui.targetPort }}"
+        - name: FLOW_ID
+          value: "{{ .Values.tdarr.setup.flow.id }}"
+        - name: FLOW_NAME
+          value: "{{ .Values.tdarr.setup.flow.name }}"
+        - name: FLOW_PLUGIN_SOURCE_ID
+          value: "{{ .Values.tdarr.setup.flow.pluginSourceId }}"
+        - name: FLOW_PLUGIN_INPUTS_JSON
+          value: '{{ .Values.tdarr.setup.flow.pluginInputs | toJson }}'
+        - name: LIBRARY_ID
+          value: "{{ .Values.tdarr.setup.library.id }}"
+        - name: LIBRARY_NAME
+          value: "{{ .Values.tdarr.setup.library.name }}"
+        - name: LIBRARY_FOLDER
+          value: "{{ tpl .Values.tdarr.setup.library.folder . }}"
+        - name: LIBRARY_CACHE
+          value: "{{ tpl .Values.tdarr.setup.library.cache . }}"
+        - name: LIBRARY_OUTPUT
+          value: "{{ .Values.tdarr.setup.library.output }}"
+        - name: LIBRARY_CONTAINER
+          value: "{{ .Values.tdarr.setup.library.container }}"
+        - name: LIBRARY_FOLDER_WATCHING
+          value: "{{ .Values.tdarr.setup.library.folderWatching }}"
+        - name: LIBRARY_USE_FS_EVENTS
+          value: "{{ .Values.tdarr.setup.library.useFsEvents }}"
+        - name: SCAN_AFTER_SETUP
+          value: "{{ .Values.tdarr.setup.scanAfterSetup }}"
+        - name: UPDATE_EXISTING_FLOW
+          value: "{{ .Values.tdarr.setup.updateExistingFlow }}"
+        command:
+        - python3
+        - -c
+        - |
+          import json, os, time, urllib.request, urllib.error
+
+          BASE = os.environ["TDARR_URL"]
+
+          def as_bool(value: str) -> bool:
+              return str(value).strip().lower() == "true"
+
+          def call(method, path, body=None):
+              payload = json.dumps(body).encode() if body is not None else None
+              req = urllib.request.Request(
+                  f"{BASE}{path}",
+                  data=payload,
+                  method=method,
+                  headers={"Content-Type": "application/json"},
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      raw = r.read().decode()
+                      return r.status, (json.loads(raw) if raw else None)
+              except urllib.error.HTTPError as e:
+                  raw = e.read().decode()
+                  try:
+                      data = json.loads(raw)
+                  except Exception:
+                      data = raw
+                  return e.code, data
+
+          def crud(collection, mode, doc_id=None, obj=None, filters=None):
+              data = {"collection": collection, "mode": mode}
+              if doc_id is not None:
+                  data["docID"] = doc_id
+              if obj is not None:
+                  data["obj"] = obj
+              if filters is not None:
+                  data["filters"] = filters
+              status, body = call("POST", "/api/v2/cruddb", {"data": data})
+              if status != 200:
+                  raise RuntimeError(f"cruddb {collection}/{mode} failed [{status}]: {body}")
+              return body
+
+          def upsert_flow(flow_id: str, flow_doc: dict, update_existing: bool):
+              existing = crud("FlowsJSONDB", "getById", doc_id=flow_id)
+              if existing:
+                  if update_existing:
+                      merged = dict(existing)
+                      merged.update(flow_doc)
+                      crud("FlowsJSONDB", "update", doc_id=flow_id, obj=merged)
+                      print(f"Updated Tdarr flow '{flow_id}'.")
+                  else:
+                      print(f"Tdarr flow '{flow_id}' already exists; keeping it.")
+              else:
+                  crud("FlowsJSONDB", "insert", doc_id=flow_id, obj=flow_doc)
+                  print(f"Created Tdarr flow '{flow_id}'.")
+
+          def upsert_library(lib_id: str, lib_doc: dict):
+              existing = crud("LibrarySettingsJSONDB", "getById", doc_id=lib_id)
+              if existing:
+                  merged = dict(existing)
+                  merged.update(lib_doc)
+                  crud("LibrarySettingsJSONDB", "update", doc_id=lib_id, obj=merged)
+                  print(f"Updated Tdarr library '{lib_id}'.")
+              else:
+                  crud("LibrarySettingsJSONDB", "insert", doc_id=lib_id, obj=lib_doc)
+                  print(f"Created Tdarr library '{lib_id}'.")
+
+          # 1) wait for Tdarr API readiness
+          for i in range(60):
+              status, body = call("GET", "/api/v2/status")
+              if status == 200 and isinstance(body, dict) and body.get("status") == "good":
+                  print(f"  [{i}] Tdarr is up.")
+                  break
+              time.sleep(5)
+          else:
+              raise SystemExit("Tdarr never became ready")
+
+          flow_id = os.environ["FLOW_ID"]
+          flow_plugin_inputs = json.loads(os.environ["FLOW_PLUGIN_INPUTS_JSON"])
+          flow_doc = {
+              "_id": flow_id,
+              "name": os.environ["FLOW_NAME"],
+              "description": "Managed by Helm tdarr-setup Job",
+              "flowPlugins": [
+                  {
+                      "name": "Input File",
+                      "sourceRepo": "Community",
+                      "pluginName": "inputFile",
+                      "version": "1.0.0",
+                      "id": "input",
+                      "position": {"x": 500, "y": 50},
+                  },
+                  {
+                      "name": "Normalize Transcode",
+                      "sourceRepo": "Community",
+                      "pluginName": "runClassicTranscodePlugin",
+                      "version": "2.0.0",
+                      "id": "transcode",
+                      "inputsDB": {
+                          "pluginSourceId": os.environ["FLOW_PLUGIN_SOURCE_ID"],
+                          **flow_plugin_inputs,
+                      },
+                      "position": {"x": 500, "y": 180},
+                  },
+                  {
+                      "name": "Replace Original File",
+                      "sourceRepo": "Community",
+                      "pluginName": "replaceOriginalFile",
+                      "version": "1.0.0",
+                      "id": "replace",
+                      "position": {"x": 500, "y": 310},
+                  },
+              ],
+              "flowEdges": [
+                  {"source": "input", "sourceHandle": "1", "target": "transcode", "targetHandle": None, "id": "e-input-transcode"},
+                  {"source": "transcode", "sourceHandle": "1", "target": "replace", "targetHandle": None, "id": "e-transcode-replace-1"},
+                  {"source": "transcode", "sourceHandle": "2", "target": "replace", "targetHandle": None, "id": "e-transcode-replace-2"},
+              ],
+          }
+          upsert_flow(flow_id, flow_doc, update_existing=as_bool(os.environ["UPDATE_EXISTING_FLOW"]))
+
+          lib_id = os.environ["LIBRARY_ID"]
+          lib_doc = {
+              "_id": lib_id,
+              "name": os.environ["LIBRARY_NAME"],
+              "folder": os.environ["LIBRARY_FOLDER"],
+              "cache": os.environ["LIBRARY_CACHE"],
+              "output": os.environ["LIBRARY_OUTPUT"],
+              "container": os.environ["LIBRARY_CONTAINER"],
+              "folderWatching": as_bool(os.environ["LIBRARY_FOLDER_WATCHING"]),
+              "useFsEvents": as_bool(os.environ["LIBRARY_USE_FS_EVENTS"]),
+              "processLibrary": True,
+              "scanOnStart": True,
+              "scheduledScanFindNew": True,
+              "folderWatchScanInterval": 30,
+              "scannerThreadCount": 2,
+              "pluginCommunity": True,
+              "pluginIDs": [],
+              "schedule": [],
+              "priority": 0,
+              "foldersToIgnore": "",
+              "containerFilter": "mkv,mp4,avi,ts,mov,wmv,flv,m4v,webm,mpg,mpeg,m2ts",
+              "folderToFolderConversion": False,
+              "copyIfConditionsMet": False,
+              "handbrake": False,
+              "ffmpeg": True,
+              "handbrakescan": False,
+              "ffmpegscan": True,
+              "exifToolScan": False,
+              "mediaInfoScan": True,
+              "closedCaptionScan": False,
+              "expanded": True,
+              "scanButtons": False,
+              "scanFound": "Files found:0",
+              "verboseLogs": False,
+              "decisionMaker": {
+                  "settingsPlugin": False,
+                  "settingsFlows": True,
+                  "settingsVideo": False,
+                  "settingsAudio": False,
+              },
+              "processTranscodes": True,
+              "processHealthChecks": False,
+              "holdNewFiles": False,
+              "pluginStackOverview": True,
+              "processPluginsSequentially": True,
+              "flowId": flow_id,
+          }
+          upsert_library(lib_id, lib_doc)
+
+          # Ensure folder watch is aligned with values.
+          status, body = call(
+              "POST",
+              "/api/v2/toggle-folder-watch",
+              {
+                  "data": {
+                      "auto": False,
+                      "folder": os.environ["LIBRARY_FOLDER"],
+                      "dbID": lib_id,
+                      "status": as_bool(os.environ["LIBRARY_FOLDER_WATCHING"]),
+                  }
+              },
+          )
+          if status != 200:
+              print(f"WARN: toggle-folder-watch failed [{status}]: {body}")
+
+          if as_bool(os.environ["SCAN_AFTER_SETUP"]):
+              status, body = call(
+                  "POST",
+                  "/api/v2/scan-files",
+                  {
+                      "data": {
+                          "scanConfig": {
+                              "dbID": lib_id,
+                              "mode": "scanFindNew",
+                              "arrayOrPath": os.environ["LIBRARY_FOLDER"],
+                          }
+                      }
+                  },
+              )
+              if status != 200:
+                  print(f"WARN: scan-files failed [{status}]: {body}")
+              else:
+                  print(f"Triggered scanFindNew for '{lib_id}'.")
+
+          print("tdarr-setup complete.")
+{{- end }}

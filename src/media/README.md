@@ -67,7 +67,7 @@ Extensions page and install the sources you want.
 Several services bootstrap via post-install/post-upgrade hook Jobs (idempotent,
 exit 0 on partial so the release succeeds): `jellyfin-setup` (w10),
 `komga-setup` / `kavita-setup` (w15, whichever's enabled), `jellyseerr-setup`
-(w20), `reclaimerr-setup` (w30).
+(w20), `reclaimerr-setup` (w30), `tdarr-setup` (w35).
 
 ## Flaresolverr
 

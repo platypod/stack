@@ -1,0 +1,129 @@
+{{- if .Values.tdarr.enable }}
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.tdarr.label .Values.k8s.names.pods.suffix }}
+{{- $appVolume := "app-volume" }}
+{{- $mediaVolume := "media-volume" }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.tdarr.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      initContainers:
+      - name: init-permissions
+        image: busybox
+        securityContext:
+          runAsUser: 0
+        command:
+        - sh
+        - -c
+        - >
+          mkdir -p /state/tdarr/server /state/tdarr/configs /state/tdarr/logs /state/tdarr/cache &&
+          chown -R {{ .Values.media.system.userId }}:{{ .Values.media.system.groupId }} /state/tdarr
+        volumeMounts:
+        - name: {{ $appVolume }}
+          mountPath: /state
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.tdarr.label }}-server{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.tdarr.image.server }}
+        resources:
+          {{- toYaml .Values.tdarr.resources.server | nindent 10 }}
+        ports:
+        - name: {{ .Values.tdarr.ports.ui.name }}
+          containerPort: {{ .Values.tdarr.ports.ui.targetPort }}
+        - name: {{ .Values.tdarr.ports.server.name }}
+          containerPort: {{ .Values.tdarr.ports.server.targetPort }}
+        startupProbe:
+          tcpSocket:
+            port: {{ .Values.tdarr.ports.ui.targetPort }}
+          periodSeconds: 10
+          failureThreshold: 30
+        livenessProbe:
+          tcpSocket:
+            port: {{ .Values.tdarr.ports.ui.targetPort }}
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 3
+        env:
+        - name: PUID
+          value: "{{ .Values.media.system.userId }}"
+        - name: PGID
+          value: "{{ .Values.media.system.groupId }}"
+        - name: UMASK_SET
+          value: "{{ .Values.media.system.umask }}"
+        - name: TZ
+          value: "{{ .Values.project.timezone }}"
+        - name: serverIP
+          value: "0.0.0.0"
+        - name: serverPort
+          value: "{{ .Values.tdarr.ports.server.targetPort }}"
+        - name: webUIPort
+          value: "{{ .Values.tdarr.ports.ui.targetPort }}"
+        volumeMounts:
+        - mountPath: /app/server
+          name: {{ $appVolume }}
+          subPath: tdarr/server
+        - mountPath: /app/configs
+          name: {{ $appVolume }}
+          subPath: tdarr/configs
+        - mountPath: /app/logs
+          name: {{ $appVolume }}
+          subPath: tdarr/logs
+        - mountPath: /app/cache
+          name: {{ $appVolume }}
+          subPath: tdarr/cache
+        - mountPath: {{ .Values.media.system.data.path }}
+          name: {{ $mediaVolume }}
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.tdarr.label }}-node{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.tdarr.image.node }}
+        resources:
+          {{- toYaml .Values.tdarr.resources.node | nindent 10 }}
+        env:
+        - name: PUID
+          value: "{{ .Values.media.system.userId }}"
+        - name: PGID
+          value: "{{ .Values.media.system.groupId }}"
+        - name: UMASK_SET
+          value: "{{ .Values.media.system.umask }}"
+        - name: TZ
+          value: "{{ .Values.project.timezone }}"
+        - name: nodeName
+          value: "{{ .Values.tdarr.node.name }}"
+        - name: serverIP
+          value: "127.0.0.1"
+        - name: serverPort
+          value: "{{ .Values.tdarr.ports.server.targetPort }}"
+        - name: inContainer
+          value: "true"
+        volumeMounts:
+        - mountPath: /app/configs
+          name: {{ $appVolume }}
+          subPath: tdarr/configs
+        - mountPath: /app/logs
+          name: {{ $appVolume }}
+          subPath: tdarr/logs
+        - mountPath: /app/cache
+          name: {{ $appVolume }}
+          subPath: tdarr/cache
+        - mountPath: {{ .Values.media.system.data.path }}
+          name: {{ $mediaVolume }}
+      volumes:
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.tdarr.pvc.app . }}
+      - name: {{ $mediaVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.tdarr.pvc.media . }}
+{{- end }}

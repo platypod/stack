@@ -240,7 +240,7 @@ data:
           description: 3D maze wrapped onto the inside of a sphere.
 {{- end }}
 {{- end }}
-{{- if or .Values.prowlarr.enable .Values.transmission.enable .Values.suwayomi.enable .Values.radarr.enable .Values.sonarr.enable .Values.readarr.enable .Values.bazarr.enable .Values.flaresolverr.enable .Values.reclaimerr.enable .Values.sabnzbd.enable }}
+{{- if or .Values.prowlarr.enable .Values.transmission.enable .Values.suwayomi.enable .Values.radarr.enable .Values.sonarr.enable .Values.readarr.enable .Values.bazarr.enable .Values.flaresolverr.enable .Values.reclaimerr.enable .Values.sabnzbd.enable .Values.tdarr.enable }}
     - Media-Maintainer:
 {{- if .Values.prowlarr.enable }}
       - Prowlarr:
@@ -331,6 +331,12 @@ data:
           icon: mdi-delete-sweep
           href: https://{{ tpl .Values.reclaimerr.host . }}
           description: Automatically reclaims media disk space.
+{{- end }}
+{{- if .Values.tdarr.enable }}
+      - Tdarr:
+          icon: mdi-video-wireless
+          href: https://{{ tpl .Values.tdarr.host . }}
+          description: Media transcoding and normalization pipeline.
 {{- end }}
 {{- end }}
   widgets.yaml: |

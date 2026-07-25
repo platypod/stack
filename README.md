@@ -343,7 +343,7 @@ talosctl -n 192.168.122.102 cp ./some-file /var/local/platypod/volumes/apps/some
   - [x] **Jellyseerr** -> *requester*
   - [x] **Kavita** -> *comic/book/manga-reader* (remplace Komga)
   - [x] **Suwayomi** -> *manga-downloader* (alimente Kavita)
-  - [ ] **Tdarr** -> *hardware-transcoding*
+  - [x] **Tdarr** -> *hardware-transcoding*
   - [x] **Flaresolverr** -> *cloudflare*
   - [ ] **Invidious** -> *youtube*
   - [ ] **SftpGo** -> *files*

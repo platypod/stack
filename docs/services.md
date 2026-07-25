@@ -41,6 +41,7 @@ refers to the model described in [authentication.md](authentication.md).
 | Prowlarr | Indexer manager | own auth (`group:media`) |
 | Bazarr | Subtitles | own auth (`group:media`) |
 | Mediarvester | Media tooling | `group:media` |
+| Tdarr | Media transcoding / normalization | `group:media` |
 | Reclaimerr | *arr cleanup | **OIDC** (`group:media`) |
 | Kavita | Comic/book/manga reader | **OIDC** (`group:media`) |
 | Audiobookshelf | Audiobook/podcast server | **OIDC** (`group:media`) |

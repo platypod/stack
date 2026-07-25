@@ -21,10 +21,12 @@ requests (Jellyseerr), and housekeeping. Many apps use SQLite on the **local
 | [suwayomi](suwayomi.md) | `ghcr.io/suwayomi/suwayomi-server:v2.2.2100` | manga; setup Job |
 | [reclaimerr](reclaimerr.md) | `ghcr.io/jessielw/reclaimerr:latest` | disk reclaim; setup Job |
 | [mediarvester](mediarvester.md) | `ghcr.io/platypod/mediarvester:v1.0.0` | **custom** image |
+| [tdarr](tdarr.md) | `ghcr.io/haveagitgat/tdarr:latest` + `ghcr.io/haveagitgat/tdarr_node:latest` | media normalization/transcoding |
 | [postgres](postgres.md) | `postgres:17` | DB for Jellyseerr |
 
 ## Jobs
 [jellyfin-setup](jellyfin-setup-job.md), [jellyseerr-setup](jellyseerr-setup-job.md),
 [kavita-setup](kavita-setup-job.md), [audiobookshelf-setup](audiobookshelf-setup-job.md),
-[suwayomi-setup](suwayomi-setup-job.md), [reclaimerr-setup](reclaimerr-setup-job.md) —
+[suwayomi-setup](suwayomi-setup-job.md), [reclaimerr-setup](reclaimerr-setup-job.md),
+[tdarr-setup](tdarr-setup-job.md) —
 post-install hooks (admin/config seeding).

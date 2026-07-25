@@ -95,6 +95,7 @@ authelia:
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.kavita.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.audiobookshelf.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.suwayomi.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.tdarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
 
     - subject:
       - group:download
