@@ -28,13 +28,32 @@ after the repo, letting several small repos share one collection (`git:
 images`) while each sync run only manages its own subtree. Dot-directories
 and `CLAUDE.md` files (agent instructions, not human docs) are skipped.
 
+**Table of contents & in-page anchors:** source markdown is written and
+linked the way it renders on GitHub, where a heading's anchor is its plain
+lower-kebab-cased text. Outline computes anchors differently — its
+`headingToSlug` prefixes with `h-` and folds through the `slugify` package's
+rules (e.g. accents get transliterated) — so a same-document link like
+`#mark-now-see-later` that resolves on GitHub 404s once imported unmodified.
+Each file document's headings are parsed and run through both slug
+algorithms; any `(#github-style-anchor)` link in the body is rewritten to
+Outline's real `(#h-outline-style-anchor)`, and a **Contents** block linking
+every heading (via the same real anchors) is prepended, skipped for docs
+with fewer than two sections. This only fixes links *within* one document —
+cross-document anchors are still a v1 limit below.
+
 **Change detection & limits:** every file document's banner links back to
 its GitHub source and ends in a `sync:<hash>` token — Outline normalizes
 stored markdown, so raw text comparison would re-update everything nightly;
-the hash survives normalization and unchanged files are skipped. Writes
-that trip Outline's rate limit (429) wait out the `Retry-After` window and
-retry. Collections are created with `permission: read`, so members browse
-but only git changes content.
+the hash survives normalization and unchanged files are skipped. The hash
+is `SYNC_VERSION` + the source file's raw bytes + resolved image bytes —
+**bump `SYNC_VERSION` whenever `node_text`'s output shape changes** (banner
+format, TOC, anchor rewriting, ...), since the hash is otherwise blind to
+script changes: an already-synced doc's stored `sync:<hash>` still matches
+on the next run even though the *rendering* changed, so it reads as
+"unchanged" and is silently skipped rather than republished. Writes that
+trip Outline's rate limit (429) wait out the `Retry-After` window and retry.
+Collections are created with `permission: read`, so members browse but only
+git changes content.
 
 **Private repos (`infra-as-code`):** repos marked `private: true` clone
 over SSH using the key in `outline.sync.deployKey` (per-env, like

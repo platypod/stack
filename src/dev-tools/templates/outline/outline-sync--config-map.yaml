@@ -34,16 +34,35 @@ data:
     and the reference rewritten to the attachment URL; absolute-URL images
     pass through (title strings are stripped either way -- Outline's
     importer drops titled images). HTML `<img>` tags are not handled.
-    Change detection hashes the raw body plus the bytes of every resolved
-    image, so an image edit re-publishes its documents; uploads only happen
-    for documents actually being (re)written, keeping the no-op run free.
-    Replaced uploads are orphaned, not deleted -- accepted cost.
+    Change detection hashes SYNC_VERSION plus the raw body plus the bytes of
+    every resolved image, so an image edit re-publishes its documents;
+    uploads only happen for documents actually being (re)written, keeping
+    the no-op run free. SYNC_VERSION exists because the hash is otherwise a
+    pure function of the source file -- bump it whenever node_text's output
+    shape changes (banner, TOC, anchor rewriting, ...), or already-synced
+    docs keep reading "unchanged" against their stored sync:<hash> and never
+    pick up the new rendering. Replaced uploads are orphaned, not deleted --
+    accepted cost.
 
     Each file document opens with a banner linking back to its source on
     GitHub, ending in a `sync:<hash>` token -- Outline normalizes stored
     markdown, so the hash (which survives normalization) is what detects
     change. Dot-directories and CLAUDE.md files (agent instructions, not
     human docs) are skipped.
+
+    Table of contents & in-page anchors: source markdown is written and
+    linked as it renders on GitHub, where a heading's anchor is its
+    lower-kebab-cased text. Outline computes anchors differently (its
+    `headingToSlug` prefixes with `h-` and uses the `slugify` package's
+    rules) -- so a same-document link like `#mark-now-see-later` that works
+    on GitHub 404s inside Outline. Each file document's headings are parsed
+    and run through both slug algorithms; any `(#github-slug)` link in the
+    body is rewritten to Outline's real `(#h-outline-slug)`, and a
+    **Contents** block linking every heading (via the same real anchors) is
+    prepended. Cross-document links are unaffected -- both slug schemes only
+    ever apply within one document, so multi-doc links are left alone (they
+    already don't resolve inside Outline; the banner's GitHub link is the
+    escape hatch).
     """
     import hashlib
     import json
@@ -53,6 +72,7 @@ data:
     import re
     import sys
     import time
+    import unicodedata
     import urllib.error
     import urllib.request
 
@@ -62,6 +82,13 @@ data:
     PAGE = 100
     RETRIES_429 = 30
     IMG_RE = re.compile(r'!\[([^\]]*)\]\(\s*([^)\s]+)(?:\s+"[^"]*")?\s*\)')
+    # Mixed into every marker so a rendering-logic change (not just a source
+    # file change) forces a full resync -- the marker is otherwise a pure
+    # function of the source file's bytes, and a script change alone leaves
+    # every existing doc's stored sync:<hash> untouched, so it reads as
+    # "unchanged" and never gets re-rendered. Bump on any change to
+    # node_text's output shape (banner, TOC, anchor rewriting, ...).
+    SYNC_VERSION = "2"
 
 
     def http(url, data, headers):
@@ -229,13 +256,127 @@ data:
             return handle.read()
 
 
+    # -- heading anchors: GitHub's scheme (what the source markdown links
+    # against) vs. Outline's scheme (what actually resolves once imported).
+    # See headingToSlug / the slug package: charmap a few symbols (this
+    # *does* fold accents, e.g. "ö" -> "o"), drop the rest of the
+    # punctuation set, collapse whitespace to '-', lowercase, prefix 'h-'.
+    # github-slugger only strips punctuation/symbols -- it leaves non-ASCII
+    # *letters* like "ö" untouched -- then lowercases and swaps spaces for
+    # '-' (no collapsing).
+    OUTLINE_CHARMAP = {"$": "dollar", "%": "percent", "&": "and",
+                        "<": "less", ">": "greater", "|": "or",
+                        "¢": "cent", "£": "pound", "¥": "yen", "€": "euro",
+                        "©": "(c)", "®": "(r)", "™": "tm"}
+    OUTLINE_REMOVE_RE = re.compile(r"""[!"#$%&'.()*+,/:;<=>?@\[\]\\^_`{|}~]""")
+    ATX_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
+    FENCE_RE = re.compile(r"^\s*(```|~~~)")
+    MD_LINK_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+    INLINE_CODE_RE = re.compile(r"`([^`]*)`")
+    BOLD_RE = re.compile(r"\*\*([^*]+)\*\*|__([^_]+)__")
+    ITALIC_RE = re.compile(r"\*([^*]+)\*|_([^_]+)_")
+    HTML_TAG_RE = re.compile(r"<[^>]+>")
+    SAME_DOC_ANCHOR_RE = re.compile(r"(?<=\]\(#)[^)\s]+(?=\))")
+
+
+    def fold_diacritics(text):
+        decomposed = unicodedata.normalize("NFKD", text)
+        return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+
+
+    def plain_heading_text(raw):
+        """Approximate a heading's rendered plain text -- links, code spans,
+        emphasis and raw HTML stripped -- the input both slug algorithms
+        actually operate on."""
+        text = MD_LINK_RE.sub(r"\1", raw)
+        text = INLINE_CODE_RE.sub(r"\1", text)
+        text = BOLD_RE.sub(lambda m: m.group(1) or m.group(2), text)
+        text = ITALIC_RE.sub(lambda m: m.group(1) or m.group(2), text)
+        text = HTML_TAG_RE.sub("", text)
+        return re.sub(r"\s+", " ", text).strip()
+
+
+    def outline_slug(text):
+        mapped = "".join(OUTLINE_CHARMAP.get(ch, ch)
+                         for ch in fold_diacritics(text))
+        mapped = mapped.replace("-", " ")
+        slug = OUTLINE_REMOVE_RE.sub("", mapped).strip()
+        return "h-" + re.sub(r"\s+", "-", slug).lower()
+
+
+    def github_slug(text):
+        slug = text.lower()
+        slug = "".join(ch for ch in slug if ch.isalnum() or ch in " _-")
+        return slug.replace(" ", "-")
+
+
+    def parse_headings(body):
+        """[(level, raw text, plain text)] for each ATX heading, skipping
+        fenced code blocks."""
+        headings = []
+        in_fence = False
+        for line in body.splitlines():
+            if FENCE_RE.match(line):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
+            match = ATX_RE.match(line)
+            if match and match.group(2).strip():
+                raw = match.group(2).strip()
+                headings.append((len(match.group(1)), raw, plain_heading_text(raw)))
+        return headings
+
+
+    def heading_anchors(body):
+        """Headings annotated with both slug schemes, deduplicated the same
+        way the respective tools dedupe repeated heading text."""
+        outline_seen, github_seen = {}, {}
+        entries = []
+        for level, raw, plain in parse_headings(body):
+            o_base, g_base = outline_slug(plain), github_slug(plain)
+            o_n, g_n = outline_seen.get(o_base, 0), github_seen.get(g_base, 0)
+            entries.append({
+                "level": level, "plain": plain,
+                "outline_id": o_base if o_n == 0 else "%s-%d" % (o_base, o_n),
+                "github_id": g_base if g_n == 0 else "%s-%d" % (g_base, g_n),
+            })
+            outline_seen[o_base] = o_n + 1
+            github_seen[g_base] = g_n + 1
+        return entries
+
+
+    def rewrite_same_doc_anchors(body, entries):
+        """Point (#github-style-anchor) links at Outline's real heading id."""
+        link_map = {e["github_id"]: e["outline_id"] for e in entries}
+        return SAME_DOC_ANCHOR_RE.sub(lambda m: link_map.get(m.group(0), m.group(0)),
+                                      body)
+
+
+    def build_toc(entries):
+        """A '**Contents**' block linking every heading via its real Outline
+        anchor -- skipped for docs with fewer than two sections, and skipping
+        a leading H1 that just restates the document's own title."""
+        if entries and entries[0]["level"] == 1:
+            entries = entries[1:]
+        if len(entries) < 2:
+            return ""
+        min_level = min(e["level"] for e in entries)
+        lines = ["**Contents**", ""]
+        for e in entries:
+            indent = "  " * (e["level"] - min_level)
+            lines.append("%s- [%s](#%s)" % (indent, e["plain"], e["outline_id"]))
+        return "\n".join(lines) + "\n\n"
+
+
     def node_marker(repo, root, node):
         """Cheap change marker: raw body + resolved image bytes. No uploads."""
         rel = node["src"]
         if rel is None:
             return "sync:dir"
         body = read_body(root, rel)
-        digest = hashlib.sha256(body.encode())
+        digest = hashlib.sha256(SYNC_VERSION.encode())
+        digest.update(body.encode())
         for match in IMG_RE.finditer(body):
             img = resolve_image(root, rel, match.group(2))
             if img:
@@ -267,10 +408,13 @@ data:
                 return "![%s](%s)" % (alt, upload_image(img, handle.read()))
 
         body = IMG_RE.sub(replace, body)
+        anchors = heading_anchors(body)
+        body = rewrite_same_doc_anchors(body, anchors)
+        toc = build_toc(anchors)
         blob = "%s/blob/%s/%s" % (base_url, repo["branch"], rel)
         return ("> Mirrored from [`%s`](%s) -- read-only; edit in git. "
-                "`%s`\n\n%s"
-                % (posixpath.join(repo["name"], rel), blob, marker, body))
+                "`%s`\n\n%s%s"
+                % (posixpath.join(repo["name"], rel), blob, marker, toc, body))
 
 
     def existing_by_path(coll):
