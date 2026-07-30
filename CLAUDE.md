@@ -39,5 +39,17 @@ Modules: `core` `dev-tools` `files` `games` `media` `observability` `persistence
   + an init container that chowns only the service's own subPath.
 - Pods mounting a ConfigMap need a `checksum/config` annotation to auto-restart.
 - Helm parses `{{ }}` in YAML comments too — escape or avoid them.
+- **Deploy with `make deploy ENV=prd` (no `MODULE`)** — one `helmfile sync` that
+  honours the `needs:` graph. `--selector name=<module>` deploys that release
+  *only* and **skips `needs`**, so looping over modules replaces the declared
+  dependency order with the loop's. `files` needs `media`, and getting it wrong
+  costs 15 min per *arr service in `torrent-clients-setup`'s wait loop.
+- **prod has no MetalLB.** Traefik and AdGuard reach the LAN via Service
+  `externalIPs` on the bare-metal node (`traefik.externalIP` /
+  `adguard.externalIP`), not `hostNetwork` — PodSecurity `baseline` forbids host
+  namespaces and host ports, and `prd-platypod` stays at baseline. dev is
+  unchanged and still uses MetalLB.
+- **Every image is pinned**; no `:latest`. Pins were taken from the digests
+  running on 2026-07-30 and verified to resolve back to the same digest.
 
 See [docs/conventions.md](docs/conventions.md) for the rest.
