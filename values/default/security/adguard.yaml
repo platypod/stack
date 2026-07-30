@@ -26,6 +26,18 @@ adguard:
       name: admin
       nodePort: 30156
       targetPort: 3000
+  # Extra DNS rewrites, appended after the automatic "*.<traefik.domain>" one.
+  # LAN-only names live here (e.g. the Kubernetes API endpoint) so laptops and
+  # hosts resolve them without a public DNS record.
+  #
+  # NOTE: Talos nodes do NOT use AdGuard — their machine config pins
+  # nameservers to 1.1.1.1/8.8.8.8, and AdGuard runs *inside* the cluster, so it
+  # can never resolve the cluster's own API endpoint for them. Node-side
+  # resolution is handled by machine.network.extraHostEntries in infra/.
+  rewrites: []
+    # - domain: k8s.platypod.lan
+    #   answer: 192.168.1.156
+
   pvc: "{{ .Values.storage.defaultVolumes.apps }}"
   resources:
     requests:

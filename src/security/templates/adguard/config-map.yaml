@@ -90,6 +90,10 @@ data:
         - domain: "*.{{ .Values.traefik.domain }}"
           answer: "{{ .Values.traefik.loadBalancerIP }}"
         {{- end }}
+        {{- range .Values.adguard.rewrites }}
+        - domain: "{{ .domain }}"
+          answer: "{{ .answer }}"
+        {{- end }}
       blocked_services: []
       upstream_timeout: 10s
       private_networks: []
