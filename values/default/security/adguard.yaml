@@ -17,7 +17,7 @@ adguard:
     username: admin
     password: password
     passwordHash: "$2y$10$XEjNfXLsHj7CBrnT1fdMaeqVv.tA.cfpWfulEAKBupXFUUgunxgRS"
-  image: adguard/adguardhome:latest
+  image: adguard/adguardhome:v0.107.78
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   label: adguard
   ports:

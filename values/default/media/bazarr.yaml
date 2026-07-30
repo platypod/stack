@@ -2,7 +2,7 @@ bazarr:
   enable: true
   apiKey: "55555555555555555555555555555555"
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bazarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: linuxserver/bazarr:latest
+  image: linuxserver/bazarr:v1.6.0-ls356
   label: bazarr
   ports:
     http:

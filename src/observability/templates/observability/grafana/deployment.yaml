@@ -31,7 +31,7 @@ spec:
       {{- end }}
       initContainers:
       - name: init-permissions
-        image: busybox
+        image: busybox:1.37.0
         command: ['sh', '-c', 'mkdir -p /data/grafana/data /data/grafana/plugins /data/grafana/provisioning && chown -R 472:472 /data/grafana']
         volumeMounts:
         - name: {{ $appVolume }}

@@ -38,7 +38,7 @@ spec:
       # reintroduce 660. Only chmod when ACME is deliberately enabled, so the
       # resolver never activates by accident (see 2026-06-09 rate-limit incident).
       - name: fix-acme-perms
-        image: busybox:1
+        image: busybox:1.37.0
         command: ["sh", "-c", "chmod 600 /etc/traefik/acme/*.json 2>/dev/null || true"]
         volumeMounts:
         - mountPath: /etc/traefik/acme

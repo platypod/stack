@@ -2,7 +2,7 @@ prowlarr:
   enable: true
   apiKey: "11111111111111111111111111111111"
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.prowlarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: linuxserver/prowlarr:latest
+  image: linuxserver/prowlarr:2.5.2.5491-ls155
   label: prowlarr
   ports:
     http:

@@ -25,7 +25,7 @@ spec:
       # Seed config.yaml from ConfigMap on first start so Bazarr uses the
       # predefined API key from values instead of generating a random one.
       - name: seed-config
-        image: busybox:1
+        image: busybox:1.37.0
         command:
         - sh
         - -c

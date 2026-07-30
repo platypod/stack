@@ -29,7 +29,7 @@ spec:
       # into the persistent volume (and only when absent) makes it writable while
       # still letting the ConfigMap provide the initial values.
       - name: init-config
-        image: busybox
+        image: busybox:1.37.0
         command:
         - sh
         - -c

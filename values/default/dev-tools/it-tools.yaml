@@ -1,7 +1,7 @@
 itTools:
   enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.itTools.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: corentinth/it-tools:latest
+  image: corentinth/it-tools:2024.10.22-7ca5933
   label: it-tools
   ports:
     http:

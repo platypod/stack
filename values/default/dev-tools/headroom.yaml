@@ -18,7 +18,7 @@ headroom:
   # ~/.headroom either, so proxy_savings/memory.db reset on pod restart —
   # acceptable for a dev-only deploy; revisit if the dashboard/memory features
   # get used for real.
-  image: ghcr.io/chopratejas/headroom:latest
+  image: ghcr.io/chopratejas/headroom:v0.27.0
   label: headroom
   ports:
     http:

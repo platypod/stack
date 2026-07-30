@@ -27,7 +27,7 @@ spec:
       # ConfigMap mounts are read-only; Jellyfin needs to write to system.xml, so
       # we copy the template to the PVC once and let Jellyfin own it afterwards.
       - name: seed-config
-        image: busybox:1
+        image: busybox:1.37.0
         command:
         - sh
         - -c

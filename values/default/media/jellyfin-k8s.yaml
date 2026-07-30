@@ -2,7 +2,7 @@ jellyfinK8s:
   enable: false        # in-cluster benchmark instance, compared against jellyfin(-proxy) via jellyswarrm
   label: jellyfin-k8s
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyfinK8s.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: jellyfin/jellyfin:latest
+  image: jellyfin/jellyfin:10.11.11
   credentials:
     username: admin
     password: password

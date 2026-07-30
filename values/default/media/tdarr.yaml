@@ -2,8 +2,8 @@ tdarr:
   enable: false
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.tdarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image:
-    server: ghcr.io/haveagitgat/tdarr:latest
-    node: ghcr.io/haveagitgat/tdarr_node:latest
+    server: ghcr.io/haveagitgat/tdarr:2.85.01
+    node: ghcr.io/haveagitgat/tdarr_node:2.85.01
   label: tdarr
   node:
     name: tdarr-node-k8s

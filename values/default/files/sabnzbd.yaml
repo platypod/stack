@@ -2,7 +2,7 @@ sabnzbd:
   enable: true
   apiKey: "66666666666666666666666666666666"
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.sabnzbd.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: linuxserver/sabnzbd:latest
+  image: linuxserver/sabnzbd:5.0.4-ls264
   label: sabnzbd
   credentials:
     username: admin

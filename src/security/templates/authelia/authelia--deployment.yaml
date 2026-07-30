@@ -39,7 +39,7 @@ spec:
           subPath: authelia/config
       initContainers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.authelia.label }}-init{{ .Values.k8s.names.containers.suffix }}
-        image: busybox:1.28
+        image: busybox:1.37.0
         command: ['sh', '-c', '/setup.sh']
         volumeMounts:
         - mountPath: /config

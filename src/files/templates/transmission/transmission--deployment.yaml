@@ -24,7 +24,7 @@ spec:
     spec:
       initContainers:
       - name: seed-config
-        image: busybox:1
+        image: busybox:1.37.0
         command:
         - sh
         - -c
@@ -43,7 +43,7 @@ spec:
       # the transmission-exporter sidecar (it unmarshals that into uint64). mkdir is
       # idempotent; chown only the service's own leaf dirs (never the whole share).
       - name: init-download-dirs
-        image: busybox:1
+        image: busybox:1.37.0
         command:
         - sh
         - -c

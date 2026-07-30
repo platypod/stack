@@ -17,7 +17,7 @@ spec:
     spec:
       initContainers:
       - name: init-permissions
-        image: busybox
+        image: busybox:1.37.0
         command: ['sh', '-c', 'mkdir -p /data/tempo/var /data/tempo/etc && chown -R 10001:10001 /data/tempo']
         volumeMounts:
         - name: {{ $appVolume }}

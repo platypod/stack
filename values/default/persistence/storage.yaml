@@ -29,7 +29,7 @@ storage:
       enable: true
       schedule: "0 3 * * *"
       retentionDays: 14
-      image: busybox:1
+      image: busybox:1.37.0
 
   localStorage:
     enable: true

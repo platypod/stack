@@ -39,7 +39,7 @@ spec:
       {{- end }}
       initContainers:
       - name: init-permissions
-        image: busybox
+        image: busybox:1.37.0
         securityContext:
           runAsUser: 0
         command: ['sh', '-c', 'mkdir -p /data/kavita/config && chown -R {{ .Values.media.system.userId }}:{{ .Values.media.system.groupId }} /data/kavita']

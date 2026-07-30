@@ -7,7 +7,7 @@ jellyfin:
     password: password
   baseUrl: ""           # URL base path if Jellyfin is served under a subpath (usually empty)
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: jellyfin/jellyfin:latest
+  image: jellyfin/jellyfin:10.11.11
   label: jellyfin
   replicasNb: 1
   ports:

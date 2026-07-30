@@ -2,7 +2,7 @@ flaresolverr:
   enable: true
   captchaSolver: none
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.flaresolverr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: flaresolverr/flaresolverr:latest
+  image: flaresolverr/flaresolverr:v3.5.0
   label: flaresolverr
   log:
     level: info

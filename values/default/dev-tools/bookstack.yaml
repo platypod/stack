@@ -3,7 +3,7 @@ bookstack:
   appKey: base64:gJJbTsv2CTPeHrCOmu0crY65zypAC747jgMHvYEUlto=
   appDebug: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bookstack.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: lscr.io/linuxserver/bookstack:latest
+  image: lscr.io/linuxserver/bookstack:v26.05.3-ls277
   label: bookstack
   database:
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bookstack.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"

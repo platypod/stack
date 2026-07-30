@@ -1,6 +1,6 @@
 lldap:
   label: lldap
-  image: lldap/lldap:stable
+  image: lldap/lldap:v0.6.3-alpine
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.lldap.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   # Internal LDAP base DN — environment-independent, not tied to the public domain.
   baseDn: dc=platypod,dc=home

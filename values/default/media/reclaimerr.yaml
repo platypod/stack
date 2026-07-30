@@ -12,7 +12,7 @@ reclaimerr:
   adminEmail: ""
   enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.reclaimerr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: ghcr.io/jessielw/reclaimerr:latest
+  image: ghcr.io/jessielw/reclaimerr:0.3.4
   label: reclaimerr
   credentials:
     # Admin account auto-created on first boot by the reclaimerr-setup Job.

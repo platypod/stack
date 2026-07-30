@@ -1,7 +1,7 @@
 deluge:
   enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.deluge.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: lscr.io/linuxserver/deluge:latest
+  image: lscr.io/linuxserver/deluge:2.2.0-ls381
   label: deluge
   logLevel: info
   credentials:

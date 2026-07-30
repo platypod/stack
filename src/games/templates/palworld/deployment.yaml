@@ -21,7 +21,7 @@ spec:
     spec:
       initContainers:
       - name: {{ .Values.k8s.names.initContainers.prefix }}palworld-data-dir{{ .Values.k8s.names.initContainers.suffix }}
-        image: busybox:1
+        image: busybox:1.37.0
         command: ["sh", "-c", "mkdir -p /palworld && chown 1000:1000 /palworld"]
         securityContext:
           runAsUser: 0

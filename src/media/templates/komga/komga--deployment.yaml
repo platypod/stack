@@ -46,7 +46,7 @@ spec:
       # The /config subPath dir is created root-owned; chown ONLY that dir
       # (same pattern as jellyseerr — never the whole volume).
       - name: init-permissions
-        image: busybox
+        image: busybox:1.37.0
         securityContext:
           runAsUser: 0
         command: ['sh', '-c', 'mkdir -p /data/komga/config && chown -R {{ .Values.media.system.userId }}:{{ .Values.media.system.groupId }} /data/komga']

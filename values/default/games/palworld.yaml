@@ -2,7 +2,7 @@ palworld:
   enable: false
   loadBalancerIP: ""  # override per-env with a MetalLB IP
   label: palworld
-  image: thijsvanloef/palworld-server-docker:latest
+  image: thijsvanloef/palworld-server-docker:v2.7.1
   ports:
     game:
       name: game

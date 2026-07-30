@@ -29,7 +29,7 @@ spec:
       # predefined credentials/api_key from values instead of generating its
       # own, and so host_whitelist stays blank (same guard as Bazarr's seed).
       - name: seed-config
-        image: busybox:1
+        image: busybox:1.37.0
         command:
         - sh
         - -c
@@ -66,7 +66,7 @@ spec:
       # Create the ongoing/finished dirs on the media volume — a fresh dev PVC
       # is empty and SABnzbd doesn't create missing parents on its own.
       - name: init-download-dirs
-        image: busybox:1
+        image: busybox:1.37.0
         command:
         - sh
         - -c

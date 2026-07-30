@@ -29,7 +29,7 @@ spec:
       # Seed system.xml from ConfigMap into the PVC on first start (read-only
       # ConfigMap mount; Jellyfin needs to write system.xml afterwards).
       - name: seed-config
-        image: busybox:1
+        image: busybox:1.37.0
         command:
         - sh
         - -c

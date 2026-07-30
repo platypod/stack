@@ -31,7 +31,7 @@ spec:
       # start. This seeds the config on first boot and re-applies it after
       # any ConfigMap change (checksum annotation triggers a restart).
       - name: {{ .Values.k8s.names.initContainers.prefix }}adguard-config-init{{ .Values.k8s.names.initContainers.suffix }}
-        image: busybox
+        image: busybox:1.37.0
         command:
         - sh
         - -c

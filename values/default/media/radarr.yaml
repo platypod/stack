@@ -2,7 +2,7 @@ radarr:
   enable: true
   apiKey: "33333333333333333333333333333333"
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: linuxserver/radarr:latest
+  image: linuxserver/radarr:6.3.0.10514-ls312
   label: radarr
   ports:
     http:

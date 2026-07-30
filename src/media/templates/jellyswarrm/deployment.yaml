@@ -29,7 +29,7 @@ spec:
       # ConfigMap on first start only — the app rewrites/owns this file
       # afterwards (e.g. admin UI edits), same pattern as jellyfin/bazarr.
       - name: seed-config
-        image: busybox:1
+        image: busybox:1.37.0
         command:
         - sh
         - -c

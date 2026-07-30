@@ -1,7 +1,7 @@
 outline:
   enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.outline.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: outlinewiki/outline:latest
+  image: outlinewiki/outline:1.9.2
   label: outline
   secretKey: 60aa61ff577303bd4ec1043e3d684337c520cd9894553a22c507f0f308f699e2
   utilsSecret: fb7285f1066b5c20bf39738cd3900f6dc468f75e06ae1747485ac9a7861f19e5
@@ -50,7 +50,7 @@ outline:
     # Settings -> API -> New token). The CronJob template gates on it.
     apiToken: ""
     schedule: "23 4 * * *"
-    gitImage: alpine/git:latest
+    gitImage: alpine/git:1e6b3f5
     image: python:3.12-alpine
     # SSH private key paired with the read-only deploy key on
     # platypod/infra-as-code (repos marked `private` clone over SSH with
