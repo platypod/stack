@@ -86,9 +86,14 @@ data:
         yandex: true
         youtube: true
       rewrites:
-        {{- if .Values.traefik.loadBalancerIP }}
+        {{- /* Where Traefik is reachable on the LAN: its node IP under
+               hostNetwork, otherwise its LoadBalancer VIP. Without this rewrite
+               internal clients resolve the public record and have to hairpin
+               back through the router. */}}
+        {{- $traefikLan := default .Values.traefik.loadBalancerIP .Values.traefik.lanAddress }}
+        {{- if $traefikLan }}
         - domain: "*.{{ .Values.traefik.domain }}"
-          answer: "{{ .Values.traefik.loadBalancerIP }}"
+          answer: "{{ $traefikLan }}"
         {{- end }}
         {{- range .Values.adguard.rewrites }}
         - domain: "{{ .domain }}"

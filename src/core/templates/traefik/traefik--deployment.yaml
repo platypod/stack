@@ -26,6 +26,14 @@ spec:
         # are silently never picked up until something else restarts the pod.
         checksum/config: {{ include (print $.Template.BasePath "/traefik/traefik--config-map.yaml") . | sha256sum }}
     spec:
+      {{- if .Values.traefik.hostNetwork }}
+      # Bind the entrypoints directly on the node instead of going through a
+      # LoadBalancer VIP. ClusterFirstWithHostNet is mandatory here: without it
+      # a hostNetwork pod inherits the host resolver and cannot resolve
+      # in-cluster Services, which breaks Authelia forward-auth.
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
       {{- with .Values.traefik.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -1,3 +1,4 @@
+{{- $hostNet := .Values.traefik.hostNetwork }}
 apiVersion: v1
 kind: Service
 
@@ -5,21 +6,38 @@ metadata:
   name: {{ .Values.k8s.names.services.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.services.suffix }}
 
 spec:
+  {{- if not $hostNet }}
+  # Local preserves the client source IP, but requires the announcing node to
+  # hold a ready endpoint — which is why the LoadBalancer path needs Traefik
+  # pinned to a node that is L2-adjacent to the MetalLB pool.
   externalTrafficPolicy: Local
+  {{- end }}
   ports:
     - protocol: TCP
       port: {{ .Values.traefik.ports.http.port }}
       targetPort: {{ .Values.traefik.ports.http.targetPort }}
       name: {{ .Values.traefik.ports.http.name }}
+      {{- if not $hostNet }}
       nodePort: {{ .Values.traefik.ports.http.nodePort }}
+      {{- end }}
     - protocol: TCP
       port: {{ .Values.traefik.ports.https.port }}
       targetPort: {{ .Values.traefik.ports.https.targetPort }}
       name: {{ .Values.traefik.ports.https.name }}
+      {{- if not $hostNet }}
       nodePort: {{ .Values.traefik.ports.https.nodePort }}
+      {{- end }}
   selector:
     app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.pods.suffix }}
+  {{- if $hostNet }}
+  # hostNetwork: the pod binds the entrypoints on the node itself, so the router
+  # forwards straight to the node IP and no LoadBalancer or VIP is involved.
+  # The Service stays ClusterIP purely for in-cluster references; nodePort and
+  # externalTrafficPolicy are invalid on ClusterIP and must be omitted.
+  type: ClusterIP
+  {{- else }}
   type: LoadBalancer
   {{- if .Values.traefik.loadBalancerIP }}
   loadBalancerIP: {{ .Values.traefik.loadBalancerIP }}
+  {{- end }}
   {{- end }}

@@ -6,7 +6,9 @@ metadata:
   name: {{ .Values.k8s.names.services.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.services.suffix }}
 
 spec:
+  {{- if not .Values.adguard.hostNetwork }}
   externalTrafficPolicy: Local
+  {{- end }}
   ports:
   - protocol: TCP
     name: {{ .Values.adguard.ports.dnsTcp.name }}
@@ -26,8 +28,15 @@ spec:
     targetPort: {{ .Values.adguard.ports.admin.targetPort }}
   selector:
     app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.pods.suffix }}
+  {{- if .Values.adguard.hostNetwork }}
+  # hostNetwork: AdGuard binds :53 (tcp+udp) on the node itself, so LAN clients
+  # point their resolver at the node IP. ClusterIP here is only for in-cluster
+  # references and the Traefik-fronted admin UI.
+  type: ClusterIP
+  {{- else }}
   type: LoadBalancer
   {{- if .Values.adguard.loadBalancerIP }}
   loadBalancerIP: {{ .Values.adguard.loadBalancerIP }}
+  {{- end }}
   {{- end }}
 {{- end }}

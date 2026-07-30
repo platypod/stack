@@ -22,6 +22,18 @@ spec:
         # (e.g. updated DNS rewrites) is applied immediately.
         checksum/config: {{ include (print $.Template.BasePath "/adguard/config-map.yaml") . | sha256sum }}
     spec:
+      {{- if .Values.adguard.hostNetwork }}
+      # Bind :53 on the node so LAN clients can use it as their resolver without
+      # a LoadBalancer VIP. ClusterFirstWithHostNet keeps in-cluster DNS working
+      # for the pod itself. NOTE: the web UI port must not collide with anything
+      # else bound on the host — see adguard.ports.http.targetPort.
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
+      {{- with .Values.adguard.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       initContainers:
       # Copy the ConfigMap into the persistent conf directory on every pod
       # start. This seeds the config on first boot and re-applies it after

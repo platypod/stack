@@ -28,12 +28,30 @@ traefik:
       targetPort: 443
       nodePort: 30679
   replicasNb: 1
-  loadBalancerIP: ""   # set per env; used by Adguard DNS rewrite
-  # Pin the pod to specific node(s). Required in prod: the Service is
-  # externalTrafficPolicy=Local, so MetalLB announces the LoadBalancer IP from
-  # whichever node runs this pod. The IP lives in mini4's VM subnet (10.0.2.0/24),
-  # so the pod must stay on a mini4 node or the VIP becomes unreachable from the
-  # host ingress (homepage 000). Empty = no constraint (dev, single node).
+  # Bind the entrypoints on the node itself (hostNetwork) instead of taking a
+  # LoadBalancer VIP. Use this when the cluster has no load balancer to hand and
+  # the node is already on the LAN — the router then forwards to the node IP.
+  #
+  # It is also the only workable option when the LAN-facing node is a control
+  # plane: Kubernetes labels those node.kubernetes.io/exclude-from-external-load-balancers,
+  # MetalLB honours it and refuses to announce, and Talos re-applies the label
+  # from a NodeLabelSpec after every reboot. See infra/docs/baremetal-cp-migration.md.
+  #
+  # When true, loadBalancerIP is ignored and the Service becomes ClusterIP.
+  hostNetwork: false
+  loadBalancerIP: ""   # set per env. Ignored when hostNetwork is true.
+  # The address Traefik answers on from the LAN, used for AdGuard's
+  # "*.<domain>" rewrite so internal clients don't hairpin through the router.
+  # Under hostNetwork set this to the node IP; otherwise leave empty and the
+  # rewrite falls back to loadBalancerIP.
+  lanAddress: ""
+  # Pin the pod to specific node(s).
+  # With hostNetwork: required, because the entrypoints only exist on the node
+  # the pod lands on — that must be the node the router forwards to.
+  # With a LoadBalancer: also required in prod, because the Service is
+  # externalTrafficPolicy=Local, so MetalLB announces the VIP from whichever node
+  # runs this pod, and the VIP must be L2-adjacent to it.
+  # Empty = no constraint (dev, single node).
   nodeSelector: {}
   resolverName: letsencrypt
   tls:

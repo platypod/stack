@@ -1,6 +1,17 @@
 adguard:
   enable: true
-  loadBalancerIP: ""  # override per-env (e.g. dev: 192.168.122.201)
+  # Bind :53 (tcp+udp) on the node itself instead of taking a LoadBalancer VIP.
+  # LAN clients then point their resolver at the node IP. Required when the
+  # LAN-facing node is a control plane — see the note in core/traefik.yaml.
+  #
+  # ⚠ With hostNetwork, ports.http.targetPort binds on the HOST. The default 80
+  # collides with Traefik's http entrypoint if both run on the same node; move
+  # AdGuard's web UI to 8080 (the ConfigMap, Service and IngressRoute all derive
+  # from this one value, so changing it is enough).
+  hostNetwork: false
+  # Pin to the node the LAN resolves to. Required with hostNetwork.
+  nodeSelector: {}
+  loadBalancerIP: ""  # override per-env (e.g. dev: 192.168.122.201). Ignored when hostNetwork.
   adminHost: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.adguard.label }}-admin{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   credentials:
     username: admin
