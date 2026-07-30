@@ -1,4 +1,4 @@
-{{- $hostNet := .Values.traefik.hostNetwork }}
+{{- $extIP := .Values.traefik.externalIP }}
 apiVersion: v1
 kind: Service
 
@@ -6,7 +6,7 @@ metadata:
   name: {{ .Values.k8s.names.services.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.services.suffix }}
 
 spec:
-  {{- if not $hostNet }}
+  {{- if not $extIP }}
   # Local preserves the client source IP, but requires the announcing node to
   # hold a ready endpoint — which is why the LoadBalancer path needs Traefik
   # pinned to a node that is L2-adjacent to the MetalLB pool.
@@ -17,24 +17,32 @@ spec:
       port: {{ .Values.traefik.ports.http.port }}
       targetPort: {{ .Values.traefik.ports.http.targetPort }}
       name: {{ .Values.traefik.ports.http.name }}
-      {{- if not $hostNet }}
+      {{- if not $extIP }}
       nodePort: {{ .Values.traefik.ports.http.nodePort }}
       {{- end }}
     - protocol: TCP
       port: {{ .Values.traefik.ports.https.port }}
       targetPort: {{ .Values.traefik.ports.https.targetPort }}
       name: {{ .Values.traefik.ports.https.name }}
-      {{- if not $hostNet }}
+      {{- if not $extIP }}
       nodePort: {{ .Values.traefik.ports.https.nodePort }}
       {{- end }}
   selector:
     app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.pods.suffix }}
-  {{- if $hostNet }}
-  # hostNetwork: the pod binds the entrypoints on the node itself, so the router
-  # forwards straight to the node IP and no LoadBalancer or VIP is involved.
-  # The Service stays ClusterIP purely for in-cluster references; nodePort and
-  # externalTrafficPolicy are invalid on ClusterIP and must be omitted.
+  {{- if $extIP }}
+  # No LoadBalancer. kube-proxy programs the node to accept traffic addressed to
+  # externalIPs on the service ports and DNATs it to the pod — so the router can
+  # forward straight to the node IP with no VIP and no MetalLB.
+  #
+  # externalIPs rather than hostNetwork/hostPort on purpose: PodSecurity
+  # "baseline" (Talos' default for non-system namespaces) forbids host
+  # namespaces and host ports, and prd-platypod deliberately stays at baseline
+  # — see the observability nodes-collectors namespace for the precedent.
+  # externalIPs works at the kube-proxy layer, so no pod-level exemption is
+  # needed. nodePort and externalTrafficPolicy are invalid on ClusterIP.
   type: ClusterIP
+  externalIPs:
+    - {{ $extIP }}
   {{- else }}
   type: LoadBalancer
   {{- if .Values.traefik.loadBalancerIP }}

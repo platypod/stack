@@ -6,7 +6,7 @@ metadata:
   name: {{ .Values.k8s.names.services.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.services.suffix }}
 
 spec:
-  {{- if not .Values.adguard.hostNetwork }}
+  {{- if not .Values.adguard.externalIP }}
   externalTrafficPolicy: Local
   {{- end }}
   ports:
@@ -28,11 +28,13 @@ spec:
     targetPort: {{ .Values.adguard.ports.admin.targetPort }}
   selector:
     app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.pods.suffix }}
-  {{- if .Values.adguard.hostNetwork }}
-  # hostNetwork: AdGuard binds :53 (tcp+udp) on the node itself, so LAN clients
-  # point their resolver at the node IP. ClusterIP here is only for in-cluster
-  # references and the Traefik-fronted admin UI.
+  {{- if .Values.adguard.externalIP }}
+  # externalIPs, not hostNetwork: PodSecurity "baseline" forbids host namespaces
+  # and host ports, and prd-platypod stays at baseline. kube-proxy accepts :53
+  # on this address and DNATs to the pod, so LAN clients resolve against it.
   type: ClusterIP
+  externalIPs:
+    - {{ .Values.adguard.externalIP }}
   {{- else }}
   type: LoadBalancer
   {{- if .Values.adguard.loadBalancerIP }}

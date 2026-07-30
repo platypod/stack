@@ -1,17 +1,17 @@
 adguard:
   enable: true
-  # Bind :53 (tcp+udp) on the node itself instead of taking a LoadBalancer VIP.
-  # LAN clients then point their resolver at the node IP. Required when the
-  # LAN-facing node is a control plane — see the note in core/traefik.yaml.
+  # Address AdGuard answers on from the LAN (see traefik.externalIP for the
+  # mechanism and why it is not hostNetwork). LAN clients point their resolver
+  # here. Ports 53/tcp+udp are served on this address.
   #
-  # ⚠ With hostNetwork, ports.http.targetPort binds on the HOST. The default 80
-  # collides with Traefik's http entrypoint if both run on the same node; move
-  # AdGuard's web UI to 8080 (the ConfigMap, Service and IngressRoute all derive
-  # from this one value, so changing it is enough).
-  hostNetwork: false
-  # Pin to the node the LAN resolves to. Required with hostNetwork.
+  # NOTE: ports.http.targetPort must not collide with another Service claiming
+  # the same externalIP — the default 80 clashes with Traefik's http entrypoint,
+  # so prod moves AdGuard's web UI to 8080 (the ConfigMap bind_port, Service and
+  # IngressRoute all derive from that one value).
+  externalIP: ""
+  loadBalancerIP: ""  # MetalLB path only (e.g. dev: 192.168.122.201).
+  # Pin to the node that owns externalIP.
   nodeSelector: {}
-  loadBalancerIP: ""  # override per-env (e.g. dev: 192.168.122.201). Ignored when hostNetwork.
   adminHost: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.adguard.label }}-admin{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   credentials:
     username: admin
