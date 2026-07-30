@@ -80,7 +80,17 @@ spec:
               try:
                   with urllib.request.urlopen(req, timeout=30) as r:
                       raw = r.read().decode()
-                      return r.status, (json.loads(raw) if raw else None)
+                      if not raw:
+                          return r.status, None
+                      # Not every Tdarr endpoint answers with JSON on success —
+                      # /api/v2/toggle-folder-watch returns a bare string. Parsing
+                      # unconditionally raised JSONDecodeError *before* the caller
+                      # could check the status, killing the whole job. Mirror the
+                      # tolerance the HTTPError branch below already has.
+                      try:
+                          return r.status, json.loads(raw)
+                      except ValueError:
+                          return r.status, raw
               except urllib.error.HTTPError as e:
                   raw = e.read().decode()
                   try:
