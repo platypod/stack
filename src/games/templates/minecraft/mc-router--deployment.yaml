@@ -1,0 +1,49 @@
+{{- if eq (include "games.minecraft.anyEnabled" .) "true" }}
+{{- $pod := print .Values.k8s.names.pods.prefix "mc-router" .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      # Must tolerate the primary-node taint: when pinned there via
+      # externalIP/nodeSelector (prod, no MetalLB) it has nowhere else to run.
+      # Harmless on dev, where there is no taint to match.
+      tolerations:
+      - key: platypod.io/reserved
+        operator: Equal
+        value: primary
+        effect: NoSchedule
+      priorityClassName: platypod-gaming
+      {{- with .Values.minecraft.mcRouter.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}mc-router{{ .Values.k8s.names.serviceAccounts.suffix }}
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}mc-router{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.minecraft.mcRouter.image }}
+        args: ["-port", {{ .Values.minecraft.mcRouter.port | quote }}, "-in-kube-cluster"]
+        resources:
+          {{- toYaml .Values.minecraft.mcRouter.resources | nindent 10 }}
+        env:
+        - name: KUBE_NAMESPACE
+          value: {{ .Values.k8s.namespace }}
+        ports:
+        - name: minecraft
+          containerPort: {{ .Values.minecraft.mcRouter.port }}
+          protocol: TCP
+{{- end }}

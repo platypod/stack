@@ -1,0 +1,28 @@
+{{- range $name, $instance := .Values.minecraft.instances }}
+{{- if $instance.enable }}
+{{- $pod := print $.Values.k8s.names.pods.prefix "minecraft-" $name $.Values.k8s.names.pods.suffix }}
+{{- $host := tpl $instance.hostname $ }}
+---
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ $.Values.k8s.names.services.prefix }}minecraft-{{ $name }}{{ $.Values.k8s.names.services.suffix }}
+  annotations:
+    # Read by mc-router's --in-kube-cluster watch (see mc-router--rbac.yaml) —
+    # this is the whole mechanism that lets enabling/disabling an instance
+    # change routing with nothing to edit on mc-router's own side.
+    mc-router.itzg.me/externalServerName: {{ $host }}
+
+spec:
+  # ClusterIP only — never gets an externalIP/LoadBalancer of its own.
+  # mc-router is the single ingress point; see mc-router--service.yaml.
+  ports:
+  - protocol: TCP
+    name: minecraft
+    port: 25565
+    targetPort: 25565
+  selector:
+    app: {{ $pod }}
+{{- end }}
+{{- end }}

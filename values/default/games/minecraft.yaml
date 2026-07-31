@@ -1,0 +1,99 @@
+minecraft:
+  eula: true
+
+  # Shared by every AUTO_CURSEFORGE instance below. Get a free personal key
+  # from console.curseforge.com — CurseForge locked down modpack auto-download
+  # behind it in 2023. Vanilla instances don't need it.
+  curseforge:
+    apiKey: ""
+
+  # The single external entry point for every instance. Shares chuwi-cp1's
+  # externalIP with traefik/adguard/palworld in prod (see traefik.externalIP
+  # for the mechanism) — but unlike palworld, only mc-router's own Service
+  # needs it; instances underneath stay ClusterIP-only.
+  #
+  # Traefik can't do this hop itself: it routes HTTP by Host header or TLS by
+  # SNI, and Minecraft's protocol is neither (plain, unencrypted TCP). The
+  # hostname a player typed only exists a few bytes into Minecraft's own
+  # handshake payload — mc-router is the thing that knows how to read that.
+  #
+  # Runs in --in-kube-cluster mode: it watches this namespace's Services via
+  # the k8s API (not DNS) for the mc-router.itzg.me/externalServerName
+  # annotation, and proxies straight to the matching Service's ClusterIP.
+  # Enable/disable an instance and its route appears/disappears automatically
+  # — nothing here to keep in sync by hand. Rendered only when at least one
+  # instance below is enabled (see the games._helpers.tpl anyEnabled check).
+  mcRouter:
+    externalIP: ""
+    loadBalancerIP: ""  # MetalLB path only (dev); ignored when externalIP is set.
+    nodeSelector: {}
+    image: itzg/mc-router:1.23.0
+    port: 25565
+    resources:
+      requests:
+        cpu: 100m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+
+  # One entry per flavor. More than one `enable: true` at once is exactly the
+  # "several at once" case — nothing here prevents it. Each instance is its
+  # own Deployment + ClusterIP Service; the world/save data subPath is derived
+  # from the instance's own hostname label (see instances--deployment.yaml),
+  # not stored here, so renaming a key doesn't strand old data under the
+  # previous name.
+  instances:
+    vanilla:
+      enable: false
+      hostname: "{{ .Values.k8s.names.urls.prefix }}vanilla{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      image: itzg/minecraft-server:2026.7.2-java25   # MC 26.2 needs Java 25 (LTS)
+      type: VANILLA
+      version: "26.2"
+      jvmHeapSize: 4G
+      # Passthrough for any other itzg/minecraft-server env var (same idea as
+      # palworld.server.extraEnv), e.g.:
+      #   extraEnv:
+      #     PAUSE_WHEN_EMPTY_SECONDS: "0"   # disable auto-pause when idle
+      extraEnv: {}
+      resources:
+        requests:
+          cpu: 500m
+          memory: 4Gi
+        limits:
+          memory: 5Gi        # heap + ~1Gi off-heap/GC/native headroom
+
+    bcgplus:
+      enable: false
+      hostname: "{{ .Values.k8s.names.urls.prefix }}bcgplus{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      image: itzg/minecraft-server:2026.7.2-java17   # MC 1.20.1 needs Java 17, NOT java21
+      type: AUTO_CURSEFORGE
+      curseforge:
+        slug: bcg
+        fileId: "7268971"     # BCG+ 2.15.0, MC 1.20.1 (as of 2025-11-27) — verify still current before deploying
+      jvmHeapSize: 8G
+      extraEnv: {}
+      resources:
+        requests:
+          cpu: 1000m
+          memory: 8Gi
+        limits:
+          memory: 10Gi        # heap + ~2Gi headroom, modded packs run hotter GC
+
+    cobbleverse:
+      enable: false
+      hostname: "{{ .Values.k8s.names.urls.prefix }}cobbleverse{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      image: itzg/minecraft-server:2026.7.2-java21   # MC 1.21.1 needs Java 21
+      type: AUTO_CURSEFORGE
+      curseforge:
+        slug: cobbleverse-cobblemon
+        fileId: "8488030"     # v1.7.42, MC 1.21.1 (as of 2026-07-22) — verify still current before deploying
+      jvmHeapSize: 8G
+      extraEnv: {}
+      resources:
+        requests:
+          cpu: 1000m
+          memory: 8Gi
+        limits:
+          memory: 10Gi
+
+  pvc: "{{ .Values.storage.defaultVolumes.apps }}"

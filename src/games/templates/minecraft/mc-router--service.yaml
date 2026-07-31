@@ -1,0 +1,34 @@
+{{- if eq (include "games.minecraft.anyEnabled" .) "true" }}
+{{- $pod := print .Values.k8s.names.pods.prefix "mc-router" .Values.k8s.names.pods.suffix }}
+{{- $extIP := .Values.minecraft.mcRouter.externalIP }}
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.k8s.names.services.prefix }}mc-router{{ .Values.k8s.names.services.suffix }}
+
+spec:
+  {{- if not $extIP }}
+  externalTrafficPolicy: Local
+  {{- end }}
+  ports:
+  - protocol: TCP
+    name: minecraft
+    port: {{ .Values.minecraft.mcRouter.port }}
+    targetPort: {{ .Values.minecraft.mcRouter.port }}
+  selector:
+    app: {{ $pod }}
+  {{- if $extIP }}
+  # No MetalLB in prod: same externalIPs mechanism as traefik/adguard/palworld
+  # (see traefik--service.yaml). kube-proxy DNATs traffic for $extIP on this
+  # port to the pod, so no LoadBalancer is needed.
+  type: ClusterIP
+  externalIPs:
+    - {{ $extIP }}
+  {{- else }}
+  type: LoadBalancer
+  {{- if .Values.minecraft.mcRouter.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.minecraft.mcRouter.loadBalancerIP }}
+  {{- end }}
+  {{- end }}
+{{- end }}

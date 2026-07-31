@@ -1,0 +1,38 @@
+{{- if eq (include "games.minecraft.anyEnabled" .) "true" }}
+apiVersion: v1
+kind: ServiceAccount
+
+metadata:
+  name: {{ .Values.k8s.names.serviceAccounts.prefix }}mc-router{{ .Values.k8s.names.serviceAccounts.suffix }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+
+metadata:
+  name: {{ .Values.k8s.names.clusterRoles.prefix }}mc-router{{ .Values.k8s.names.clusterRoles.suffix }}
+
+# Despite KUBE_NAMESPACE being set (see mc-router--deployment.yaml), mc-router
+# 1.23.0's informer still issues a cluster-scope List/Watch on Services —
+# confirmed by a live "services is forbidden ... at the cluster scope" error
+# with a namespaced Role. Matches upstream's own example manifests, which use
+# ClusterRole for exactly this reason. Read-only on Services, cluster-wide.
+rules:
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+
+metadata:
+  name: {{ .Values.k8s.names.clusterRoleBindings.prefix }}mc-router{{ .Values.k8s.names.clusterRoleBindings.suffix }}
+
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.k8s.names.serviceAccounts.prefix }}mc-router{{ .Values.k8s.names.serviceAccounts.suffix }}
+  namespace: {{ .Values.k8s.namespace }}
+roleRef:
+  kind: ClusterRole
+  name: {{ .Values.k8s.names.clusterRoles.prefix }}mc-router{{ .Values.k8s.names.clusterRoles.suffix }}
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

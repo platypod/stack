@@ -1,0 +1,94 @@
+{{- range $name, $instance := .Values.minecraft.instances }}
+{{- if $instance.enable }}
+{{- $pod := print $.Values.k8s.names.pods.prefix "minecraft-" $name $.Values.k8s.names.pods.suffix }}
+{{- $host := tpl $instance.hostname $ }}
+{{- $label := splitList "." $host | first }}
+{{- $subPath := printf "minecraft/%s" $label }}
+---
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      # No externalIP/nodeSelector needed here — unlike mc-router (which must
+      # sit on chuwi-cp1 to hold the shared externalIP), instance pods are
+      # ClusterIP-only and can run wherever the scheduler finds room,
+      # including the workers. Still tolerate the primary taint so the
+      # scheduler is free to use chuwi-cp1's spare capacity too if a worker
+      # doesn't have room for a given pack's heap.
+      tolerations:
+      - key: platypod.io/reserved
+        operator: Equal
+        value: primary
+        effect: NoSchedule
+      priorityClassName: platypod-gaming
+      initContainers:
+      - name: {{ $.Values.k8s.names.initContainers.prefix }}minecraft-{{ $name }}-data-dir{{ $.Values.k8s.names.initContainers.suffix }}
+        image: busybox:1.37.0
+        command: ["sh", "-c", "mkdir -p /data && chown 1000:1000 /data"]
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: data
+          mountPath: /data
+          subPath: {{ $subPath }}
+      containers:
+      - name: {{ $.Values.k8s.names.containers.prefix }}minecraft-{{ $name }}{{ $.Values.k8s.names.containers.suffix }}
+        image: {{ $instance.image }}
+        resources:
+          {{- toYaml $instance.resources | nindent 10 }}
+        env:
+        - name: EULA
+          value: {{ $.Values.minecraft.eula | quote }}
+        - name: TYPE
+          value: {{ $instance.type | quote }}
+        - name: MEMORY
+          value: {{ $instance.jvmHeapSize | quote }}
+        - name: UID
+          value: "1000"
+        - name: GID
+          value: "1000"
+        {{- if eq $instance.type "VANILLA" }}
+        - name: VERSION
+          value: {{ $instance.version | quote }}
+        {{- else if eq $instance.type "AUTO_CURSEFORGE" }}
+        - name: CF_SLUG
+          value: {{ $instance.curseforge.slug | quote }}
+        - name: CF_FILE_ID
+          value: {{ $instance.curseforge.fileId | quote }}
+        {{- if $.Values.minecraft.curseforge.apiKey }}
+        - name: CF_API_KEY
+          value: {{ $.Values.minecraft.curseforge.apiKey | quote }}
+        {{- end }}
+        {{- end }}
+        {{- range $key, $value := $instance.extraEnv }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        ports:
+        - name: minecraft
+          containerPort: 25565
+          protocol: TCP
+        volumeMounts:
+        - name: data
+          mountPath: /data
+          subPath: {{ $subPath }}
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ tpl $.Values.minecraft.pvc $ }}
+{{- end }}
+{{- end }}
