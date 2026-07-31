@@ -78,6 +78,22 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
 
 - **Investigate VLANs** to interconnect the project's workers.
 
+- **Palworld/Minecraft internet-facing access.** Both are LAN-only right now —
+  `chuwi-cp1`'s externalIP is reachable inside the network (AdGuard's
+  `*.platypod.ovh` wildcard covers Minecraft's per-instance hostnames
+  automatically for LAN clients), but nothing forwards the ports from the
+  router yet: Palworld needs UDP `8211`+`27015`, Minecraft/mc-router needs TCP
+  `25565`, both to `192.168.1.156`. Also needs real public DNS records per
+  enabled Minecraft instance hostname (`vanilla.platypod.ovh`, etc.) — AdGuard
+  only helps LAN clients.
+
+- **Verify CurseForge `fileId` pins before enabling bcgplus/cobbleverse.**
+  `values/default/games/minecraft.yaml` pins specific file IDs found via a
+  CurseForge page fetch on 2026-07-31 (BCG+ 2.15.0 / Cobbleverse 1.7.42) —
+  confirm on curseforge.com that these are still the intended files (there are
+  several similarly-named "BigChadGuys"/"Cobbleverse" packs by other
+  uploaders) before flipping `enable: true` on either.
+
 ---
 
 ## Later / Potential additions
@@ -127,6 +143,19 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
 
 ## Recently done
 
+- **Palworld enabled in prod + Minecraft (`mc-router`) added (2026-07-31).**
+  Palworld's chart gained `externalIP`/`nodeSelector` support (was
+  MetalLB-only, prod has none — see `traefik.externalIP` for the mechanism)
+  and an `extraEnv` passthrough for any `PalWorldSettings.ini`-mapped var;
+  memory bumped to the image's real recommendation (`16Gi`/`32Gi`, was
+  `4Gi`/`8Gi`); switched off the image's deprecated `MULTITHREADING` toggle.
+  New `games/templates/minecraft/` chart supports named vanilla/CurseForge
+  instances (any subset enabled at once) fronted by `itzg/mc-router`, which
+  hostname-routes since Minecraft's protocol has no HTTP Host/TLS SNI for
+  Traefik to use; needed a `ClusterRole` for its Service watch despite
+  `KUBE_NAMESPACE` (see conventions.md pitfall). First instance live: vanilla
+  MC 26.2 (Mojang's 2026 year-based versioning, not `1.21.x`) on Java 25.
+  Both are LAN-only pending the router port-forward (see Soon, above).
 - Per-module service/job docs under `docs/<module>/` — one page per workload
   (role + non-default config + quirks), 59 pages across all 8 modules (2026-06).
 - OIDC expansion: RomM, Reclaimerr, Vaultwarden, Kavita (2026-06).

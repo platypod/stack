@@ -81,6 +81,16 @@ blocking other pods and Traefik. Fix: a `lifecycle.postStart` hook that calls th
 RPC from `localhost` to disable both checks (see
 `src/files/templates/transmission/transmission--deployment.yaml`).
 
+**A namespace env var doesn't always mean namespace-scoped RBAC.** `mc-router`
+(games/Minecraft) sets `KUBE_NAMESPACE` and its own docs say that restricts its
+Service watch to one namespace — in practice (confirmed live, v1.23.0) its
+informer still issues a cluster-scope `List`/`Watch` on Services regardless,
+so a namespaced `Role`/`RoleBinding` fails with `services is forbidden ... at
+the cluster scope`. Needed a `ClusterRole`/`ClusterRoleBinding` instead
+(read-only on Services, cluster-wide) — matches upstream's own example
+manifests, which use `ClusterRole` too. Don't trust a tool's "just set this
+namespace env var" claim for RBAC scoping without a live check.
+
 **LLDAP doesn't update the admin password on restart.** `LLDAP_LDAP_USER_PASS`
 only applies on first creation (fresh DB). To change it on a running instance:
 ```sh
