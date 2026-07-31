@@ -108,11 +108,20 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
   recreation (loses etcd). Add a `make upgrade` target running `talosctl upgrade`
   per node in rolling order (workers first, control planes last).
 
-- **Point other LAN devices (phones, etc.) at AdGuard.** `make setup-prod-dns`
-  covers this laptop; the Bbox router can't set DHCP-assigned DNS, so every
-  other device needs its DNS set by hand in its own network settings — outside
-  what this repo can automate. Until then those devices get none of AdGuard's
-  ad-blocking or the `*.platypod.ovh`/`k8s.platypod.lan` rewrites.
+- **Run `make setup-prod-dns` on the laptop.** Built and verified
+  (2026-07-31) but not yet executed — the DNS flip needs an interactive
+  `sudo` password, so it was left for the operator. Note: after switching a
+  device's DNS to AdGuard, any hostname the Bbox self-answers for (e.g. its
+  own admin UI, `mabbox.bytel.fr`) stops resolving unless mirrored as an
+  AdGuard rewrite — already done for that one (`adguard.rewrites` in
+  `values/prd/values.yaml`), but the same gotcha will hit any other
+  Bbox-hijacked name.
+
+- **Point other LAN devices (phones, etc.) at AdGuard.** The Bbox router can't
+  set DHCP-assigned DNS, so every other device needs its DNS set by hand in
+  its own network settings — outside what this repo can automate. Until then
+  those devices get none of AdGuard's ad-blocking or the
+  `*.platypod.ovh`/`k8s.platypod.lan` rewrites.
 
 ---
 
