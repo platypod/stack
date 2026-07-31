@@ -62,6 +62,7 @@ minecraft:
         limits:
           memory: 5Gi        # heap + ~1Gi off-heap/GC/native headroom
 
+    # https://minecraft.fr/bigchadguys-plus-le-modpack-minecraft-qui-fait-rimer-detente-et-cobblemon/
     bcgplus:
       enable: false
       hostname: "{{ .Values.k8s.names.urls.prefix }}bcgplus{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
@@ -79,6 +80,7 @@ minecraft:
         limits:
           memory: 10Gi        # heap + ~2Gi headroom, modded packs run hotter GC
 
+    # https://minecraft.fr/cobbleverse-est-un-modpack-qui-recree-une-aventure-pokemon-complete-dans-minecraft-avec-cobblemon/
     cobbleverse:
       enable: false
       hostname: "{{ .Values.k8s.names.urls.prefix }}cobbleverse{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
@@ -95,5 +97,43 @@ minecraft:
           memory: 8Gi
         limits:
           memory: 10Gi
+
+    # https://minecraft.fr/mc-eternal-2-modpack-minecraft/
+    mceternal2:
+      enable: false
+      hostname: "{{ .Values.k8s.names.urls.prefix }}mceternal2{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      image: itzg/minecraft-server:2026.7.2-java17   # MC 1.20.1 needs Java 17
+      type: AUTO_CURSEFORGE
+      curseforge:
+        slug: mc-eternal-2
+        fileId: "8400639"     # v1.2.2.1, MC 1.20.1 (as of 2026-07-09) — verify still current before deploying
+      jvmHeapSize: 10G
+      extraEnv: {}
+      resources:
+        requests:
+          cpu: 1500m
+          memory: 10Gi
+        limits:
+          memory: 13Gi        # heap + ~3Gi headroom — kitchen-sink pack, heavier GC than bcgplus/cobbleverse
+
+    # https://minecraft.fr/vanilla-perfected-lessence-de-minecraft-sublimee/
+    vanillaperfected:
+      enable: false
+      hostname: "{{ .Values.k8s.names.urls.prefix }}vanillaperfected{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      image: itzg/minecraft-server:2026.7.2-java21   # MC 1.21 needs Java 21
+      type: AUTO_CURSEFORGE
+      curseforge:
+        slug: vanilla-perfected-curseforge-edition
+        fileId: "6034929"     # v1.0.0, MC 1.21 (as of 2024-12-29) — verify still current before deploying
+      # Lightweight "vanilla plus" pack (QoL/performance/aesthetic mods, not a
+      # heavy mod stack) — sized closer to vanilla than the other modpacks.
+      jvmHeapSize: 6G
+      extraEnv: {}
+      resources:
+        requests:
+          cpu: 750m
+          memory: 6Gi
+        limits:
+          memory: 7Gi        # heap + ~1Gi headroom
 
   pvc: "{{ .Values.storage.defaultVolumes.apps }}"
