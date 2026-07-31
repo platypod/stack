@@ -21,6 +21,15 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
+      # Must tolerate the primary-node taint: this workload is pinned there
+      # (local config volume / externalIP nodeSelector / auth co-location) and
+      # has nowhere else to run. Without the toleration it is evicted with no
+      # valid node and sits Pending.
+      tolerations:
+      - key: platypod.io/reserved
+        operator: Equal
+        value: primary
+        effect: NoSchedule
       initContainers:
       - name: init-permissions
         image: busybox:1.37.0

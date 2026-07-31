@@ -23,6 +23,14 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
+      # Must tolerate the primary-node taint: this workload is pinned there by
+      # the local config volume and has nowhere else to run. Without the
+      # toleration it is evicted with no valid node and sits Pending.
+      tolerations:
+      - key: platypod.io/reserved
+        operator: Equal
+        value: primary
+        effect: NoSchedule
       # Media user so /config, /metadata and the library on NFS share ownership
       # with the *arrs. NEVER fsGroup on the NFS PVCs (recursive chown) — see CLAUDE.md.
       securityContext:

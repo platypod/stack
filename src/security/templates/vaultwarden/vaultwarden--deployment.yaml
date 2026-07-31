@@ -22,6 +22,14 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
+      # Must tolerate the primary-node taint: this workload is pinned there by
+      # the local config volume and has nowhere else to run. Without the
+      # toleration it is evicted with no valid node and sits Pending.
+      tolerations:
+      - key: platypod.io/reserved
+        operator: Equal
+        value: primary
+        effect: NoSchedule
       {{- if and .Values.vaultwarden.oidc.clientId .Values.traefik.loadBalancerIP }}
       # OIDC discovery back-channel: resolve the public Authelia host to the
       # Traefik LB in-cluster (same trick as Grafana/Komga/RomM).

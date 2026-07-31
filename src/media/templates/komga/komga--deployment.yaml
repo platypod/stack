@@ -21,6 +21,14 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
+      # Must tolerate the primary-node taint: this workload is pinned there by
+      # the local config volume and has nowhere else to run. Without the
+      # toleration it is evicted with no valid node and sits Pending.
+      tolerations:
+      - key: platypod.io/reserved
+        operator: Equal
+        value: primary
+        effect: NoSchedule
       # gotson/komga is not a linuxserver image (no PUID/PGID env); run the
       # whole pod as the media user so /config and the library on NFS get the
       # same ownership as the *arr apps.

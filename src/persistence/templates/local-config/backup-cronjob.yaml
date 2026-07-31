@@ -22,6 +22,13 @@ spec:
       backoffLimit: 2
       template:
         spec:
+          # Must tolerate the primary-node taint: this Job mounts the local
+          # config volume, which only exists on the primary node.
+          tolerations:
+          - key: platypod.io/reserved
+            operator: Equal
+            value: primary
+            effect: NoSchedule
           restartPolicy: OnFailure
           containers:
           - name: config-backup
