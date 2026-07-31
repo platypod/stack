@@ -93,6 +93,26 @@ Anything else the image exposes — `TERRARIA_SEED`, `TERRARIA_NOUPNP`,
 into `terraria.server.extraEnv`, same mechanism as the other game servers in
 this module.
 
+## Satisfactory
+
+Dedicated Satisfactory server (`wolveix/satisfactory-server`). Same
+externalIP/nodeSelector (prod) / loadBalancerIP (dev) shape as the other game
+servers. Exposes UDP+TCP `7777` (game) and TCP `8888` (messaging/reliable).
+
+**Port collision with Terraria:** both default to game port `7777`. They can
+coexist on the cluster, but not on the same `externalIP` — give each its own
+if both are ever enabled at once (or move one to a non-default port via
+`SERVERGAMEPORT`/`terraria.port`).
+
+**Memory sizing:** upstream recommends 8-16GB, more toward the top end
+late-game or with 4+ players. `satisfactory.resources` defaults to
+`8Gi`/`12Gi` request/limit — the middle of that range, no dev-vs-prod gap.
+
+Save data, backups, game files, and logs all live under `/config` on the
+shared `apps` PVC (`satisfactory/`). Anything else the image exposes —
+`DISABLESEASONALEVENTS`, `STEAMBETA`, `MAXTICKRATE`, `AUTOSAVENUM`, … — drops
+into `satisfactory.server.extraEnv`, same mechanism as the other game servers.
+
 ## Minecraft
 
 Zero or more named instances (vanilla, CurseForge modpacks) under

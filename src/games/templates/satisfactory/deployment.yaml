@@ -1,0 +1,83 @@
+{{- if .Values.satisfactory.enable }}
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.satisfactory.label .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      # Must tolerate the primary-node taint: when pinned there via
+      # externalIP/nodeSelector (prod, no MetalLB) it has nowhere else to run.
+      # Harmless on dev, where there is no taint to match.
+      tolerations:
+      - key: platypod.io/reserved
+        operator: Equal
+        value: primary
+        effect: NoSchedule
+      priorityClassName: platypod-gaming
+      {{- with .Values.satisfactory.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+      - name: {{ .Values.k8s.names.initContainers.prefix }}satisfactory-data-dir{{ .Values.k8s.names.initContainers.suffix }}
+        image: busybox:1.37.0
+        command: ["sh", "-c", "mkdir -p /config && chown 1000:1000 /config"]
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: data
+          mountPath: /config
+          subPath: satisfactory
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.satisfactory.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.satisfactory.image }}
+        resources:
+          {{- toYaml .Values.satisfactory.resources | nindent 10 }}
+        env:
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        - name: SERVERGAMEPORT
+          value: {{ .Values.satisfactory.ports.game.targetPort | quote }}
+        - name: SERVERMESSAGINGPORT
+          value: {{ .Values.satisfactory.ports.messaging.targetPort | quote }}
+        - name: MAXPLAYERS
+          value: {{ .Values.satisfactory.server.maxPlayers | quote }}
+        {{- range $key, $value := .Values.satisfactory.server.extraEnv }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        ports:
+        - name: {{ .Values.satisfactory.ports.game.name }}-udp
+          containerPort: {{ .Values.satisfactory.ports.game.targetPort }}
+          protocol: UDP
+        - name: {{ .Values.satisfactory.ports.game.name }}-tcp
+          containerPort: {{ .Values.satisfactory.ports.game.targetPort }}
+          protocol: TCP
+        - name: {{ .Values.satisfactory.ports.messaging.name }}
+          containerPort: {{ .Values.satisfactory.ports.messaging.targetPort }}
+          protocol: TCP
+        volumeMounts:
+        - name: data
+          mountPath: /config
+          subPath: satisfactory
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.satisfactory.pvc . }}
+{{- end }}

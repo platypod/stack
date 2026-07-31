@@ -1,0 +1,41 @@
+{{- if .Values.satisfactory.enable }}
+{{- $extIP := .Values.satisfactory.externalIP }}
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.satisfactory.label }}{{ .Values.k8s.names.services.suffix }}
+
+spec:
+  {{- if not $extIP }}
+  externalTrafficPolicy: Local
+  {{- end }}
+  ports:
+  - protocol: UDP
+    name: {{ .Values.satisfactory.ports.game.name }}
+    port: {{ .Values.satisfactory.ports.game.port }}
+    targetPort: {{ .Values.satisfactory.ports.game.targetPort }}
+  - protocol: TCP
+    name: {{ .Values.satisfactory.ports.game.name }}-tcp
+    port: {{ .Values.satisfactory.ports.game.port }}
+    targetPort: {{ .Values.satisfactory.ports.game.targetPort }}
+  - protocol: TCP
+    name: {{ .Values.satisfactory.ports.messaging.name }}
+    port: {{ .Values.satisfactory.ports.messaging.port }}
+    targetPort: {{ .Values.satisfactory.ports.messaging.targetPort }}
+  selector:
+    app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.satisfactory.label }}{{ .Values.k8s.names.pods.suffix }}
+  {{- if $extIP }}
+  # No MetalLB in prod: same externalIPs mechanism as traefik/adguard/palworld
+  # (see traefik--service.yaml). kube-proxy DNATs traffic for $extIP on these
+  # ports to the pod, so no LoadBalancer is needed.
+  type: ClusterIP
+  externalIPs:
+    - {{ $extIP }}
+  {{- else }}
+  type: LoadBalancer
+  {{- if .Values.satisfactory.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.satisfactory.loadBalancerIP }}
+  {{- end }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,38 @@
+satisfactory:
+  enable: false
+  # Address this Service answers on from the LAN when there's no MetalLB (see
+  # traefik.externalIP for the mechanism). Ports don't collide with Traefik
+  # (80/443), AdGuard (53), Palworld (8211/27015), Valheim (2456-2458), or
+  # Terraria (7777) — Satisfactory's game port also happens to be 7777, but
+  # UDP+TCP on it plus TCP 8888 vs. Terraria's TCP+UDP-only on 7777 means both
+  # can't share one IP; keep them on separate externalIPs if both are ever
+  # enabled at once.
+  externalIP: ""
+  loadBalancerIP: ""  # MetalLB path only (dev); ignored when externalIP is set.
+  # Pin to the node that owns externalIP. Required in prod.
+  nodeSelector: {}
+  label: satisfactory
+  image: wolveix/satisfactory-server:v1.9.10
+  ports:
+    game:
+      name: game
+      port: 7777
+      targetPort: 7777
+    messaging:
+      name: messaging
+      port: 8888
+      targetPort: 8888
+  server:
+    maxPlayers: 4
+    # Passthrough for any other wolveix/satisfactory-server env var, e.g.:
+    #   extraEnv:
+    #     DISABLESEASONALEVENTS: "true"
+    #     STEAMBETA: "true"
+    extraEnv: {}
+  pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 8Gi
+    limits:
+      memory: 12Gi   # upstream: 8-16Gi, more headroom needed late-game/4+ players

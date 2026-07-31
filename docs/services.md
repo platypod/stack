@@ -67,6 +67,7 @@ refers to the model described in [authentication.md](authentication.md).
 | Minecraft | Vanilla + CurseForge modpack instances, any subset at once, fronted by `mc-router` | direct TCP via mc-router (LoadBalancer/externalIP), hostname-routed, no ingress |
 | Valheim | Dedicated Valheim game server | direct UDP (LoadBalancer/externalIP) |
 | Terraria | Dedicated Terraria game server | direct TCP+UDP (LoadBalancer/externalIP) |
+| Satisfactory | Dedicated Satisfactory game server | direct TCP+UDP (LoadBalancer/externalIP) |
 
 ## observability
 | Service | Role | Auth |
