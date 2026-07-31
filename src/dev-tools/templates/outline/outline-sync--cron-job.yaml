@@ -37,9 +37,30 @@ spec:
             - -c
             - |
               set -e
+              # Retry each clone: a brief DNS or GitHub hiccup used to fail the
+              # whole run for a full day. backoffLimit burns its attempts within
+              # seconds of each other, so pod-level retries never outlast even a
+              # short outage, and the schedule is daily with no alert -- the run
+              # just silently doesn't happen. Ten tries with a growing sleep span
+              # ~4 min, which covers the blips seen so far.
+              clone() {
+                n=0
+                until git clone --depth 1 --branch "$1" "$2" "$3"; do
+                  n=$((n + 1))
+                  if [ "$n" -ge 10 ]; then
+                    echo "clone failed after $n attempts: $2" >&2
+                    return 1
+                  fi
+                  # A failed clone can leave a partial directory behind, which
+                  # makes every subsequent attempt fail on "already exists".
+                  rm -rf "$3"
+                  echo "clone attempt $n failed for $2, retrying in $((n * 5))s" >&2
+                  sleep $((n * 5))
+                done
+              }
               {{- range $s.repos }}
               {{- if or (not .private) $s.deployKey }}
-              git clone --depth 1 --branch {{ .branch }} {{ .url }} /work/{{ .name }}
+              clone {{ .branch }} {{ .url }} /work/{{ .name }}
               {{- end }}
               {{- end }}
             {{- if $s.deployKey }}
