@@ -86,9 +86,11 @@ local hostPath and doesn't need it.
 Prod uses public DNS (`platypod.ovh`) and ACME/Let's Encrypt for TLS — no mkcert.
 The ACME email/endpoint are in `values/prd/values.yaml`.
 
-> Prod kubectl/deploys go through the SSH tunnel
-> (`ssh -fN -L 16443:10.0.2.11:6443 mini4`); the Makefile uses the
-> `kubeconfig-tunnel` automatically for `ENV=prd`.
+> Prod's control plane is bare metal on the LAN (`chuwi-cp1`,
+> `https://k8s.platypod.lan:6443`), directly reachable — the Makefile points
+> `ENV=prd` at `../infra/.generated/prod/kubeconfig`, no tunnel needed. Before
+> the 2026-07-30 cutover the control plane was a vfkit guest reachable only via
+> SSH tunnel; see `../infra/docs/baremetal-cp-migration.md`.
 
 ## Dev vs prod
 

@@ -6,11 +6,17 @@ MODULE ?=
 # Command-line override still works: make deploy KUBECONFIG=/other/path
 #
 # Services use env names dev/prd, but infra writes its kubeconfigs under
-# dev/prod — and prod is only reachable through the SSH tunnel, so it needs the
-# `kubeconfig-tunnel` file. Map service env -> infra kubeconfig path explicitly.
+# dev/prod. Map service env -> infra kubeconfig path explicitly.
+#
+# prd's control plane is bare metal on the LAN (chuwi-cp1), directly reachable
+# at https://k8s.platypod.lan:6443 — the generated kubeconfig works as-is.
+# Before the 2026-07-30 cutover the control plane was a vfkit guest reachable
+# only from its VM host, which is why this pointed at an SSH-tunnel copy
+# (`kubeconfig-tunnel`); that tunnel is retired, see
+# ../infra/docs/baremetal-cp-migration.md.
 GENERATED   := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/../infra/.generated
 KUBECONFIG_dev := $(GENERATED)/dev/kubeconfig
-KUBECONFIG_prd := $(GENERATED)/prod/kubeconfig-tunnel
+KUBECONFIG_prd := $(GENERATED)/prod/kubeconfig
 export KUBECONFIG := $(KUBECONFIG_$(ENV))
 
 HELMFILE = helmfile --environment $(ENV)

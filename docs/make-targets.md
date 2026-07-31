@@ -14,9 +14,9 @@ hood). `make help` prints this list live. Default goal is `help`.
 | `CSI_DRIVER_NFS_VERSION` | `4.13.2` | NFS CSI driver chart version for `install-csi` |
 | `IMAGE`, `VERSION` | — | For `build` (custom image name + tag) |
 
-> `ENV` uses `dev`/`prd`, but the infra writes kubeconfigs under `dev`/`prod`, and
-> prod is only reachable via the SSH tunnel — the Makefile maps `prd` to
-> `.../prod/kubeconfig-tunnel` automatically.
+> `ENV` uses `dev`/`prd`, but the infra writes kubeconfigs under `dev`/`prod` —
+> the Makefile maps `prd` to `.../prod/kubeconfig` automatically. Prod's control
+> plane is bare metal on the LAN, directly reachable — no tunnel involved.
 
 ## Dependencies
 
