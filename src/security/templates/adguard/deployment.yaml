@@ -22,6 +22,7 @@ spec:
         # (e.g. updated DNS rewrites) is applied immediately.
         checksum/config: {{ include (print $.Template.BasePath "/adguard/config-map.yaml") . | sha256sum }}
     spec:
+      priorityClassName: platypod-critical
       {{- with .Values.adguard.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

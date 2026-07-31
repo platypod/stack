@@ -19,6 +19,26 @@ spec:
         # silently ignored until the pod happens to restart). See stack CLAUDE.md.
         checksum/config: {{ include (print $.Template.BasePath "/observability/loki/config-map.yaml") . | sha256sum }}
     spec:
+      priorityClassName: platypod-bulk
+      # Prefer the bulk node (memory-rich, CPU-poor) but never require it: that
+      # class of node may not exist yet, and a hard requirement would leave
+      # these Pending instead of falling back. Also steer away from the primary
+      # node, whose spare memory is the gaming reserve.
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: platypod.io/node-class
+                operator: In
+                values: ["bulk"]
+          - weight: 50
+            preference:
+              matchExpressions:
+              - key: platypod.io/node-class
+                operator: NotIn
+                values: ["primary"]
       initContainers:
       - name: init-permissions
         image: busybox:1.37.0

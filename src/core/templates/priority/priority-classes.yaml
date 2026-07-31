@@ -1,0 +1,43 @@
+{{- if .Values.priorityClasses.enable }}
+{{- /*
+  Cluster-scoped scheduling priorities.
+
+  These exist so the gaming reserve on the primary node is *enforced* rather
+  than merely intended. Placement rules (labels, affinity, taints) keep normal
+  workloads off the primary node; priority decides what happens when something
+  gets there anyway and a game server needs the room — the game server evicts
+  it instead of sitting Pending.
+
+  Ordering, highest first:
+    critical  ingress + auth. If these are down nothing is reachable, so they
+              outrank even the game servers they are protecting capacity for.
+    gaming    game servers. Preempts, because the whole point of the reserve is
+              that a session can always start.
+    standard  everything else. globalDefault, so unlabelled workloads land here.
+    bulk      observability and batch. First to be evicted; losing a scrape or
+              a compaction for a few minutes is survivable, and these are the
+              largest consumers after the media apps.
+*/ -}}
+{{- range .Values.priorityClasses.classes }}
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ .name }}
+  labels:
+    chartVersion: {{ $.Chart.Version }}
+    env: {{ $.Values.project.env }}
+# `| int` is mandatory: Helm parses YAML numbers as float64, so interpolating
+# the raw value renders 1000000 as "1e+06" and the API server rejects it —
+# PriorityClass.value is an int32. (No template braces in this comment: Helm
+# evaluates them inside comments too.)
+value: {{ .value | int }}
+{{- if .globalDefault }}
+globalDefault: true
+{{- end }}
+{{- if .preemptionPolicy }}
+preemptionPolicy: {{ .preemptionPolicy }}
+{{- end }}
+description: {{ .description | quote }}
+{{- end }}
+{{- end }}

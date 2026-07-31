@@ -26,6 +26,7 @@ spec:
         # are silently never picked up until something else restarts the pod.
         checksum/config: {{ include (print $.Template.BasePath "/traefik/traefik--config-map.yaml") . | sha256sum }}
     spec:
+      priorityClassName: platypod-critical
       {{- with .Values.traefik.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

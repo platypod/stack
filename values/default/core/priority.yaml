@@ -1,0 +1,33 @@
+# Scheduling priorities. See src/core/templates/priority/priority-classes.yaml
+# for the reasoning; the short version is that placement rules keep workloads
+# off the primary node, and these decide what happens when one gets there anyway
+# and a game server needs the capacity.
+#
+# Values are spaced widely so classes can be inserted later without renumbering.
+# They sit far below system-cluster-critical (2000000000) on purpose — nothing
+# here should ever outrank the control plane.
+priorityClasses:
+  enable: true
+  classes:
+    - name: platypod-critical
+      value: 1000000
+      description: >-
+        Ingress and auth path (Traefik, AdGuard, Authelia, LLDAP). If these are
+        down nothing is reachable, including the thing the reserve exists for.
+    - name: platypod-gaming
+      value: 900000
+      preemptionPolicy: PreemptLowerPriority
+      description: >-
+        Game servers. Preempts so a session can always start, which is the
+        entire purpose of keeping headroom on the primary node.
+    - name: platypod-standard
+      value: 500000
+      globalDefault: true
+      description: >-
+        Default for everything unlabelled. Media apps, files, dev-tools.
+    - name: platypod-bulk
+      value: 100000
+      description: >-
+        Observability and batch. First to be preempted — losing a scrape or a
+        compaction for a few minutes is survivable, and these are the biggest
+        consumers after the media apps.

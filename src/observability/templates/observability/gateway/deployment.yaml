@@ -16,6 +16,26 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/observability/gateway/config-map.yaml") . | sha256sum }}
     spec:
+      priorityClassName: platypod-bulk
+      # Prefer the bulk node (memory-rich, CPU-poor) but never require it: that
+      # class of node may not exist yet, and a hard requirement would leave
+      # these Pending instead of falling back. Also steer away from the primary
+      # node, whose spare memory is the gaming reserve.
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: platypod.io/node-class
+                operator: In
+                values: ["bulk"]
+          - weight: 50
+            preference:
+              matchExpressions:
+              - key: platypod.io/node-class
+                operator: NotIn
+                values: ["primary"]
       serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.serviceAccounts.suffix }}
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ tpl .Values.observability.otelCollector.gateway.label . }}{{ .Values.k8s.names.containers.suffix }}

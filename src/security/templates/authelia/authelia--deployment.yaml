@@ -22,6 +22,21 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/authelia/authelia--config-map.yaml") . | sha256sum }}
     spec:
+      priorityClassName: platypod-critical
+      # Prefer the primary node, where Traefik is pinned by its externalIP
+      # nodeSelector. Traefik calls Authelia on EVERY authenticated request via
+      # forwardAuth, so splitting them puts the hottest path in the stack across
+      # a node boundary — LAN to vmnet — for no benefit. Preferred, not
+      # required: if primary is full these must still schedule somewhere.
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: platypod.io/node-class
+                operator: In
+                values: ["primary"]
       enableServiceLinks: false
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.containers.suffix }}

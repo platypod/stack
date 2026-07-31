@@ -19,6 +19,7 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
+      priorityClassName: platypod-gaming
       initContainers:
       - name: {{ .Values.k8s.names.initContainers.prefix }}palworld-data-dir{{ .Values.k8s.names.initContainers.suffix }}
         image: busybox:1.37.0

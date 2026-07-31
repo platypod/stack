@@ -17,12 +17,18 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/observability/nodes-collectors/config-map.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ .Values.k8s.names.serviceAccounts.prefix }}{{ tpl .Values.observability.otelCollector.collectors.label . }}{{ .Values.k8s.names.serviceAccounts.suffix }}
-      # Observe the control-plane node too — without this the DaemonSet only
-      # lands on workers and the cp's metrics/logs are a blind spot.
+      # Tolerate EVERY taint. A node-level collector must run on every node or
+      # that node silently becomes a metrics/logs blind spot — and a blind spot
+      # is indistinguishable from a healthy node in a dashboard.
+      #
+      # This was previously a single toleration for the control-plane taint,
+      # which was enough while that was the only taint in play. It is not: the
+      # primary node carries platypod.io/reserved to keep the gaming reserve
+      # clear, and any future taint would silently evict this DaemonSet too.
+      # The kube-system DaemonSets (flannel, kube-proxy, csi-nfs-node) all take
+      # the same blanket approach for the same reason.
       tolerations:
-      - key: node-role.kubernetes.io/control-plane
-        operator: Exists
-        effect: NoSchedule
+      - operator: Exists
       securityContext:
         runAsUser: 0
         fsGroup: 0
