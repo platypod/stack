@@ -1,4 +1,5 @@
 {{- if .Values.palworld.enable }}
+{{- $extIP := .Values.palworld.externalIP }}
 apiVersion: v1
 kind: Service
 
@@ -6,7 +7,9 @@ metadata:
   name: {{ .Values.k8s.names.services.prefix }}{{ .Values.palworld.label }}{{ .Values.k8s.names.services.suffix }}
 
 spec:
+  {{- if not $extIP }}
   externalTrafficPolicy: Local
+  {{- end }}
   ports:
   - protocol: UDP
     name: {{ .Values.palworld.ports.game.name }}
@@ -18,8 +21,17 @@ spec:
     targetPort: {{ .Values.palworld.ports.query.targetPort }}
   selector:
     app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.palworld.label }}{{ .Values.k8s.names.pods.suffix }}
+  {{- if $extIP }}
+  # No MetalLB in prod: same externalIPs mechanism as traefik/adguard (see
+  # traefik--service.yaml). kube-proxy DNATs traffic for $extIP on these ports
+  # to the pod, so no LoadBalancer is needed.
+  type: ClusterIP
+  externalIPs:
+    - {{ $extIP }}
+  {{- else }}
   type: LoadBalancer
   {{- if .Values.palworld.loadBalancerIP }}
   loadBalancerIP: {{ .Values.palworld.loadBalancerIP }}
+  {{- end }}
   {{- end }}
 {{- end }}

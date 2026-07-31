@@ -19,7 +19,19 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
+      # Must tolerate the primary-node taint: when pinned there via
+      # externalIP/nodeSelector (prod, no MetalLB) it has nowhere else to run.
+      # Harmless on dev, where there is no taint to match.
+      tolerations:
+      - key: platypod.io/reserved
+        operator: Equal
+        value: primary
+        effect: NoSchedule
       priorityClassName: platypod-gaming
+      {{- with .Values.palworld.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       initContainers:
       - name: {{ .Values.k8s.names.initContainers.prefix }}palworld-data-dir{{ .Values.k8s.names.initContainers.suffix }}
         image: busybox:1.37.0
@@ -54,10 +66,14 @@ spec:
           value: {{ .Values.palworld.server.adminPassword | quote }}
         - name: PLAYERS
           value: {{ .Values.palworld.server.maxPlayers | quote }}
-        - name: MULTITHREADING
-          value: {{ .Values.palworld.server.multithreading | quote }}
+        - name: ENABLE_PERF_THREADING_ARGS
+          value: {{ .Values.palworld.server.perfThreadingArgs | quote }}
         - name: COMMUNITY
           value: {{ .Values.palworld.server.community | quote }}
+        {{- range $key, $value := .Values.palworld.server.extraEnv }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
         ports:
         - name: {{ .Values.palworld.ports.game.name }}
           containerPort: {{ .Values.palworld.ports.game.targetPort }}
