@@ -65,6 +65,7 @@ refers to the model described in [authentication.md](authentication.md).
 | Sphaze | 3D maze wrapped onto the inside of a sphere, browser game | forwardauth (`one_factor`) |
 | Palworld | Dedicated Palworld game server | direct UDP (LoadBalancer/externalIP) |
 | Minecraft | Vanilla + CurseForge modpack instances, any subset at once, fronted by `mc-router` | direct TCP via mc-router (LoadBalancer/externalIP), hostname-routed, no ingress |
+| Valheim | Dedicated Valheim game server | direct UDP (LoadBalancer/externalIP) |
 
 ## observability
 | Service | Role | Auth |

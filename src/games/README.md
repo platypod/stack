@@ -47,6 +47,30 @@ resources" before enabling more game workloads there, since everything in this
 module that needs external exposure ends up sharing that one node (see
 Minecraft below).
 
+## Valheim
+
+Dedicated Valheim server (`lloesche/valheim-server`). Same shape as Palworld:
+plain UDP, no HTTP ingress possible, `valheim.externalIP`/`nodeSelector` (prod)
+or `valheim.loadBalancerIP` (dev) on its own Service. Exposes 3 consecutive UDP
+ports starting at `2456` — game, query, and (only used when `CROSSPLAY=true`)
+the crossplay backend — all three published regardless, since leaving
+crossplay off just makes the third port unused.
+
+**Memory sizing:** upstream docs give minimum 4GB/dual-core, recommended
+8GB/quad-core; idle usage is much lower (~2.8GB). `valheim.resources` defaults
+to `4Gi`/`8Gi` request/limit, matching the recommended tier directly (no
+dev-vs-prod gap needed like Palworld's).
+
+Image is pinned to a `sha-<hash>` tag — upstream doesn't publish semver tags,
+only `latest` and content-addressed shas — re-check
+[Docker Hub](https://hub.docker.com/r/lloesche/valheim-server/tags) for a newer
+sha before bumping.
+
+Server settings (`name`, `worldName`, `password`, `public`) live in
+`valheim.server`; anything else the image exposes (`CROSSPLAY`, `BEPINEX`,
+`VPCFG_*`/`BEPINEXCFG_*` mod passthrough, backup/update cron tuning, …) drops
+into `valheim.server.extraEnv`, same mechanism as Palworld/Minecraft.
+
 ## Minecraft
 
 Zero or more named instances (vanilla, CurseForge modpacks) under

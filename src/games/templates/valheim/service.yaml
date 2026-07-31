@@ -1,0 +1,41 @@
+{{- if .Values.valheim.enable }}
+{{- $extIP := .Values.valheim.externalIP }}
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.valheim.label }}{{ .Values.k8s.names.services.suffix }}
+
+spec:
+  {{- if not $extIP }}
+  externalTrafficPolicy: Local
+  {{- end }}
+  ports:
+  - protocol: UDP
+    name: {{ .Values.valheim.ports.game.name }}
+    port: {{ .Values.valheim.ports.game.port }}
+    targetPort: {{ .Values.valheim.ports.game.targetPort }}
+  - protocol: UDP
+    name: {{ .Values.valheim.ports.query.name }}
+    port: {{ .Values.valheim.ports.query.port }}
+    targetPort: {{ .Values.valheim.ports.query.targetPort }}
+  - protocol: UDP
+    name: {{ .Values.valheim.ports.crossplay.name }}
+    port: {{ .Values.valheim.ports.crossplay.port }}
+    targetPort: {{ .Values.valheim.ports.crossplay.targetPort }}
+  selector:
+    app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.valheim.label }}{{ .Values.k8s.names.pods.suffix }}
+  {{- if $extIP }}
+  # No MetalLB in prod: same externalIPs mechanism as traefik/adguard/palworld
+  # (see traefik--service.yaml). kube-proxy DNATs traffic for $extIP on these
+  # ports to the pod, so no LoadBalancer is needed.
+  type: ClusterIP
+  externalIPs:
+    - {{ $extIP }}
+  {{- else }}
+  type: LoadBalancer
+  {{- if .Values.valheim.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.valheim.loadBalancerIP }}
+  {{- end }}
+  {{- end }}
+{{- end }}
