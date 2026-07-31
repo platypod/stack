@@ -108,6 +108,12 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
   recreation (loses etcd). Add a `make upgrade` target running `talosctl upgrade`
   per node in rolling order (workers first, control planes last).
 
+- **Point other LAN devices (phones, etc.) at AdGuard.** `make setup-prod-dns`
+  covers this laptop; the Bbox router can't set DHCP-assigned DNS, so every
+  other device needs its DNS set by hand in its own network settings — outside
+  what this repo can automate. Until then those devices get none of AdGuard's
+  ad-blocking or the `*.platypod.ovh`/`k8s.platypod.lan` rewrites.
+
 ---
 
 ## Recently done

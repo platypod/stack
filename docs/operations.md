@@ -92,6 +92,14 @@ The ACME email/endpoint are in `values/prd/values.yaml`.
 > the 2026-07-30 cutover the control plane was a vfkit guest reachable only via
 > SSH tunnel; see `../infra/docs/baremetal-cp-migration.md`.
 
+> **DNS.** `make setup-prod-dns` points this laptop's system DNS at prod's
+> AdGuard (`192.168.1.156`), same mechanism as `setup-dev-dns`. AdGuard also
+> serves the `k8s.platypod.lan → 192.168.1.156` rewrite
+> (`adguard.rewrites` in `values/prd/values.yaml`), but keep a manual
+> `/etc/hosts` line for that name too — if AdGuard's pod is ever down, that's
+> the only way kubectl still resolves the API to fix it. See
+> `../infra/docs/decisions.md`.
+
 ## Dev vs prod
 
 | Concern | dev | prod |

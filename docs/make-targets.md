@@ -31,6 +31,7 @@ hood). `make help` prints this list live. Default goal is `help`.
 |--------|--------------|
 | `make setup-dev-tls` | Trust the mkcert CA + create/refresh the wildcard TLS secret in the cluster |
 | `make setup-dev-dns` | Point system DNS at AdGuard (primary) + `1.1.1.1` (fallback); clean up dnsmasq |
+| `make setup-prod-dns` | Same, for prod's AdGuard (`192.168.1.156`) — also serves the `k8s.platypod.lan` rewrite. Keep a manual `/etc/hosts` line for that name too; see `../infra/docs/decisions.md` |
 | `make setup-dev` | Full dev bootstrap: TLS → CRDs → base deploy → DNS |
 
 ## Cluster bootstrap

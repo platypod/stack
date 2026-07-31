@@ -1,18 +1,28 @@
 #!/bin/sh
 # Configure macOS to use Adguard as its system DNS server with 1.1.1.1 as
-# fallback. Adguard handles the *.DOMAIN → Traefik rewrite internally.
+# fallback. Adguard handles the *.DOMAIN → Traefik rewrite internally, and (in
+# prod) the k8s.platypod.lan → control-plane rewrite (adguard.rewrites in
+# values/prd/values.yaml) — see ../infra/docs/decisions.md.
 #
 # When the cluster is suspended, Adguard doesn't respond; macOS falls through
-# to 1.1.1.1 for internet DNS. *.platypod.local simply won't resolve — that's
-# expected when the cluster is down.
+# to 1.1.1.1 for internet DNS. *.DOMAIN (and, in prod, k8s.platypod.lan)
+# simply won't resolve — that's expected when the cluster is down. For prod
+# specifically, that means losing kubectl DNS exactly when you'd want it to
+# fix the cluster: Terraform's extraHostEntries (api_host_entries in
+# cluster-core/locals.tf) covers the Talos NODES, not your laptop. Keep a
+# manual /etc/hosts line for k8s.platypod.lan on any machine you'll run
+# kubectl from as a break-glass fallback — see ../infra/docs/decisions.md.
 #
 # Also cleans up any leftover dnsmasq configuration from the old approach.
 #
 # Usage:
-#   bin/setup-dev-dns.sh
+#   bin/setup-dev-dns.sh                    # ENV=dev (default)
+#   ENV=prd bin/setup-dev-dns.sh
 #   ADGUARD_IP=192.168.122.201 NETWORK_SERVICE="Wi-Fi" bin/setup-dev-dns.sh
 
 set -e
+
+ENV="${ENV:-dev}"
 
 info() { printf '\033[1;33m[info]\033[0m   %s\n' "$*"; }
 ok()   { printf '\033[0;32m[ok]\033[0m     %s\n' "$*"; }
@@ -28,24 +38,35 @@ FALLBACK_DNS="1.1.1.1"
 # Resolve DOMAIN and NAMESPACE from values files
 # ---------------------------------------------------------------------------
 
+DEFAULT_DOMAIN="platypod.local"
+DEFAULT_NAMESPACE="dev-platypod"
+[ "$ENV" = "prd" ] && DEFAULT_DOMAIN="platypod.ovh" && DEFAULT_NAMESPACE="prd-platypod"
+
 if [ -z "$DOMAIN" ] && command -v yq > /dev/null 2>&1; then
-  DOMAIN="$(yq e '.traefik.domain' "$SCRIPT_DIR/values/dev/values.yaml" 2>/dev/null || true)"
+  DOMAIN="$(yq e '.traefik.domain' "$SCRIPT_DIR/values/$ENV/values.yaml" 2>/dev/null || true)"
 fi
-DOMAIN="${DOMAIN:-platypod.local}"
+DOMAIN="${DOMAIN:-$DEFAULT_DOMAIN}"
 
 if [ -z "$NAMESPACE" ] && command -v yq > /dev/null 2>&1; then
-  NAMESPACE="$(yq e '.k8s.namespace' "$SCRIPT_DIR/values/dev/values.yaml" 2>/dev/null || true)"
+  NAMESPACE="$(yq e '.k8s.namespace' "$SCRIPT_DIR/values/$ENV/values.yaml" 2>/dev/null || true)"
 fi
-NAMESPACE="${NAMESPACE:-dev-platypod}"
+NAMESPACE="${NAMESPACE:-$DEFAULT_NAMESPACE}"
 
 # ---------------------------------------------------------------------------
-# Auto-detect Adguard LoadBalancer IP
+# Auto-detect Adguard IP
 # ---------------------------------------------------------------------------
+# dev: MetalLB assigns a LoadBalancer IP. prod has no MetalLB (see
+# ../infra/CLAUDE.md) — Adguard is exposed via Service externalIPs instead, so
+# fall back to that when the LoadBalancer field is empty.
 
 if [ -z "$ADGUARD_IP" ] && command -v kubectl > /dev/null 2>&1 && [ -n "$KUBECONFIG" ]; then
-  info "Auto-detecting Adguard LoadBalancer IP from cluster..."
+  info "Auto-detecting Adguard IP from cluster..."
   ADGUARD_IP="$(kubectl get svc adguard -n "$NAMESPACE" \
     -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
+  if [ -z "$ADGUARD_IP" ]; then
+    ADGUARD_IP="$(kubectl get svc adguard -n "$NAMESPACE" \
+      -o jsonpath='{.spec.externalIPs[0]}' 2>/dev/null || true)"
+  fi
   if [ -n "$ADGUARD_IP" ]; then
     info "Detected Adguard IP: ${ADGUARD_IP}"
   else

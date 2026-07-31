@@ -67,13 +67,20 @@ check-deps:    ## Check which tools are installed without installing anything
 # Local dev setup (macOS)
 # ---------------------------------------------------------------------------
 
-.PHONY: setup-dev-tls setup-dev-dns setup-dev
+.PHONY: setup-dev-tls setup-dev-dns setup-prod-dns setup-dev
 
 setup-dev-tls:  ## Trust mkcert CA + create/refresh wildcard TLS secret in the cluster
 	@sh bin/setup-dev-tls.sh
 
 setup-dev-dns:  ## Set system DNS to Adguard (primary) + 1.1.1.1 (fallback); clean up dnsmasq
 	@sh bin/setup-dev-dns.sh
+
+# Same script, prod's Adguard/domain/namespace/kubeconfig. Keep a manual
+# /etc/hosts entry for k8s.platypod.lan too (see bin/setup-dev-dns.sh) — if
+# Adguard itself is ever down, that's the only way kubectl still resolves the
+# API to fix it.
+setup-prod-dns:  ## Set system DNS to Adguard (prod) + 1.1.1.1 (fallback)
+	@KUBECONFIG=$(KUBECONFIG_prd) ENV=prd sh bin/setup-dev-dns.sh
 
 setup-dev: setup-dev-tls install-crds  ## Full dev bootstrap: TLS, CRDs, base deploy, DNS
 	@$(MAKE) --no-print-directory deploy-base
