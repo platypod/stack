@@ -71,6 +71,28 @@ Server settings (`name`, `worldName`, `password`, `public`) live in
 `VPCFG_*`/`BEPINEXCFG_*` mod passthrough, backup/update cron tuning, …) drops
 into `valheim.server.extraEnv`, same mechanism as Palworld/Minecraft.
 
+## Terraria
+
+Dedicated Terraria server (`brammys/terraria`). Same externalIP/nodeSelector
+(prod) / loadBalancerIP (dev) shape as Palworld/Valheim, but exposes **both**
+TCP and UDP on port `7777` — the game simulation runs over TCP, but UDP is
+commonly recommended alongside it for auxiliary traffic, so both are opened.
+
+Much lighter than Palworld/Valheim/Minecraft: upstream states ~1-1.5GB RAM
+covers a small/medium world with up to 8 players, so `terraria.resources`
+defaults to `512Mi`/`1Gi` request/limit — no dev-vs-prod gap needed.
+
+World files (`/worlds`) and server config (`/configs`) persist on the shared
+`apps` PVC under `terraria/`. `terraria.server.autocreate` (1/2/3 =
+small/medium/large) only takes effect the first time a world with that name is
+generated — it's ignored once the `.wld` file already exists, so resizing
+later means picking a new `worldName`.
+
+Anything else the image exposes — `TERRARIA_SEED`, `TERRARIA_NOUPNP`,
+`TERRARIA_BANLIST`, `TERRARIA_EXTRA_ARGS` (raw CLI passthrough), … — drops
+into `terraria.server.extraEnv`, same mechanism as the other game servers in
+this module.
+
 ## Minecraft
 
 Zero or more named instances (vanilla, CurseForge modpacks) under

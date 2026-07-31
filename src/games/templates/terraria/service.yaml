@@ -1,0 +1,37 @@
+{{- if .Values.terraria.enable }}
+{{- $extIP := .Values.terraria.externalIP }}
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.terraria.label }}{{ .Values.k8s.names.services.suffix }}
+
+spec:
+  {{- if not $extIP }}
+  externalTrafficPolicy: Local
+  {{- end }}
+  ports:
+  - protocol: UDP
+    name: game
+    port: {{ .Values.terraria.port }}
+    targetPort: {{ .Values.terraria.port }}
+  - protocol: TCP
+    name: game-tcp
+    port: {{ .Values.terraria.port }}
+    targetPort: {{ .Values.terraria.port }}
+  selector:
+    app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.terraria.label }}{{ .Values.k8s.names.pods.suffix }}
+  {{- if $extIP }}
+  # No MetalLB in prod: same externalIPs mechanism as traefik/adguard/palworld
+  # (see traefik--service.yaml). kube-proxy DNATs traffic for $extIP on these
+  # ports to the pod, so no LoadBalancer is needed.
+  type: ClusterIP
+  externalIPs:
+    - {{ $extIP }}
+  {{- else }}
+  type: LoadBalancer
+  {{- if .Values.terraria.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.terraria.loadBalancerIP }}
+  {{- end }}
+  {{- end }}
+{{- end }}
