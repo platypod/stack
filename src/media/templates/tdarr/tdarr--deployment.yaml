@@ -2,6 +2,10 @@
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.tdarr.label .Values.k8s.names.pods.suffix }}
 {{- $appVolume := "app-volume" }}
 {{- $mediaVolume := "media-volume" }}
+{{- $nodeResources := deepCopy .Values.tdarr.resources.node }}
+{{- if .Values.tdarr.node.gpuEnable }}
+{{- $_ := set $nodeResources.limits (printf "%s/%s" .Values.gpuDevicePlugin.resourceDomain .Values.gpuDevicePlugin.resourceLabel) 1 }}
+{{- end }}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -98,7 +102,7 @@ spec:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.tdarr.label }}-node{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.tdarr.image.node }}
         resources:
-          {{- toYaml .Values.tdarr.resources.node | nindent 10 }}
+          {{- toYaml $nodeResources | nindent 10 }}
         env:
         - name: PUID
           value: "{{ .Values.media.system.userId }}"
@@ -116,6 +120,14 @@ spec:
           value: "{{ .Values.tdarr.ports.server.targetPort }}"
         - name: inContainer
           value: "true"
+        {{- if .Values.tdarr.node.gpuEnable }}
+        # Without this the FFmpeg Command Builder's hardwareType=vaapi setting
+        # is silently ignored: hardware encode paths only activate when the
+        # assigned worker is of type "gpu" (see getEncoder() in Tdarr_Plugins'
+        # hardwareUtils.ts, gated on args.workerType.includes('gpu')).
+        - name: transcodegpuWorkers
+          value: "{{ .Values.tdarr.node.gpuWorkers }}"
+        {{- end }}
         volumeMounts:
         - mountPath: /app/configs
           name: {{ $appVolume }}

@@ -1,0 +1,62 @@
+{{- if .Values.gpuDevicePlugin.enable }}
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.gpuDevicePlugin.label .Values.k8s.names.pods.suffix }}
+apiVersion: apps/v1
+kind: DaemonSet
+
+metadata:
+  name: {{ $pod }}
+  namespace: {{ tpl .Values.gpuDevicePlugin.namespace . }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      # Only chuwi-cp1 (the bare-metal node) has an iGPU; the vfkit VM workers
+      # (mini4-w1/mini1-w2) have no /dev/dri at all, so this must not run there.
+      nodeSelector:
+        {{- toYaml .Values.gpuDevicePlugin.nodeSelector | nindent 8 }}
+      tolerations:
+      - key: platypod.io/reserved
+        operator: Equal
+        value: primary
+        effect: NoSchedule
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.gpuDevicePlugin.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.gpuDevicePlugin.image }}
+        securityContext:
+          privileged: true
+        args:
+        - --device
+        - |
+          name: {{ .Values.gpuDevicePlugin.resourceLabel }}
+          groups:
+            - count: {{ .Values.gpuDevicePlugin.device.count }}
+              paths:
+                - path: {{ .Values.gpuDevicePlugin.device.path }}
+        resources:
+          {{- toYaml .Values.gpuDevicePlugin.resources | nindent 10 }}
+        ports:
+        - name: http
+          containerPort: 8080
+        volumeMounts:
+        - name: device-plugin
+          mountPath: /var/lib/kubelet/device-plugins
+        - name: dev
+          mountPath: /dev
+      volumes:
+      - name: device-plugin
+        hostPath:
+          path: /var/lib/kubelet/device-plugins
+      - name: dev
+        hostPath:
+          path: /dev
+  updateStrategy:
+    type: RollingUpdate
+{{- end }}

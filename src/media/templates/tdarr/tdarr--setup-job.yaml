@@ -3,10 +3,15 @@
   Tdarr setup Job.
 
   Idempotently upserts:
-    1) one flow (Input -> classic transcode plugin -> Replace Original File)
+    1) one flow: Input File -> tdarr.setup.flow.plugins (an arbitrary linear
+       chain of flow plugins, declared in values) -> next plugin's output 1
     2) one library pointing to a subfolder and bound to that flow
 
   This makes Tdarr configuration reproducible from values instead of UI clicks.
+  The plugin chain is generic on purpose: it's driven entirely by
+  tdarr.setup.flow.plugins (list of {id, pluginName, version, inputs}), so
+  swapping encode targets (classic plugin vs. FFmpeg Command Builder vs.
+  hardware transcode) is a values change, not a script rewrite.
 */ -}}
 {{- $svc := print .Values.k8s.names.services.prefix .Values.tdarr.label .Values.k8s.names.services.suffix }}
 apiVersion: batch/v1
@@ -34,10 +39,14 @@ spec:
           value: "{{ .Values.tdarr.setup.flow.id }}"
         - name: FLOW_NAME
           value: "{{ .Values.tdarr.setup.flow.name }}"
-        - name: FLOW_PLUGIN_SOURCE_ID
-          value: "{{ .Values.tdarr.setup.flow.pluginSourceId }}"
-        - name: FLOW_PLUGIN_INPUTS_JSON
-          value: '{{ .Values.tdarr.setup.flow.pluginInputs | toJson }}'
+        - name: FLOW_PLUGINS_JSON
+          # toJson serializes plugin input strings as-is, including any literal
+          # template expressions inside them (e.g. outputDirectory below
+          # cross-referencing .Values.media.system.data.path) — toJson alone
+          # does NOT render those. Piping through tpl afterward does: it scans
+          # for template delimiters wherever they are, JSON syntax or not, and
+          # substitutes them against the current context.
+          value: {{ tpl (.Values.tdarr.setup.flow.plugins | toJson) . | quote }}
         - name: LIBRARY_ID
           value: "{{ .Values.tdarr.setup.library.id }}"
         - name: LIBRARY_NAME
@@ -48,6 +57,8 @@ spec:
           value: "{{ tpl .Values.tdarr.setup.library.cache . }}"
         - name: LIBRARY_OUTPUT
           value: "{{ .Values.tdarr.setup.library.output }}"
+        - name: LIBRARY_CONTAINER_FILTER
+          value: "{{ .Values.tdarr.setup.library.containerFilter }}"
         - name: LIBRARY_CONTAINER
           value: "{{ .Values.tdarr.setup.library.container }}"
         - name: LIBRARY_FOLDER_WATCHING
@@ -148,46 +159,53 @@ spec:
               raise SystemExit("Tdarr never became ready")
 
           flow_id = os.environ["FLOW_ID"]
-          flow_plugin_inputs = json.loads(os.environ["FLOW_PLUGIN_INPUTS_JSON"])
+          plugin_specs = json.loads(os.environ["FLOW_PLUGINS_JSON"])
+
+          # Input File always leads the chain; each subsequent node comes from
+          # values, in order, wired output-1 -> next node's input.
+          chain = [{"id": "input", "pluginName": "inputFile", "version": "1.0.0", "name": "Input File"}]
+          for spec in plugin_specs:
+              chain.append({
+                  "id": spec["id"],
+                  "pluginName": spec["pluginName"],
+                  "version": spec.get("version", "1.0.0"),
+                  "name": spec.get("name", spec["pluginName"]),
+                  "inputs": spec.get("inputs", {}),
+              })
+
+          flow_plugins = []
+          flow_edges = []
+          y = 50
+          prev_id = None
+          for node in chain:
+              entry = {
+                  "name": node["name"],
+                  "sourceRepo": "Community",
+                  "pluginName": node["pluginName"],
+                  "version": node["version"],
+                  "id": node["id"],
+                  "position": {"x": 500, "y": y},
+              }
+              if node.get("inputs"):
+                  entry["inputsDB"] = node["inputs"]
+              flow_plugins.append(entry)
+              if prev_id is not None:
+                  flow_edges.append({
+                      "source": prev_id,
+                      "sourceHandle": "1",
+                      "target": node["id"],
+                      "targetHandle": None,
+                      "id": f"e-{prev_id}-{node['id']}",
+                  })
+              prev_id = node["id"]
+              y += 130
+
           flow_doc = {
               "_id": flow_id,
               "name": os.environ["FLOW_NAME"],
               "description": "Managed by Helm tdarr-setup Job",
-              "flowPlugins": [
-                  {
-                      "name": "Input File",
-                      "sourceRepo": "Community",
-                      "pluginName": "inputFile",
-                      "version": "1.0.0",
-                      "id": "input",
-                      "position": {"x": 500, "y": 50},
-                  },
-                  {
-                      "name": "Normalize Transcode",
-                      "sourceRepo": "Community",
-                      "pluginName": "runClassicTranscodePlugin",
-                      "version": "2.0.0",
-                      "id": "transcode",
-                      "inputsDB": {
-                          "pluginSourceId": os.environ["FLOW_PLUGIN_SOURCE_ID"],
-                          **flow_plugin_inputs,
-                      },
-                      "position": {"x": 500, "y": 180},
-                  },
-                  {
-                      "name": "Replace Original File",
-                      "sourceRepo": "Community",
-                      "pluginName": "replaceOriginalFile",
-                      "version": "1.0.0",
-                      "id": "replace",
-                      "position": {"x": 500, "y": 310},
-                  },
-              ],
-              "flowEdges": [
-                  {"source": "input", "sourceHandle": "1", "target": "transcode", "targetHandle": None, "id": "e-input-transcode"},
-                  {"source": "transcode", "sourceHandle": "1", "target": "replace", "targetHandle": None, "id": "e-transcode-replace-1"},
-                  {"source": "transcode", "sourceHandle": "2", "target": "replace", "targetHandle": None, "id": "e-transcode-replace-2"},
-              ],
+              "flowPlugins": flow_plugins,
+              "flowEdges": flow_edges,
           }
           upsert_flow(flow_id, flow_doc, update_existing=as_bool(os.environ["UPDATE_EXISTING_FLOW"]))
 
@@ -211,7 +229,7 @@ spec:
               "schedule": [],
               "priority": 0,
               "foldersToIgnore": "",
-              "containerFilter": "mkv,mp4,avi,ts,mov,wmv,flv,m4v,webm,mpg,mpeg,m2ts",
+              "containerFilter": os.environ["LIBRARY_CONTAINER_FILTER"],
               "folderToFolderConversion": False,
               "copyIfConditionsMet": False,
               "handbrake": False,

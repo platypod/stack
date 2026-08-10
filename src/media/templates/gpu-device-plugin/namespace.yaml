@@ -1,0 +1,20 @@
+{{- if .Values.gpuDevicePlugin.enable }}
+{{- /*
+  Dedicated privileged namespace for the generic-device-plugin DaemonSet.
+
+  It needs `privileged: true` plus hostPath mounts on /dev and
+  /var/lib/kubelet/device-plugins to expose chuwi-cp1's Radeon 780M VAAPI
+  render node (/dev/dri/renderD128) as a schedulable resource. Same rationale
+  as observability/nodes-collectors: relax only this namespace, so Tdarr
+  itself (which just requests the resulting resource) stays inside
+  prd-platypod's baseline PodSecurity policy.
+*/ -}}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ tpl .Values.gpuDevicePlugin.namespace . }}
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: privileged
+    pod-security.kubernetes.io/audit: privileged
+{{- end }}

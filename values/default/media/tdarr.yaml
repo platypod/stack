@@ -1,5 +1,5 @@
 tdarr:
-  enable: false
+  enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.tdarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   image:
     server: ghcr.io/haveagitgat/tdarr:2.85.01
@@ -7,6 +7,16 @@ tdarr:
   label: tdarr
   node:
     name: tdarr-node-k8s
+    # Requests the gpu-device-plugin resource (chuwi-cp1's Radeon 780M VAAPI
+    # render node) and tells the Tdarr node to run N concurrent GPU workers so
+    # the hardwareType=vaapi flow step actually engages hardware instead of
+    # silently falling back to CPU. See tdarr--deployment.yaml. The k8s
+    # resource request stays at 1 unit regardless of this count — VAAPI on
+    # this iGPU tolerates multiple concurrent encode sessions against the
+    # same /dev/dri/renderD128 fine; this is a Tdarr-side worker-pool size,
+    # not a device-exclusivity limit.
+    gpuEnable: true
+    gpuWorkers: 2
   setup:
     # Seeds one flow + one library through Tdarr's REST API (idempotent).
     # Use this to codify "watch this folder and normalize to this format".
@@ -14,23 +24,82 @@ tdarr:
     scanAfterSetup: true
     updateExistingFlow: true
     flow:
-      id: replays-normalize
-      name: Replays Normalize
-      # This is the output-format selector in practice: pick a plugin and its inputs.
-      # Example below is CPU HEVC. Swap for another plugin to target another format.
-      pluginSourceId: Community:Tdarr_Plugin_bsh1_Boosh_FFMPEG_CPU_HEVC
-      pluginInputs:
-        container: mkv
-        encoder: libx265
-        enable_10bit: "false"
-        reconvert_hevc: "false"
+      id: replays-normalize-h264-vaapi-test
+      name: Replays Normalize (H264 VAAPI test)
+      # FFmpeg Command Builder chain (not a classic plugin): hardware-encodes to
+      # H264/MP4/AAC via the chuwi-cp1 Radeon 780M (VAAPI), the widest-compatibility
+      # target. The render device (/dev/dri/renderD128) is mounted into the pod
+      # via the gpu-device-plugin resource request in the Deployment.
+      #
+      # NOT using ffmpegCommandSetVideoEncoder's hardwareType=vaapi here: verified
+      # live (2026-08-02) that Tdarr_Plugins' own encoder capability table lists
+      # hevc_vaapi/av1_vaapi but never registers h264_vaapi at all — it throws
+      # "Could not find encoder h264 for hardware vaapi" unconditionally, even
+      # though ffmpeg itself supports h264_vaapi fine (confirmed manually against
+      # this exact device). Upstream gap, not a config error. Driving VAAPI
+      # directly via Custom Arguments sidesteps that table entirely.
+      #
+      # Deliberately NOT passing -hwaccel_output_format vaapi on the input side:
+      # that forces hardware *decode* straight to a GPU surface, which the
+      # `format=nv12,hwupload` filter then can't accept (hwupload expects a
+      # software frame to push onto the GPU, not one already there) — verified
+      # live, fails with "Impossible to convert between the formats supported by
+      # the filter 'graph -1 input from stream 0:0' and the filter
+      # 'auto_scale_0'". Software-decode + hardware-encode-only (this config)
+      # is the well-known-correct VAAPI recipe and was verified working against
+      # a real source file (produced a valid h264_vaapi/aac/mp4 output).
+      plugins:
+        - id: start
+          pluginName: ffmpegCommandStart
+        - id: hwaccel
+          pluginName: ffmpegCommandCustomArguments
+          inputs:
+            inputArguments: "-hwaccel vaapi -hwaccel_device /dev/dri/renderD128"
+            # +faststart moves the moov atom to the front of the file. Without
+            # it (ffmpeg's default), moov lands at the very end — verified
+            # live (2026-08-03) on a finished output: player has to seek to
+            # the tail of an 800MB+ file before it can start, and over an NFS
+            # mount that shows up as exactly the "smoother codec, but pauses
+            # to load mid-playback" symptom reported.
+            outputArguments: "-vf format=nv12,hwupload -c:v h264_vaapi -qp 23 -c:a aac -movflags +faststart"
+        - id: container
+          pluginName: ffmpegCommandSetContainer
+          inputs:
+            container: mp4
+            forceConform: "true"
+        - id: execute
+          pluginName: ffmpegCommandExecute
+        # Verified live (2026-08-03): the "Failed to move file" seen earlier
+        # was plain EACCES — the "-h264" duplicate folder was still owned
+        # pittinic:staff from being created on the host, not writable by
+        # Tdarr's runtime PUID/PGID (media.system.userId/groupId). Not a race,
+        # not an upstream bug. Fixed by chowning the duplicate folder to
+        # Tdarr's runtime user; replaceOriginalFile (the standard, built-in
+        # terminal step) works fine once the directory is actually writable.
+        # Safe here specifically because the library folder (below) points
+        # only at the duplicated "-h264" copy, never the real source.
+        - id: replace
+          pluginName: replaceOriginalFile
     library:
-      id: replays-mrderiv
-      name: Replays - MrDeriv
-      folder: "{{ .Values.media.system.data.path }}/replays/MrDeriv"
+      id: replays-mrderiv-kcd2-h264-test
+      name: Replays - MrDeriv - KCD2 (H264 test copy)
+      # Points at the duplicated folder only, never the source — the flow ends
+      # in replaceOriginalFile, which is safe here precisely because this
+      # folder is a disposable copy, not "Kingdom Come Deliverance 2 - Le RPG
+      # de l'Été" itself.
+      folder: "{{ .Values.media.system.data.path }}/replays/MrDeriv/Kingdom Come Deliverance 2 - Le RPG de l'Été-h264"
       cache: "{{ .Values.media.system.data.path }}/ongoing/tdarr"
       output: "."
-      container: ".mkv"
+      container: ".mp4"
+      # Restricted to webm (the only real source format here) rather than the
+      # usual broad default list. Verified live (2026-08-03): with mp4 also in
+      # the filter, replaceOriginalFile's own output lands in this same
+      # watched folder, folder-watching rediscovers it as "new" on the next
+      # rescan, and the flow reprocesses its own already-converted file — a
+      # wasteful second pass that also corrupted the filename down to just
+      # "<N>.mp4" along the way. Excluding mp4 from the scan entirely closes
+      # off that whole class of reprocessing loop.
+      containerFilter: "webm"
       folderWatching: true
       useFsEvents: false
   ports:

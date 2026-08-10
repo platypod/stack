@@ -1,0 +1,39 @@
+gpuDevicePlugin:
+  # squat/generic-device-plugin: exposes an arbitrary host device path as a
+  # schedulable Kubernetes resource. Chosen over AMD's own ROCm k8s-device-plugin
+  # because ROCm targets Instinct-class compute cards and doesn't recognize
+  # consumer iGPUs like the Radeon 780M — this plugin doesn't care, it just
+  # bind-mounts whatever device file you point it at, which is all a VAAPI
+  # transcode workload needs.
+  enable: true
+  label: gpu-device-plugin
+  # Own privileged namespace, distinct from observability's — see namespace.yaml.
+  namespace: "{{ .Values.k8s.namespace }}--privileged-gpu"
+  image: squat/generic-device-plugin:2cc50b0@sha256:dc192e164c69b03f156765793a1be62ca437709ae477b27ca7d8f3dcf5021576
+  # Resulting schedulable resource name is "<resourceDomain>/<resourceLabel>".
+  # devic.es is the plugin's own default domain (not something we chose).
+  resourceDomain: devic.es
+  resourceLabel: gpu-render
+  device:
+    # renderD128 is the Radeon 780M's VAAPI render node on chuwi-cp1 (confirmed
+    # via `talosctl ls /dev/dri` per infra/docs/baremetal-cp-migration.md).
+    path: /dev/dri/renderD128
+    # Advertise 2 schedulable claims of this SAME device file, not because a
+    # single Tdarr pod ever holds more than one (its multiple concurrent GPU
+    # workers all share one mounted device fine — VAAPI tolerates concurrent
+    # sessions) — this is purely so a rolling update can schedule the new pod
+    # while the old one still holds its claim. With count=1, a replicas=1
+    # Deployment update deadlocks: RollingUpdate needs the new pod Ready
+    # before killing the old one, but the new pod can't schedule at all
+    # ("Insufficient devic.es/gpu-render") while the old one still holds the
+    # only unit. Verified live (2026-08-03).
+    count: 2
+  nodeSelector:
+    node.platypod/platform: baremetal
+  resources:
+    requests:
+      cpu: 50m
+      memory: 10Mi
+    limits:
+      cpu: 50m
+      memory: 20Mi
