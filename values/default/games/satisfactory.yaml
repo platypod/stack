@@ -29,7 +29,7 @@ satisfactory:
     #     DISABLESEASONALEVENTS: "true"
     #     STEAMBETA: "true"
     extraEnv: {}
-  pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  pvc: "{{ .Values.storage.defaultVolumes.games }}"
   resources:
     requests:
       cpu: 1000m

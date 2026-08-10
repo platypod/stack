@@ -24,7 +24,7 @@ terraria:
     #     TERRARIA_SEED: "for the worthy"
     #     TERRARIA_NOUPNP: "1"
     extraEnv: {}
-  pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  pvc: "{{ .Values.storage.defaultVolumes.games }}"
   resources:
     requests:
       cpu: 250m

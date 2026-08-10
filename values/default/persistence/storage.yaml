@@ -6,6 +6,11 @@ storage:
     # dev, where everything is already local). On prod it is overridden to the
     # dedicated local `config` volume below (NFS can't host SQLite WAL).
     config: apps
+    # PVC name for dedicated game servers. Defaults to the apps volume (fine on
+    # dev). On prod it is overridden to the dedicated local `games` volume
+    # below — game images re-validate their whole install on every restart,
+    # which is too slow over NFS. See storage.localGames.
+    games: apps
 
   # Dedicated LOCAL (non-NFS) volume for SQLite app config dirs. Coexists with
   # storage.nfs (unlike storage.localStorage). Enabled on prod only.
@@ -30,6 +35,24 @@ storage:
       schedule: "0 3 * * *"
       retentionDays: 14
       image: busybox:1.37.0
+
+  # Dedicated LOCAL (non-NFS) volume for dedicated game servers. Coexists with
+  # storage.nfs, same shape as storage.localConfig. Enabled on prod only.
+  # No backup block yet — deferred, see stack/docs/TODO.md.
+  localGames:
+    enable: false
+    rootPath: /var/local/platypod/volumes/
+    capacityStorage: 100Gi
+    name: games
+    labels:
+      volumeSelector: games
+    nodeAffinity:
+      required:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: platypod.io/local-storage
+            operator: In
+            values: ["true"]
 
   localStorage:
     enable: true

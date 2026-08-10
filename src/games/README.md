@@ -47,6 +47,18 @@ resources" before enabling more game workloads there, since everything in this
 module that needs external exposure ends up sharing that one node (see
 Minecraft below).
 
+**Storage: node-local, not NFS.** Game servers use `storage.defaultVolumes.games`
+(prod: a dedicated local hostPath volume, `storage.localGames`; dev: falls back
+to the shared `apps` volume). This isn't just a preference — these images
+re-validate/re-chown their entire install on every container start regardless
+of restart cause, and doing that over NFS is catastrophically slow (2026-08-02:
+a Palworld restart took ~4h instead of its normal ~15min, traced to NFS
+read/write latency on the Synology). Since every game server is already pinned
+to one node via `nodeSelector`, NFS's cross-node portability bought nothing.
+`UPDATE_ON_BOOT: "false"` (in `palworld.server.extraEnv`) additionally skips
+SteamCMD's own validate pass on ordinary restarts — `AUTO_UPDATE_ENABLED`'s
+hourly cron still catches real game updates without blocking startup on it.
+
 ## Valheim
 
 Dedicated Valheim server (`lloesche/valheim-server`). Same shape as Palworld:

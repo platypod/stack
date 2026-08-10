@@ -1,0 +1,19 @@
+{{- /*
+  Shared StorageClass for every non-NFS local hostPath volume (localConfig,
+  localGames, …). Extracted from local-config/config-volume.yaml so a second
+  local volume enabled alongside it doesn't render a duplicate object.
+
+  storage.localStorage (dev) declares this same class name itself, guarded by
+  its own enable flag — the two are mutually exclusive per environment today
+  (dev: localStorage on, localConfig/localGames off; prod: the reverse), so
+  excluding localStorage here avoids a collision if that ever changes.
+*/ -}}
+{{- if and (not .Values.storage.localStorage.enable) (or .Values.storage.localConfig.enable .Values.storage.localGames.enable) }}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-storage
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+{{- end }}

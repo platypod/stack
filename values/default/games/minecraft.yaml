@@ -136,4 +136,4 @@ minecraft:
         limits:
           memory: 7Gi        # heap + ~1Gi headroom
 
-  pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  pvc: "{{ .Values.storage.defaultVolumes.games }}"

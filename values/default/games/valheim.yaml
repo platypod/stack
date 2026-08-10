@@ -35,7 +35,7 @@ valheim:
     #     CROSSPLAY: "true"
     #     BEPINEX: "true"
     extraEnv: {}
-  pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  pvc: "{{ .Values.storage.defaultVolumes.games }}"
   resources:
     requests:
       cpu: 500m

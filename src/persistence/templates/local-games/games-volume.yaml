@@ -1,22 +1,22 @@
 {{- /*
-  Dedicated LOCAL (non-NFS) volume for SQLite app config dirs.
+  Dedicated LOCAL (non-NFS) volume for dedicated game servers (Palworld,
+  Valheim, Satisfactory, Terraria, Minecraft, …).
 
-  SQLite WAL mode is unsupported over NFS (the -shm shared-memory file can't be
-  mmap'd reliably), which causes lock contention, "database is locked" errors and
-  crashes for the DB-backed apps (Kavita, *arrs, Vaultwarden, Uptime-Kuma, …).
-  This volume keeps those config dirs on local node disk instead, pinned to the
-  local-storage node via the PV's nodeAffinity.
+  These servers are already pinned to a single node via nodeSelector, so NFS's
+  cross-node portability buys nothing — and every game image re-validates its
+  full install (checksums, ownership fixes) on each container start, which is
+  catastrophically slow over NFS (2026-08-02: a Palworld restart took ~4h
+  instead of its normal ~15min, traced to NFS read/write latency). Node-local
+  storage removes that bottleneck entirely.
 
-  Unlike storage.localStorage, this is designed to COEXIST with storage.nfs
-  (NFS still serves the large `apps`/`media` volumes) — so it has its own flag
-  and is NOT subject to the localStorage/nfs either-or guard.
+  Same shape as local-config/config-volume.yaml (hostPath+DirectoryOrCreate,
+  pinned via nodeAffinity, COEXISTS with storage.nfs). See
+  local-storage-class.yaml for the shared StorageClass both reference.
 
-  The shared `local-storage` StorageClass lives in local-storage-class.yaml,
-  not here — this and local-games/games-volume.yaml both reference it by name,
-  and a class can only be declared once per release.
+  No backup CronJob (unlike localConfig) — deferred, see stack/docs/TODO.md.
 */ -}}
-{{- if .Values.storage.localConfig.enable }}
-{{- $c := .Values.storage.localConfig }}
+{{- if .Values.storage.localGames.enable }}
+{{- $c := .Values.storage.localGames }}
 apiVersion: v1
 kind: PersistentVolume
 
