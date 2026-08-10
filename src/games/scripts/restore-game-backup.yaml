@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: restore-GAME-backup
+  namespace: prd-platypod
+spec:
+  # NOT part of the Helm release — this is a manual, deliberate-use runbook
+  # manifest. A restore should never run unattended or on a schedule (unlike
+  # the backup CronJob), so it isn't wired into any values/enable flag.
+  #
+  # Usage (see stack/src/games/README.md "Restoring a game backup"):
+  #   1. Scale the game's deployment to 0 first — restoring into a save dir
+  #      the live server is still writing to will race and can corrupt it
+  #      worse than what you're trying to fix.
+  #        kubectl -n prd-platypod scale deployment palworld --replicas=0
+  #   2. Pick a snapshot: kubectl -n prd-platypod exec <any pod mounting the
+  #      apps PVC> -- ls /backup-mount-path/_games-backups/palworld/
+  #      (dated dirs, or `latest`).
+  #   3. Edit GAME, SAVE_PATH and SNAPSHOT below, then:
+  #        sed 's/GAME/palworld/g; s/RESTORE_SAVE_PATH/Pal\/Saved\/SaveGames/; s/RESTORE_SNAPSHOT/2026-08-03-080809/' \
+  #          restore-game-backup.yaml | kubectl apply -f -
+  #   4. Check logs, confirm PRE_RESTORE_BACKUP path printed (this pod always
+  #      renames the live dir aside before restoring — restoring is itself
+  #      reversible), then scale the deployment back up.
+  restartPolicy: Never
+  nodeSelector:
+    node.platypod/platform: baremetal
+  tolerations:
+  - key: platypod.io/reserved
+    operator: Equal
+    value: primary
+    effect: NoSchedule
+  containers:
+  - name: restore
+    image: busybox:1.37.0
+    command:
+    - sh
+    - -c
+    - |
+      set -e
+      LIVE="/games/GAME/RESTORE_SAVE_PATH"
+      SNAPSHOT="/backup/_games-backups/GAME/RESTORE_SNAPSHOT"
+
+      test -d "$SNAPSHOT" || { echo "no such snapshot: $SNAPSHOT"; exit 1; }
+
+      # Never overwrite the live dir without first moving it aside — a bad
+      # restore should be as recoverable as a bad save.
+      if [ -d "$LIVE" ]; then
+        ASIDE="${LIVE}.pre-restore-$(date +%Y%m%d-%H%M%S)"
+        mv "$LIVE" "$ASIDE"
+        echo "PRE_RESTORE_BACKUP: $ASIDE"
+      fi
+
+      mkdir -p "$LIVE"
+      cp -a "$SNAPSHOT/." "$LIVE/"
+      echo "restored $SNAPSHOT -> $LIVE"
+      du -sh "$LIVE"
+    volumeMounts:
+    - name: games
+      mountPath: /games
+    - name: backup
+      mountPath: /backup
+      readOnly: true
+  volumes:
+  - name: games
+    persistentVolumeClaim:
+      claimName: games
+  - name: backup
+    persistentVolumeClaim:
+      claimName: apps

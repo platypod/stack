@@ -1,0 +1,101 @@
+{{- /*
+  Nightly, hardlink-based ("rsnapshot"-style) backup of each enabled game's
+  save-data path to the NFS apps share. See games.backupTargets in
+  values/default/games/backups.yaml for why this only covers save data, not
+  the whole install.
+
+  Each run creates a new dated directory. If a previous snapshot exists,
+  rsync --link-dest hardlinks any file whose size+mtime match instead of
+  copying it — only new/changed bytes consume new disk space, but every
+  dated directory is still a complete, independently-restorable tree (no
+  diffing needed to restore a given day).
+
+  Requires the local-storage node's `games` PVC to be enabled (this backs up
+  FROM node-local disk, not from NFS).
+*/ -}}
+{{- if .Values.storage.localGames.enable }}
+{{- range $game := .Values.games.backupTargets }}
+{{- if $game.enable }}
+apiVersion: batch/v1
+kind: CronJob
+
+metadata:
+  name: {{ $game.name }}-backup
+
+spec:
+  schedule: {{ $game.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          # Must tolerate the primary-node taint: this Job mounts the local
+          # games volume, which only exists on the primary node.
+          tolerations:
+          - key: platypod.io/reserved
+            operator: Equal
+            value: primary
+            effect: NoSchedule
+          restartPolicy: OnFailure
+          containers:
+          - name: backup
+            # Needs real rsync (--link-dest) — busybox's cp can't do this.
+            image: instrumentisto/rsync-ssh:alpine3.20
+            securityContext:
+              runAsUser: 0
+            command:
+            - sh
+            - -c
+            - |
+              set -e
+              SRC="/games/{{ $game.name }}/{{ $game.savePath }}"
+              DEST_ROOT="/backup/_games-backups/{{ $game.name }}"
+              TS=$(date +%Y-%m-%d-%H%M%S)
+              NEW="$DEST_ROOT/$TS"
+              mkdir -p "$DEST_ROOT"
+
+              # Exit code 24 ("partial transfer due to vanished source files")
+              # is expected, not fatal: the server is live and may rewrite/
+              # rotate save files mid-scan. Only treat other non-zero exits
+              # as real failures.
+              rc=0
+              if [ -L "$DEST_ROOT/latest" ]; then
+                PREV=$(readlink -f "$DEST_ROOT/latest")
+                rsync -a --delete --link-dest="$PREV" "$SRC/" "$NEW/" || rc=$?
+              else
+                rsync -a "$SRC/" "$NEW/" || rc=$?
+              fi
+              if [ "$rc" -ne 0 ] && [ "$rc" -ne 24 ]; then
+                echo "rsync failed with exit code $rc"; exit "$rc"
+              fi
+
+              ln -sfn "$NEW" "$DEST_ROOT/latest"
+              echo "snapshot: $NEW ($(du -sh "$NEW" | cut -f1))"
+
+              # Prune snapshots older than retention. Never prune the one
+              # `latest` points at, even if somehow older than the window.
+              find "$DEST_ROOT" -maxdepth 1 -type d -name '20*' -mtime +{{ $game.retentionDays }} \
+                | while read -r old; do
+                    [ "$(readlink -f "$DEST_ROOT/latest")" = "$old" ] && continue
+                    rm -rf "$old"
+                  done
+              echo "kept:"; ls -1 "$DEST_ROOT" | grep -v latest
+            volumeMounts:
+            - name: games
+              mountPath: /games
+              readOnly: true
+            - name: backup
+              mountPath: /backup
+          volumes:
+          - name: games
+            persistentVolumeClaim:
+              claimName: {{ tpl $.Values.storage.defaultVolumes.games $ }}
+          - name: backup
+            persistentVolumeClaim:
+              claimName: {{ tpl $.Values.storage.defaultVolumes.apps $ }}
+{{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,21 @@
+# Nightly, hardlink-based ("rsnapshot"-style) backups of each enabled game's
+# save-data path — NOT the whole install. Engine/binaries are redownloadable
+# from Steam in minutes (see 2026-08-02's local-storage migration), so backing
+# them up nightly would waste NAS I/O and retention space for no benefit. Only
+# world/save data is irreplaceable and worth protecting.
+#
+# Each night's snapshot is a full, independently-browsable directory tree on
+# the NFS apps share, but unchanged files are hardlinked to the previous
+# night's copy rather than copied — cheap to keep many days of history.
+# Enables point-in-time rollback (e.g. a save corrupted mid-write during an
+# update), not just node-loss recovery. See stack/src/games/README.md.
+games:
+  backupTargets:
+  - name: palworld
+    enable: false
+    savePath: "Pal/Saved/SaveGames"   # relative to the game's subPath root
+    # Staggered 30min after Palworld's own BACKUP_CRON_EXPRESSION (0 3 * * *,
+    # see values/prd/values.yaml palworld.server.extraEnv) so this doesn't
+    # read the save dir mid-write from that internal backup.
+    schedule: "30 3 * * *"
+    retentionDays: 14

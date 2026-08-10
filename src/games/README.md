@@ -59,6 +59,31 @@ to one node via `nodeSelector`, NFS's cross-node portability bought nothing.
 SteamCMD's own validate pass on ordinary restarts — `AUTO_UPDATE_ENABLED`'s
 hourly cron still catches real game updates without blocking startup on it.
 
+**Backups: save data only, not the install.** Engine/binaries are redownloadable
+from Steam in minutes (proven during the 2026-08-02 migration) — backing them
+up nightly would waste NAS I/O and retention space for no benefit. Only
+world/save data is irreplaceable. `games.backupTargets` (in
+`values/default/games/backups.yaml`) drives a per-game nightly `<name>-backup`
+CronJob (`stack/src/games/templates/games-backup-cronjob.yaml`) that rsyncs
+just that game's `savePath` to a dated, hardlinked ("rsnapshot"-style) snapshot
+on the NFS `apps` share — unchanged files across nights are hardlinks, not
+copies, so many days of history costs little extra space, but each dated
+directory is still a complete, independently-restorable tree. This also
+enables point-in-time rollback (e.g. a save corrupted mid-write during an
+update), not just recovery from node/disk loss. `exit code 24` from rsync
+("files vanished mid-transfer") is expected and tolerated — the server is live
+and may rewrite/rotate save files while the backup is scanning.
+
+**Restoring a backup** is deliberately *not* automated or wired into any
+values/enable flag — a restore should never run unattended. Use
+`stack/src/games/scripts/restore-game-backup.yaml`: scale the game's deployment
+to 0 first (restoring into a save dir the live server is still writing to will
+race), pick a snapshot (`kubectl exec` into any pod mounting the `apps` PVC and
+`ls _games-backups/<game>/`), `sed` the placeholders in the script per its own
+header comment, `kubectl apply -f -`, then scale back up. The script always
+moves the existing live save dir aside (`<path>.pre-restore-<timestamp>`)
+before restoring rather than overwriting it, so a restore is itself reversible.
+
 ## Valheim
 
 Dedicated Valheim server (`lloesche/valheim-server`). Same shape as Palworld:
