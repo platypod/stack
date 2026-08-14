@@ -1,0 +1,72 @@
+{{- /*
+  Dedicated LOCAL (non-NFS) volumes for Postgres/MySQL data dirs — one PV/PVC
+  pair per entry in storage.localDb.volumes. Same NFS-fsync-latency rationale
+  as local-config/config-volume.yaml, generalized to a list since these DBs
+  are spread across more than one node.
+
+  Each PV is pinned to its OWN node via an explicit kubernetes.io/hostname
+  match, in addition to the platypod.io/local-storage marker. The marker alone
+  is not enough once more than one node carries it: a PV whose nodeAffinity
+  only checks the marker would let the consuming pod land on ANY matching
+  node, and hostPath data does not follow a pod across nodes — it would just
+  start empty on the wrong host. The hostname match is what actually pins it.
+
+  Shares the `local-storage` StorageClass declared in local-storage-class.yaml.
+*/ -}}
+{{- if .Values.storage.localDb.enable }}
+{{- $d := .Values.storage.localDb }}
+{{- range $v := $d.volumes }}
+apiVersion: v1
+kind: PersistentVolume
+
+metadata:
+  name: {{ $.Values.k8s.names.persistentVolumes.prefix }}{{ $v.name }}{{ $.Values.k8s.names.persistentVolumes.suffix }}
+  labels:
+    {{- toYaml $d.labels | nindent 4 }}
+    volumeName: {{ $v.name }}
+spec:
+  capacity:
+    storage: {{ $v.capacityStorage | default $d.capacityStorage }}
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  # hostPath (not `local:`) with DirectoryOrCreate so the node directory is
+  # auto-created on first mount — see local-config/config-volume.yaml for the
+  # full rationale (also covers why nodeAffinity, not a hostPath pod, pins it).
+  hostPath:
+    path: {{ $d.rootPath }}{{ $v.name }}/
+    type: DirectoryOrCreate
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: platypod.io/local-storage
+          operator: In
+          values: ["true"]
+        - key: kubernetes.io/hostname
+          operator: In
+          values: [{{ $v.node | quote }}]
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+
+metadata:
+  name: {{ $.Values.k8s.names.persistentVolumeClaims.prefix }}{{ $v.name }}{{ $.Values.k8s.names.persistentVolumeClaims.suffix }}
+spec:
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: local-storage
+  resources:
+    requests:
+      storage: {{ $v.capacityStorage | default $d.capacityStorage }}
+  selector:
+    matchLabels:
+      volumeName: {{ $v.name }}
+---
+{{- end }}
+{{- end }}

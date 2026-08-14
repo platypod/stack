@@ -54,6 +54,35 @@ storage:
             operator: In
             values: ["true"]
 
+  # Dedicated LOCAL (non-NFS) volumes for Postgres/MySQL data dirs. Same
+  # rationale as storage.localConfig (NFS fsync latency), one PV/PVC per
+  # listed volume. Each is pinned to a SPECIFIC node via `node:` (hostname),
+  # not just the shared platypod.io/local-storage marker label — once more
+  # than one node carries that label, a PV whose nodeAffinity only checks the
+  # marker would let a hostPath volume's consuming pod reschedule onto a node
+  # where the actual directory doesn't exist, silently starting from empty
+  # data. Enabled on prod only.
+  localDb:
+    enable: false
+    rootPath: /var/local/platypod/volumes/
+    capacityStorage: 2Gi
+    labels:
+      volumeSelector: db
+    # Nightly backup to the NFS apps share, same durability rationale as
+    # storage.localConfig.backup.
+    backup:
+      enable: true
+      schedule: "15 3 * * *"
+      retentionDays: 14
+      image: busybox:1.37.0
+    volumes: []
+    # Example (set per-environment):
+    # - name: authelia-db
+    #   node: chuwi-cp1
+    # - name: lldap-db
+    #   node: chuwi-cp1
+    #   capacityStorage: 1Gi   # optional per-volume override
+
   localStorage:
     enable: true
     default:

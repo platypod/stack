@@ -1,0 +1,82 @@
+{{- /*
+  Nightly backup of each local DB volume to the NFS apps share, same
+  durability rationale as local-config/backup-cronjob.yaml: the live DB stays
+  on local node disk (fast, NFS-fsync-safe), the backup lands on the
+  backed-up Synology so a node-disk loss costs at most ~1 day.
+
+  One CronJob per volume (rather than a single job spanning all of them)
+  because each local PVC is pinned to its own node — a single pod can't mount
+  local volumes from two different nodes at once. The toleration is added
+  unconditionally; it's a no-op on nodes that don't carry the primary taint.
+*/ -}}
+{{- if and .Values.storage.localDb.enable .Values.storage.localDb.backup.enable }}
+{{- $d := .Values.storage.localDb }}
+{{- $b := $d.backup }}
+{{- range $v := $d.volumes }}
+apiVersion: batch/v1
+kind: CronJob
+
+metadata:
+  name: {{ $v.name }}-backup
+
+spec:
+  schedule: {{ $b.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          # No-op unless this volume's node happens to carry the primary
+          # taint — see comment above.
+          tolerations:
+          - key: platypod.io/reserved
+            operator: Equal
+            value: primary
+            effect: NoSchedule
+          # Local PVCs are node-pinned; the backup pod must land on the same
+          # node as the volume it's reading.
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values: [{{ $v.node | quote }}]
+          restartPolicy: OnFailure
+          containers:
+          - name: {{ $v.name }}-backup
+            image: {{ $b.image }}
+            securityContext:
+              runAsUser: 0
+            command:
+            - sh
+            - -c
+            - |
+              set -e
+              DEST=/backup/_db-backups/{{ $v.name }}
+              mkdir -p "$DEST"
+              TS=$(date +%Y%m%d-%H%M%S)
+              tar czf "$DEST/{{ $v.name }}-$TS.tgz" -C /data .
+              echo "wrote $DEST/{{ $v.name }}-$TS.tgz ($(du -h "$DEST/{{ $v.name }}-$TS.tgz" | cut -f1))"
+              find "$DEST" -name '{{ $v.name }}-*.tgz' -mtime +{{ $b.retentionDays }} -delete 2>/dev/null || true
+              echo "kept:"; ls -1t "$DEST" | head -5
+            volumeMounts:
+            - name: data
+              mountPath: /data
+              readOnly: true
+            - name: backup
+              mountPath: /backup
+          volumes:
+          - name: data
+            persistentVolumeClaim:
+              claimName: {{ $v.name }}
+          - name: backup
+            persistentVolumeClaim:
+              claimName: {{ tpl $.Values.storage.defaultVolumes.apps $ }}
+---
+{{- end }}
+{{- end }}

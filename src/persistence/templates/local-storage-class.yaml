@@ -8,7 +8,7 @@
   (dev: localStorage on, localConfig/localGames off; prod: the reverse), so
   excluding localStorage here avoids a collision if that ever changes.
 */ -}}
-{{- if and (not .Values.storage.localStorage.enable) (or .Values.storage.localConfig.enable .Values.storage.localGames.enable) }}
+{{- if and (not .Values.storage.localStorage.enable) (or .Values.storage.localConfig.enable .Values.storage.localGames.enable .Values.storage.localDb.enable) }}
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
