@@ -38,10 +38,10 @@ spec:
           value: "{{ .Values.rommapp.database.name }}"
         volumeMounts:
         - mountPath: /var/lib/mysql
-          name: {{ tpl .Values.rommapp.pvc . }}
+          name: {{ tpl .Values.rommapp.database.pvc . }}
           subPath: rommapp/database
       volumes:
-      - name: {{ tpl .Values.rommapp.pvc . }}
+      - name: {{ tpl .Values.rommapp.database.pvc . }}
         persistentVolumeClaim:
-          claimName: {{ tpl .Values.rommapp.pvc . }}
+          claimName: {{ tpl .Values.rommapp.database.pvc . }}
 {{- end }}

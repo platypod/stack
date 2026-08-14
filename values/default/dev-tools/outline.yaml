@@ -8,6 +8,9 @@ outline:
   database:
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.outline.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
     name: "{{ .Values.outline.label }}"
+    # Distinct from outline.storage.pvc (used by the app's own file storage)
+    # so the two can be repointed independently.
+    pvc: "{{ .Values.storage.defaultVolumes.apps }}"
     credentials:
       username: admin
       password: password

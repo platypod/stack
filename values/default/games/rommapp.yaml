@@ -17,6 +17,9 @@ rommapp:
       password: "{{ .Values.rommapp.credentials.password }}"
       rootPassword: "{{ .Values.rommapp.credentials.password }}Root"
     image: mariadb:11
+    # Distinct from rommapp.pvc (used by the app's own ROM file storage) so
+    # the two can be repointed independently.
+    pvc: "{{ .Values.storage.defaultVolumes.apps }}"
     resources:
       requests:
         cpu: 50m

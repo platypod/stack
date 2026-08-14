@@ -41,5 +41,5 @@ spec:
       volumes:
       - name: data
         persistentVolumeClaim:
-          claimName: {{ tpl .Values.outline.storage.pvc . }}
+          claimName: {{ tpl .Values.outline.database.pvc . }}
 {{- end }}

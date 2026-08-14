@@ -8,6 +8,10 @@ authelia:
     credentials:
       username: admin
       password: password
+    # Distinct from authelia.storage.pvc (used by redis) so the two can be
+    # repointed independently — on prod this goes to a dedicated local volume,
+    # redis stays on the shared apps volume.
+    pvc: "{{ .Values.storage.defaultVolumes.apps }}"
     image: postgres:17
     resources:
       requests:
@@ -91,7 +95,6 @@ authelia:
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.mediarvester.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.reclaimerr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.komga.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.kavita.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.audiobookshelf.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.suwayomi.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
@@ -137,6 +140,10 @@ authelia:
       # upstream Anthropic/OpenAI key), not a browser session — forward-auth's
       # login redirect would break it. Same bypass rationale as IT-Tools/CyberChef.
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.headroom.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      # OPDS clients (e.g. CrossInk on an e-reader) can't follow forward-auth's
+      # browser login redirect — same rationale as Jellyfin. Komga has its own
+      # login/API-key auth, so this doesn't drop authentication, just moves it.
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.komga.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyswarrm.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"

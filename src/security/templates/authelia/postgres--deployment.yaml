@@ -65,4 +65,4 @@ spec:
       volumes:
       - name: {{ $appVolume }}
         persistentVolumeClaim:
-          claimName: {{ tpl .Values.authelia.storage.pvc . }}
+          claimName: {{ tpl .Values.authelia.database.pvc . }}
