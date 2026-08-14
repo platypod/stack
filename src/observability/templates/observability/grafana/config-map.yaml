@@ -14,6 +14,10 @@ data:
     [auth.generic_oauth]
     api_url = https://{{ tpl .Values.authelia.host . }}/api/oidc/userinfo
     auth_url = https://{{ tpl .Values.authelia.host . }}/api/oidc/authorization
+    ; Authelia's client registration for Grafana pins token_endpoint_auth_method
+    ; to client_secret_basic; without this, Grafana's default auto-detect sends
+    ; the secret in the POST body instead and Authelia rejects the token exchange.
+    auth_style = InHeader
     client_id = {{ .Values.observability.dashboard.oidc.clientId }}
     client_secret = {{ .Values.observability.dashboard.oidc.clientSecret.plain }}
     empty_scopes = false
