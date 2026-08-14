@@ -344,6 +344,14 @@ data:
         base_dn: {{ .Values.lldap.baseDn }}
         user: uid={{ .Values.lldap.adminUser }},ou=people,{{ .Values.lldap.baseDn }}
         password: {{ .Values.lldap.adminPassword }}
+        # lldap-db's data dir sits on NFS; its first query after ~90s idle can
+        # stall a few seconds while the client re-establishes NFS session state.
+        # A generous timeout tolerates that stall. Pooling stays OFF: LLDAP's
+        # Postgres-over-NFS backend can't handle real concurrency (verified:
+        # even 25 parallel binds all failed) — a persistent pool would keep
+        # that many connections alive and health-checked continuously, turning
+        # an occasional login-burst failure into constant background load.
+        timeout: 15s
 
     session:
       name: authelia_session
