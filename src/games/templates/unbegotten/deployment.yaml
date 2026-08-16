@@ -1,0 +1,30 @@
+{{- if .Values.unbegotten.enable }}
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.unbegotten.label .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.unbegotten.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.unbegotten.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.unbegotten.image }}
+        resources:
+          {{- toYaml .Values.unbegotten.resources | nindent 10 }}
+        ports:
+        - name: {{ .Values.unbegotten.ports.http.name }}
+          containerPort: {{ .Values.unbegotten.ports.http.targetPort }}
+{{- end }}

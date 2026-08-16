@@ -82,10 +82,10 @@ outline:
       - README.md
       - docs
       - src
-    - name: sphaze
-      url: https://github.com/platypod/sphaze.git
+    - name: unbegotten
+      url: https://github.com/platypod/unbegotten.git
       branch: main
-      collection: "git: sphaze"
+      collection: "git: unbegotten"
       paths:
       - README.md
       - docs

@@ -62,7 +62,7 @@ refers to the model described in [authentication.md](authentication.md).
 |---------|------|------|
 | RomM | ROM library manager | **OIDC** (`group:media`) |
 | PokéClicker | Browser game | forwardauth (`one_factor`) |
-| Sphaze | 3D maze wrapped onto the inside of a sphere, browser game | forwardauth (`one_factor`) |
+| Unbegotten | 3D maze wrapped onto the inside of a sphere, browser game | forwardauth (`one_factor`) |
 | Palworld | Dedicated Palworld game server | direct UDP (LoadBalancer/externalIP) |
 | Minecraft | Vanilla + CurseForge modpack instances, any subset at once, fronted by `mc-router` | direct TCP via mc-router (LoadBalancer/externalIP), hostname-routed, no ingress |
 | Valheim | Dedicated Valheim game server | direct UDP (LoadBalancer/externalIP) |

@@ -232,11 +232,11 @@ needs a real public DNS record plus a router port-forward for TCP `25565` to
 Static idle game, any authenticated user (`one_factor`). No backend, no state to
 preserve.
 
-## Sphaze
+## Unbegotten
 
 3D maze wrapped onto the interior surface of a sphere (Haxe + Heaps, WebGL), any
 authenticated user (`one_factor`). Static build served by nginx — no backend, no
 state to preserve, same shape as PokéClicker. Image published by
-[`platypod/sphaze`](https://github.com/platypod/sphaze)'s own tag-triggered
+[`platypod/unbegotten`](https://github.com/platypod/unbegotten)'s own tag-triggered
 GitHub Actions workflow; see that repo's README for the release process and the
 one-time GHCR package-visibility step required after the first tag.

@@ -1,0 +1,15 @@
+{{- if .Values.unbegotten.enable }}
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.k8s.names.services.prefix }}{{ .Values.unbegotten.label }}{{ .Values.k8s.names.services.suffix }}
+
+spec:
+  ports:
+  - protocol: TCP
+    name: {{ .Values.unbegotten.ports.http.name }}
+    port: {{ .Values.unbegotten.ports.http.targetPort }}
+  selector:
+    app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.unbegotten.label }}{{ .Values.k8s.names.pods.suffix }}
+{{- end }}
