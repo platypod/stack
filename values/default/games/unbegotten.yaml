@@ -1,13 +1,7 @@
 unbegotten:
   enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.unbegotten.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  # Still the pre-rename image: the repo (and the build workflow's own image
-  # tag) moved to ghcr.io/platypod/unbegotten, but that package has no tags
-  # published yet -- nothing has been pushed there since the rename. This
-  # stays pointed at the last real build until a new git tag is cut from the
-  # renamed repo; then bump this and make the new GHCR package public once
-  # (see the games module README).
-  image: ghcr.io/platypod/sphaze:v0.15.0
+  image: ghcr.io/platypod/unbegotten:v0.15.1
   label: unbegotten
   ports:
     http:
