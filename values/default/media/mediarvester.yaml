@@ -1,7 +1,7 @@
 mediarvester:
   enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.mediarvester.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: ghcr.io/platypod/mediarvester:v1.5.7
+  image: ghcr.io/platypod/mediarvester:v1.5.10
   label: mediarvester
   ports:
     http:
@@ -34,3 +34,21 @@ mediarvester:
       memory: 640Mi
     limits:
       memory: 1Gi
+  potProvider:
+    # Sidecar for yt-dlp's PO Token requirement -- see bgutil-ytdlp-pot-provider
+    # in requirements.txt for why. The plugin auto-discovers it at the default
+    # http://127.0.0.1:4416 (shared network namespace, same pod) with zero
+    # extractor-args config needed. Node flavor: no runtime writes, so it needs
+    # nothing mounted -- only the container-level securityContext override,
+    # since the image's own baked-in `node` user (uid/gid 1000) doesn't match
+    # mediarvester's pod-level runAsUser (needed for its own NFS access).
+    image: brainicism/bgutil-ytdlp-pot-provider:1.3.1-node
+    port: 4416
+    userId: 1000
+    groupId: 1000
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 128Mi

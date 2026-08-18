@@ -73,6 +73,20 @@ spec:
         - mountPath: /app/cookies
           subPath: {{ .Values.mediarvester.storage.cookiesSubPath }}
           name: {{ $appVolume }}
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.mediarvester.label }}-pot-provider{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.mediarvester.potProvider.image }}
+        resources:
+          {{- toYaml .Values.mediarvester.potProvider.resources | nindent 10 }}
+        imagePullPolicy: IfNotPresent
+        # Overrides the pod-level runAsUser (media.system.userId) above -- this
+        # sidecar mounts no volumes, so there's no NFS-permission reason to run
+        # it as anything other than the image's own baked-in `node` user.
+        securityContext:
+          runAsUser: {{ .Values.mediarvester.potProvider.userId }}
+          runAsGroup: {{ .Values.mediarvester.potProvider.groupId }}
+        ports:
+        - name: pot
+          containerPort: {{ .Values.mediarvester.potProvider.port }}
       volumes:
       - name: {{ $mediaVolume }}
         persistentVolumeClaim:
