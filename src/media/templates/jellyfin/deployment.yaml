@@ -2,6 +2,7 @@
 
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.jellyfin.label .Values.k8s.names.pods.suffix }}
 {{- $appVolume := "app-volume" }}
+{{- $mediaVolume := "media-volume" }}
 {{- $configMap := "config-map" }}
 
 apiVersion: apps/v1
@@ -59,10 +60,18 @@ spec:
         - mountPath: /config
           name: {{ $appVolume }}
           subPath: jellyfin
+        # Same NFS media share as the *arr stack, mounted read-only — Jellyfin
+        # only ever reads it, the *arr apps own writes.
+        - mountPath: /media
+          name: {{ $mediaVolume }}
+          readOnly: true
       volumes:
       - name: {{ $appVolume }}
         persistentVolumeClaim:
-          claimName: {{ tpl .Values.jellyfin.pvc . }}
+          claimName: {{ tpl .Values.jellyfin.pvc.config . }}
+      - name: {{ $mediaVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.jellyfin.pvc.media . }}
       - name: {{ $configMap }}
         configMap:
           name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.configMaps.suffix }}

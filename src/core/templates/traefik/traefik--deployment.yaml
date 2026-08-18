@@ -113,6 +113,7 @@ spec:
           - --entryPoints.{{ .Values.traefik.ports.http.name }}.http.redirections.entryPoint.to={{ .Values.traefik.ports.https.name }}
           - --entryPoints.{{ .Values.traefik.ports.http.name }}.http.redirections.entryPoint.scheme=https
           - --entryPoints.{{ .Values.traefik.ports.https.name }}.address=:{{ .Values.traefik.ports.https.targetPort }}
+          - --entryPoints.{{ .Values.traefik.ports.ldaps.name }}.address=:{{ .Values.traefik.ports.ldaps.targetPort }}
           # Global retry on every HTTPS router (see traefik--middleware-retry.yaml):
           # absorbs transient upstream connect failures (VM/bridge network blips)
           # that otherwise surface as sporadic 502 Bad Gateway.
@@ -128,6 +129,8 @@ spec:
           containerPort: {{ .Values.traefik.ports.https.targetPort }}
         - name: {{ .Values.traefik.ports.dashboard.name }}
           containerPort: {{ .Values.traefik.ports.dashboard.targetPort }}
+        - name: {{ .Values.traefik.ports.ldaps.name }}
+          containerPort: {{ .Values.traefik.ports.ldaps.targetPort }}
         volumeMounts:
         - mountPath: /file-providers/jellyfin-local-proxy.yaml
           name: {{ $configMap }}

@@ -7,7 +7,9 @@ exposes metrics + a dashboard. Reached via a MetalLB `LoadBalancer`.
   fixes `acme.json` permissions before Traefik starts.
 - **Ports:** http `80` (nodePort 30680), https `443` (nodePort 30679), dashboard
   `9999` (label `traefik-dashboard`, scraped by the collector for the Services
-  dashboard).
+  dashboard), `ldaps` `636` (TCP entrypoint, not HTTP — fronts LLDAP for
+  clients outside the cluster; see [../security/lldap.md](../security/lldap.md)).
+  Always present; only actually routed when `lldap.ldaps.enable`.
 - **LoadBalancer IP:** `traefik.loadBalancerIP` (set per env) — also consumed by the
   AdGuard DNS rewrite so `*.platypod.ovh` resolves to Traefik internally.
 

@@ -27,6 +27,14 @@ traefik:
       port: 443
       targetPort: 443
       nodePort: 30679
+    # TCP entrypoint (not HTTP) for LDAPS — TLS-terminated at Traefik, plaintext
+    # forwarded to the backend Service inside the cluster. Currently only used
+    # to front LLDAP for clients outside the cluster (see lldap.ldaps.enable).
+    ldaps:
+      name: ldaps
+      port: 636
+      targetPort: 636
+      nodePort: 30678
   replicasNb: 1
   # Address this Service answers on from the LAN. When set, the Service becomes
   # ClusterIP with spec.externalIPs: kube-proxy accepts traffic for that address

@@ -33,6 +33,14 @@ lldap:
     ldap:
       name: ldap
       targetPort: 3890
+  # LDAPS for clients outside the cluster (e.g. prod's host-native Jellyfin —
+  # see docs/media/jellyfin-ldap.md). Routed through Traefik's "ldaps" TCP
+  # entrypoint (see traefik.yaml), which terminates TLS with the same trusted
+  # cert as everything else and forwards PLAINTEXT to this Service internally
+  # — same edge-TLS/plaintext-inside pattern as every HTTPS-fronted app here.
+  # LLDAP itself needs no TLS config; Traefik does all of it.
+  ldaps:
+    enable: false
   storage:
     pvc: "{{ .Values.storage.defaultVolumes.apps }}"
   # Post-install/upgrade hook that pre-creates groups and users via the LLDAP
@@ -97,6 +105,15 @@ lldap:
         email: grafana-authz@platypod.local
         displayName: Grafana Authz
         password: grafana-authz-secret
+        groups:
+          - lldap_strict_readonly
+      # Read-only bind account for the Jellyfin LDAP-Auth plugin. Same
+      # rationale as grafana-authz: a scoped bind, not the LLDAP admin.
+      # See stack/docs/media/jellyfin-ldap.md.
+      - id: jellyfin-ldap
+        email: jellyfin-ldap@platypod.local
+        displayName: Jellyfin LDAP
+        password: jellyfin-ldap-secret
         groups:
           - lldap_strict_readonly
   replicasNb: 1

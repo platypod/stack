@@ -49,7 +49,7 @@ they then apply a second, app-local login.
 
 | Service | Module | Access rule |
 |---------|--------|-------------|
-| Jellyfin | media | bypass (own auth, public ingress) |
+| Jellyfin | media | bypass (own auth, public ingress) — local accounts, plus optional LLDAP-backed login via the LDAP-Auth plugin (`group:media` to log in, `group:admins` auto-promoted to Jellyfin admin); dev automated, prod manual — see [media/jellyfin-ldap.md](media/jellyfin-ldap.md) |
 | Jellyseerr | media | bypass (own auth, public ingress) |
 | Radarr / Sonarr / Readarr / Prowlarr / Bazarr | media | `group:media`; bypass from cluster CIDR for internal API calls |
 | Mediarvester | media | `group:media` |

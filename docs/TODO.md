@@ -50,6 +50,25 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
 - **Default-user enable/disable on Authelia** — add lifecycle management for the
   default users (activation / deactivation) in LLDAP/Authelia.
 
+- **Fill in real `jellyfin.libraries` paths.** Ships with placeholder movies/tv
+  paths (see [jellyfin-ldap.md](media/jellyfin-ldap.md)) — the seeding
+  mechanism is real and tested, the paths aren't.
+
+- **Authelia's JWKS signing key regenerates on every `helm template` render**
+  (not persisted/looked-up) — so *any* security-module deploy rotates it,
+  forcing re-login on every OIDC-backed app (Grafana, RomM, Vaultwarden,
+  BookStack, Wiki.js, Outline, Reclaimerr, Kavita, Audiobookshelf) for anyone
+  with an active session. Found 2026-08-18 while deploying the LDAP work
+  above; unrelated to it. Fix: persist the generated key (e.g. `lookup` against
+  the existing Secret/ConfigMap instead of regenerating inline).
+
+- **Dev's `authelia` ConfigMap has a field-manager conflict** blocking any
+  `make deploy MODULE=security ENV=dev` (`conflict with
+  "kubectl-client-side-apply" using v1: .data.configuration.yml`) — the
+  ConfigMap was modified via plain `kubectl apply` outside Helm at some point.
+  Spawned as a separate background task 2026-08-18; prod is unaffected (same
+  deploy succeeded there cleanly).
+
 - **Backups + key durability review (esp. Vaultwarden).** Vaultwarden's SQLite
   vault is on a **node-local** volume (NFS can't host SQLite WAL), protected only
   by the nightly config-backup → NFS (so up to ~24h exposure, and the NFS copy is

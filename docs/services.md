@@ -34,7 +34,7 @@ refers to the model described in [authentication.md](authentication.md).
 | Service | Role | Auth |
 |---------|------|------|
 | Jellyswarrm | Federation proxy in front of Jellyfin backends, benchmark-only (prod only) | own auth (bypass ingress); own hostname (`jellyswarrm.<domain>`), NOT in the path of real Jellyfin traffic — see [docs/media/jellyswarrm.md](media/jellyswarrm.md) |
-| Jellyfin | Media server, host-native on mini4 (GPU transcode) | own auth (bypass ingress) |
+| Jellyfin | Media server, host-native on mini4 (GPU transcode) | own auth (bypass ingress) + optional LLDAP login via LDAP-Auth plugin — see [jellyfin-ldap.md](media/jellyfin-ldap.md) |
 | jellyfin-k8s | In-cluster Jellyfin, benchmark-only (prod only) | not exposed — internal, jellyswarrm backend only |
 | Jellyseerr | Request manager | own auth (bypass ingress) |
 | Radarr / Sonarr / Readarr | *arr automation | own auth (`group:media`) |

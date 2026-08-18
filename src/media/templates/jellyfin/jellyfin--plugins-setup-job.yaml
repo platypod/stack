@@ -1,0 +1,245 @@
+{{- if and .Values.jellyfin.enable .Values.jellyfin.inCluster }}
+{{- /*
+  Jellyfin plugin setup Job — LDAP Authentication + Moonbase.
+
+  Runs as a Helm post-install/post-upgrade hook after jellyfin-setup (weight 10)
+  has bootstrapped the local admin account.
+
+  Flow (idempotent):
+    1. Poll /System/Info/Public until Jellyfin is up, auth as the bootstrap admin.
+    2. Install any missing plugin (LDAP Authentication from the official repo,
+       Moonbase from its own repo, registered first if missing).
+    3. If anything was installed, POST /System/Restart (the official image's
+       entrypoint is PID 1, so the process exit restarts the container under
+       the Deployment's default restartPolicy) and re-poll/re-auth.
+    4. Push the LDAP-Auth plugin configuration (bind account, group→access and
+       group→admin filters) unconditionally, so config drift self-heals on
+       every redeploy even when the plugin was already installed.
+    5. Seed libraries via /Library/VirtualFolders for entries not already
+       present.
+
+  Re-running after everything's already set up only touches steps 4-5 (both
+  idempotent), so it's safe on every helm upgrade.
+*/ -}}
+{{- $jellyfinSvc := print .Values.k8s.names.services.prefix .Values.jellyfin.label .Values.k8s.names.services.suffix }}
+{{- $lldapSvc := print .Values.k8s.names.services.prefix .Values.lldap.label .Values.k8s.names.services.suffix }}
+{{- $libraryPaths := list }}
+{{- range .Values.jellyfin.libraries }}
+{{- $libraryPaths = append $libraryPaths .path }}
+{{- end }}
+apiVersion: batch/v1
+kind: Job
+
+metadata:
+  name: jellyfin-plugins-setup
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "20"
+    "helm.sh/hook-delete-policy": before-hook-creation
+
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+      # Jellyfin's AddVirtualFolder API rejects paths that don't exist on disk.
+      # Create every configured library path up front (writable mount — the
+      # jellyfin container itself only ever mounts media read-only).
+      - name: ensure-library-paths
+        image: busybox:1.37.0
+        command:
+        - sh
+        - -c
+        - |
+          {{- range $libraryPaths }}
+          mkdir -p "{{ . }}"
+          {{- end }}
+        volumeMounts:
+        - mountPath: /media
+          name: media-volume
+      containers:
+      - name: jellyfin-plugins-setup
+        image: python:3-alpine
+        env:
+        - name: JELLYFIN_URL
+          value: "http://{{ $jellyfinSvc }}:{{ .Values.jellyfin.ports.http.targetPort }}"
+        - name: ADMIN_USERNAME
+          value: "{{ .Values.jellyfin.credentials.username }}"
+        - name: ADMIN_PASSWORD
+          value: "{{ .Values.jellyfin.credentials.password }}"
+        - name: LDAP_ENABLE
+          value: "{{ .Values.jellyfin.ldap.enable }}"
+        - name: LDAP_SERVER
+          value: "{{ $lldapSvc }}"
+        - name: LDAP_PORT
+          value: "{{ .Values.lldap.ports.ldap.targetPort }}"
+        - name: LDAP_BASE_DN
+          value: "{{ .Values.lldap.baseDn }}"
+        - name: LDAP_BIND_USER
+          value: "{{ .Values.jellyfin.ldap.bindUser }}"
+        - name: LDAP_BIND_PASSWORD
+          value: "{{ .Values.jellyfin.ldap.bindPassword }}"
+        - name: LDAP_USER_GROUP
+          value: "{{ .Values.jellyfin.ldap.userGroup }}"
+        - name: LDAP_ADMIN_GROUP
+          value: "{{ .Values.jellyfin.ldap.adminGroup }}"
+        - name: LDAP_PLUGIN_VERSION
+          value: "{{ .Values.jellyfin.ldap.pluginVersion }}"
+        - name: MOONFIN_ENABLE
+          value: "{{ .Values.jellyfin.moonfin.enable }}"
+        - name: MOONFIN_REPO_URL
+          value: "{{ .Values.jellyfin.moonfin.repositoryUrl }}"
+        - name: LIBRARIES
+          value: {{ .Values.jellyfin.libraries | toJson | quote }}
+        command:
+        - python3
+        - -c
+        - |
+          import json, os, time, urllib.parse, urllib.request, urllib.error
+
+          BASE            = os.environ["JELLYFIN_URL"]
+          USERNAME        = os.environ["ADMIN_USERNAME"]
+          PASSWORD        = os.environ["ADMIN_PASSWORD"]
+          LDAP_ENABLE     = os.environ["LDAP_ENABLE"] == "true"
+          LDAP_SERVER     = os.environ["LDAP_SERVER"]
+          LDAP_PORT       = int(os.environ["LDAP_PORT"])
+          LDAP_BASE_DN    = os.environ["LDAP_BASE_DN"]
+          LDAP_BIND_USER  = os.environ["LDAP_BIND_USER"]
+          LDAP_BIND_PASS  = os.environ["LDAP_BIND_PASSWORD"]
+          LDAP_USER_GROUP  = os.environ["LDAP_USER_GROUP"]
+          LDAP_ADMIN_GROUP = os.environ["LDAP_ADMIN_GROUP"]
+          LDAP_PLUGIN_VERSION = os.environ["LDAP_PLUGIN_VERSION"]
+          LDAP_PLUGIN_GUID    = "958aad66-3784-4d2a-b89a-a7b6fab6e25c"  # official LDAP Authentication plugin
+          MOONFIN_ENABLE   = os.environ["MOONFIN_ENABLE"] == "true"
+          MOONFIN_REPO_URL = os.environ["MOONFIN_REPO_URL"]
+          LIBRARIES        = json.loads(os.environ["LIBRARIES"])
+
+          HDR = ("X-Emby-Authorization",
+                 'MediaBrowser Client="PluginSetup",Device="Setup",DeviceId="jf-plugin-setup-001",Version="1.0"')
+
+          def jf(method, path, body=None, token=None, timeout=15):
+              url = f"{BASE}{path}"
+              data = json.dumps(body).encode() if body is not None else None
+              req = urllib.request.Request(url, data=data, method=method)
+              if data is not None:
+                  req.add_header("Content-Type", "application/json")
+              req.add_header(*HDR)
+              if token:
+                  req.add_header("X-Emby-Token", token)
+              try:
+                  with urllib.request.urlopen(req, timeout=timeout) as r:
+                      raw = r.read()
+                      return json.loads(raw) if raw else {}
+              except urllib.error.HTTPError as e:
+                  raise RuntimeError(f"{method} {path} -> HTTP {e.code}: {e.read().decode()}")
+
+          def wait_ready(tries=120, sleep=5):
+              for i in range(tries):
+                  try:
+                      jf("GET", "/System/Info/Public")
+                      print(f"  [{i}] Jellyfin up.")
+                      return
+                  except Exception as e:
+                      print(f"  [{i}] Not ready: {e}")
+                      time.sleep(sleep)
+              raise SystemExit("Jellyfin never became ready")
+
+          def login():
+              auth = jf("POST", "/Users/AuthenticateByName", {"Username": USERNAME, "Pw": PASSWORD})
+              return auth["AccessToken"]
+
+          print("Waiting for Jellyfin...")
+          wait_ready()
+          token = login()
+          print(f"Authenticated as '{USERNAME}'.")
+
+          def norm_guid(g):
+              return g.lower().replace("-", "")
+
+          plugins = jf("GET", "/Plugins", token=token)
+          have_ldap    = LDAP_ENABLE and any(norm_guid(p.get("Id", "")) == norm_guid(LDAP_PLUGIN_GUID) for p in plugins)
+          have_moonfin = MOONFIN_ENABLE and any("moonfin" in p.get("Name", "").lower() for p in plugins)
+
+          restart_needed = False
+
+          if LDAP_ENABLE and not have_ldap:
+              print("Installing LDAP Authentication plugin...")
+              jf("POST", f"/Packages/Installed/LDAP%20Authentication"
+                         f"?AssemblyGuid={LDAP_PLUGIN_GUID}&version={LDAP_PLUGIN_VERSION}", token=token)
+              restart_needed = True
+          elif LDAP_ENABLE:
+              print("LDAP Authentication plugin already installed.")
+
+          if MOONFIN_ENABLE and not have_moonfin:
+              repos = jf("GET", "/Repositories", token=token)
+              if not any(r.get("Url") == MOONFIN_REPO_URL for r in repos):
+                  print("Registering Moonbase plugin repository...")
+                  repos.append({"Name": "Moonfin", "Url": MOONFIN_REPO_URL, "Enabled": True})
+                  jf("POST", "/Repositories", repos, token=token)
+              print("Installing Moonbase plugin...")
+              jf("POST", "/Packages/Installed/Moonbase", token=token)
+              restart_needed = True
+          elif MOONFIN_ENABLE:
+              print("Moonbase plugin already installed.")
+
+          if restart_needed:
+              print("Restarting Jellyfin to load new plugins...")
+              try:
+                  jf("POST", "/System/Restart", token=token)
+              except Exception as e:
+                  print(f"  Restart call returned: {e} (expected if the process exits mid-response)")
+              time.sleep(10)
+              wait_ready()
+              token = login()
+              print("Re-authenticated after restart.")
+
+          if LDAP_ENABLE:
+              print("Configuring LDAP Authentication plugin...")
+              config = {
+                  "LdapServer": LDAP_SERVER,
+                  "LdapPort": LDAP_PORT,
+                  "UseSsl": False,
+                  "UseStartTls": False,
+                  "SkipSslVerify": False,
+                  "LdapBindUser": f"uid={LDAP_BIND_USER},ou=people,{LDAP_BASE_DN}",
+                  "LdapBindPassword": LDAP_BIND_PASS,
+                  "LdapBaseDn": f"ou=people,{LDAP_BASE_DN}",
+                  "LdapSearchFilter": f"(memberOf=cn={LDAP_USER_GROUP},ou=groups,{LDAP_BASE_DN})",
+                  "LdapAdminBaseDn": "",
+                  "LdapAdminFilter": f"(memberOf=cn={LDAP_ADMIN_GROUP},ou=groups,{LDAP_BASE_DN})",
+                  "EnableLdapAdminFilterMemberUid": False,
+                  "LdapSearchAttributes": "uid, cn, mail, displayName",
+                  "CreateUsersFromLdap": True,
+                  "LdapUidAttribute": "uid",
+                  "LdapUsernameAttribute": "uid",
+                  "LdapPasswordAttribute": "userPassword",
+                  "EnableAllFolders": True,
+                  "EnabledFolders": [],
+              }
+              jf("POST", f"/Plugins/{LDAP_PLUGIN_GUID}/Configuration", config, token=token)
+              print("LDAP plugin configured.")
+
+          print("Seeding libraries...")
+          existing = jf("GET", "/Library/VirtualFolders", token=token)
+          existing_names = {f["Name"] for f in existing}
+          for lib in LIBRARIES:
+              if lib["name"] in existing_names:
+                  print(f"  Library '{lib['name']}' already exists.")
+                  continue
+              qs = urllib.parse.urlencode({
+                  "name": lib["name"],
+                  "collectionType": lib["collectionType"],
+                  "paths": [lib["path"]],
+                  "refreshLibrary": "true",
+              }, doseq=True)
+              jf("POST", f"/Library/VirtualFolders?{qs}", token=token)
+              print(f"  Created library '{lib['name']}' -> {lib['path']}")
+
+          print("Jellyfin plugin setup complete.")
+      volumes:
+      - name: media-volume
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.jellyfin.pvc.media . }}
+
+{{- end }}

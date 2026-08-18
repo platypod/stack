@@ -18,7 +18,44 @@ jellyfin:
     enable: false         # set true to proxy to an out-of-cluster Jellyfin instead
     host: host.docker.internal
     port: 8096
-  pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  pvc:
+    config: "{{ .Values.storage.defaultVolumes.apps }}"
+    # Read-only NFS media mount, same share as the *arr stack and jellyfin-k8s.
+    media: "{{ .Values.storage.defaultVolumes.media }}"
+  # Libraries seeded via POST /Library/VirtualFolders by jellyfin-plugins-setup.
+  # Placeholder paths — replace with the real subfolder layout under /media
+  # before deploying for real; the seeding is generic (loops this list).
+  libraries:
+    - name: Movies
+      collectionType: movies
+      path: /media/movies
+    - name: TV Shows
+      collectionType: tvshows
+      path: /media/tv
+  # LDAP Authentication plugin (jellyfin/jellyfin-plugin-ldapauth, official
+  # repo, guid 958aad66-3784-4d2a-b89a-a7b6fab6e25c) — installed and
+  # configured by jellyfin-plugins-setup. See docs/media/jellyfin-ldap.md.
+  ldap:
+    enable: true
+    # Bind account: must match the jellyfin-ldap seed account in
+    # security/lldap.yaml (member of lldap_strict_readonly: read-all, no write).
+    bindUser: jellyfin-ldap
+    bindPassword: jellyfin-ldap-secret
+    # LLDAP group whose members may log into Jellyfin at all.
+    userGroup: media
+    # LLDAP group auto-promoted to Jellyfin Administrator on login.
+    adminGroup: admins
+    # Pinned plugin version — verify targetAbi compatibility with the pinned
+    # jellyfin.image and check github.com/jellyfin/jellyfin-plugin-ldapauth
+    # issue #224 (admin-sync instability) before bumping.
+    pluginVersion: "23.0.0.0"
+    pluginChecksum: "e67eda7dd1b91a71315bd6620c8b03f1"
+  # Moonbase plugin (Moonfin-Client/Plugin) — backend for the Moonfin client
+  # apps. Not in Jellyfin's default repo; jellyfin-plugins-setup registers
+  # its manifest before installing.
+  moonfin:
+    enable: true
+    repositoryUrl: "https://raw.githubusercontent.com/Moonfin-Client/Plugin/refs/heads/master/manifest.json"
   resources:
     requests:
       cpu: 200m
