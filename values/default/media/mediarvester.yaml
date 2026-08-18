@@ -1,7 +1,7 @@
 mediarvester:
   enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.mediarvester.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: ghcr.io/platypod/mediarvester:v1.5.4
+  image: ghcr.io/platypod/mediarvester:v1.5.5
   label: mediarvester
   ports:
     http:
@@ -16,6 +16,12 @@ mediarvester:
     defaultUser: anonymous
   downloadConcurrency: 2
   logLevel: INFO
+  # 000, not media.system.umask (002): the replays share is historically
+  # world-writable (2777 dirs, 666 files) — it's touched by the mac client over
+  # NFS, Synology's own indexer, and this pod, none of which share a common
+  # uid/gid. Group-write alone (002) would only help clients whose gid matches
+  # ours; world-write sidesteps the mismatch entirely.
+  umask: "000"
   storage:
     mediaPvc: "{{ .Values.storage.defaultVolumes.media }}"
     mediaSubPath: replays

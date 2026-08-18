@@ -21,6 +21,25 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
+      # mediarvester is a bespoke FastAPI image, not a linuxserver.io/s6-overlay
+      # one — no in-image PUID/PGID drop-privilege step — so run the whole pod
+      # as the media user directly (same pattern as komga/kavita). Its own code
+      # reads UMASK below and calls os.umask() at startup to match.
+      # NEVER fsGroup on the NFS PVCs (recursive chown) — see CLAUDE.md.
+      securityContext:
+        runAsUser: {{ .Values.media.system.userId }}
+        runAsGroup: {{ .Values.media.system.groupId }}
+      initContainers:
+      # The /app/cookies subPath dir is created root-owned; chown ONLY that dir
+      # (same pattern as jellyseerr/komga — never the whole media volume).
+      - name: init-permissions
+        image: busybox:1.37.0
+        securityContext:
+          runAsUser: 0
+        command: ['sh', '-c', 'mkdir -p /data/{{ .Values.mediarvester.storage.cookiesSubPath }} && chown -R {{ .Values.media.system.userId }}:{{ .Values.media.system.groupId }} /data/{{ .Values.mediarvester.storage.cookiesSubPath }}']
+        volumeMounts:
+        - name: {{ $appVolume }}
+          mountPath: /data
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.mediarvester.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.mediarvester.image }}
@@ -45,6 +64,8 @@ spec:
           value: {{ .Values.mediarvester.downloadConcurrency | quote }}
         - name: LOG_LEVEL
           value: {{ .Values.mediarvester.logLevel | quote }}
+        - name: UMASK
+          value: {{ .Values.mediarvester.umask | quote }}
         volumeMounts:
         - mountPath: /app/downloads
           subPath: {{ .Values.mediarvester.storage.mediaSubPath }}
