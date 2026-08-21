@@ -75,6 +75,23 @@ spec:
         # pattern (see e.g. gunicorn/celery worker memory-growth advice).
         - name: MALLOC_ARENA_MAX
           value: "2"
+        # Observability (see mediarvester/src/services/telemetry.py) -- plain
+        # OTLP to the in-cluster collector's unauthenticated ClusterIP Service.
+        # The external opentelemetry-collector-grpc.* hostname (see
+        # gateway/grpc-ingress-route.yaml) is Authelia/tenant-guard gated and
+        # meant for off-cluster clients -- an in-cluster pod talks to the
+        # gateway Service directly instead, same as the node-collector
+        # DaemonSet already does.
+        - name: OTEL_SERVICE_NAME
+          value: "mediarvester"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://{{ .Values.k8s.names.services.prefix }}{{ tpl .Values.observability.otelCollector.gateway.label . }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.otelCollector.gateway.ports.grpc.targetPort }}"
+        # Mimir's OTLP ingest rejects delta-temporality payloads outright.
+        - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+          value: "cumulative"
+        # Continuous profiling stopgap (not OTLP -- see telemetry.py's docstring).
+        - name: PYROSCOPE_SERVER_ADDRESS
+          value: "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.profiles.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.profiles.ports.http.targetPort }}"
         volumeMounts:
         - mountPath: /app/downloads
           subPath: {{ .Values.mediarvester.storage.mediaSubPath }}

@@ -1,0 +1,72 @@
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.observability.profiles.label .Values.k8s.names.pods.suffix }}
+{{- $appVolume := "app-volume" }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $pod }}
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/observability/pyroscope/config-map.yaml") . | sha256sum }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/observability/pyroscope/config-map.yaml") . | sha256sum }}
+    spec:
+      priorityClassName: platypod-bulk
+      # Same reasoning as tempo (this module's other high-churn, supplementary
+      # telemetry backend): prefer the bulk node, steer away from primary,
+      # never hard-require either.
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: platypod.io/node-class
+                operator: In
+                values: ["bulk"]
+          - weight: 50
+            preference:
+              matchExpressions:
+              - key: platypod.io/node-class
+                operator: NotIn
+                values: ["primary"]
+      initContainers:
+      - name: init-permissions
+        image: busybox:1.37.0
+        command: ['sh', '-c', 'mkdir -p /data/pyroscope/data /data/pyroscope/etc && chown -R 10001:10001 /data/pyroscope']
+        volumeMounts:
+        - name: {{ $appVolume }}
+          mountPath: /data
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.observability.profiles.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.observability.profiles.image }}
+        resources:
+          {{- toYaml .Values.observability.profiles.resources | nindent 10 }}
+        args: [ "-config.file=/etc/pyroscope.yaml" ]
+        ports:
+        - containerPort: {{ .Values.observability.profiles.ports.http.targetPort }}
+        volumeMounts:
+        - name: conf
+          mountPath: /etc/pyroscope.yaml
+          subPath: pyroscope.yaml
+        - mountPath: /var/pyroscope
+          name: {{ $appVolume }}
+          subPath: pyroscope/data
+        - mountPath: /etc/pyroscope
+          name: {{ $appVolume }}
+          subPath: pyroscope/etc
+      volumes:
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.observability.pvc . }}
+      - name: conf
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.profiles.label }}{{ .Values.k8s.names.configMaps.suffix }}

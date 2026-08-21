@@ -112,6 +112,16 @@ data:
       url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.traces.ports.http.targetPort }}
       editable: false
 
+    - name: Pyroscope
+      # Continuous-profiling backend -- not OTLP (see mediarvester's
+      # telemetry.py), pyroscope-io's own push protocol. Unscoped/unauthed
+      # like Tempo above: no per-user isolation story here either.
+      uid: profiles
+      type: grafana-pyroscope-datasource
+      access: proxy
+      url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.profiles.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.profiles.ports.http.targetPort }}
+      editable: false
+
     - name: Mimir
       # uid stays "metrics" — every provisioned dashboard (cluster/infra/services)
       # references it. Pinned to the "anonymous" tenant, where all of this

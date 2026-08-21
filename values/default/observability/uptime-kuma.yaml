@@ -37,6 +37,7 @@ uptimeKuma:
     - { name: "Mimir",        url: "http://mimir:8080/ready" }
     - { name: "Loki",         url: "http://loki:3100/ready" }
     - { name: "Tempo",        url: "http://tempo:80/ready" }
+    - { name: "Pyroscope",    url: "http://pyroscope:4040/ready" }
     - { name: "AdGuard",      url: "http://adguard:80",          enable: "{{ .Values.adguard.enable }}" }
     - { name: "BookStack",    url: "http://bookstack:80",        enable: "{{ .Values.bookstack.enable }}" }
     - { name: "Wiki.js",      url: "http://wikijs:3000",         enable: "{{ .Values.wikijs.enable }}" }
