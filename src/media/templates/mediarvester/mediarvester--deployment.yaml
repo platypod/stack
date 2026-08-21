@@ -66,6 +66,15 @@ spec:
           value: {{ .Values.mediarvester.logLevel | quote }}
         - name: UMASK
           value: {{ .Values.mediarvester.umask | quote }}
+        # glibc's default per-thread malloc arenas fragment badly under this
+        # workload (ThreadPoolExecutor threads each repeatedly allocating/
+        # freeing large yt-dlp JSON blobs + subprocess I/O buffers for the
+        # Node.js JS-challenge solver) -- RSS climbs to the memory limit over
+        # a few hours purely from unreturned-to-OS glibc arenas, not a real
+        # Python-level leak. Capping arenas is the standard fix for this
+        # pattern (see e.g. gunicorn/celery worker memory-growth advice).
+        - name: MALLOC_ARENA_MAX
+          value: "2"
         volumeMounts:
         - mountPath: /app/downloads
           subPath: {{ .Values.mediarvester.storage.mediaSubPath }}

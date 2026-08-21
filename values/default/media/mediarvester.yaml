@@ -1,7 +1,7 @@
 mediarvester:
   enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.mediarvester.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  image: ghcr.io/platypod/mediarvester:v1.6.1
+  image: ghcr.io/platypod/mediarvester:v1.6.2
   label: mediarvester
   ports:
     http:
@@ -31,9 +31,15 @@ mediarvester:
   resources:
     requests:
       cpu: 100m
-      memory: 640Mi
+      memory: 768Mi
     limits:
-      memory: 1Gi
+      # Was 1Gi; the pod was OOMKilling every ~1-3h under normal poller +
+      # download load (confirmed via Mimir: RSS climbs steadily and pins at
+      # the limit before each kill, even between active downloads). 2Gi
+      # buys headroom while MALLOC_ARENA_MAX=2 (mediarvester--deployment.yaml)
+      # addresses the likely root cause -- see mediarvester's
+      # docs/incidents/2026-08-20-youtube-403-and-oom.md.
+      memory: 2Gi
   potProvider:
     # Sidecar for yt-dlp's PO Token requirement -- see bgutil-ytdlp-pot-provider
     # in requirements.txt for why. The plugin auto-discovers it at the default
@@ -42,7 +48,11 @@ mediarvester:
     # nothing mounted -- only the container-level securityContext override,
     # since the image's own baked-in `node` user (uid/gid 1000) doesn't match
     # mediarvester's pod-level runAsUser (needed for its own NFS access).
-    image: brainicism/bgutil-ytdlp-pot-provider:1.3.1-node
+    # 1.3.2 (2026-08-21) mints WebPO tokens from the homepage challenge + ytcfg,
+    # fixing the 403s YouTube's "bind GVS PO Token to video ID" A/B test caused
+    # on adaptive/DASH formats under 1.3.1 -- confirmed empirically. See
+    # ../../../mediarvester/docs/incidents/2026-08-20-youtube-403-and-oom.md.
+    image: brainicism/bgutil-ytdlp-pot-provider:1.3.2-node
     port: 4416
     userId: 1000
     groupId: 1000
