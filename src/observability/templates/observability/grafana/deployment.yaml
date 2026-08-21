@@ -77,9 +77,14 @@ spec:
         - name: conf
           mountPath: /var/lib/grafana/dashboards/media/transmission.json
           subPath: transmission.json
+        - name: dashboard-mediarvester
+          mountPath: /var/lib/grafana/dashboards/media/mediarvester.json
+          subPath: mediarvester.json
         # Whole-directory mount: every JSON in the dashboards ConfigMap
         # (chart files/dashboards/, incl. the Synology NAS dashboard) lands in
-        # the Platform folder.
+        # the Platform folder, except mediarvester.json -- it's excluded via
+        # `items` below and mounted into the Media folder instead (see
+        # dashboard-mediarvester above).
         - name: dashboards
           mountPath: /var/lib/grafana/dashboards/platform
         - name: dashboards-claude
@@ -123,6 +128,24 @@ spec:
       - name: dashboards
         configMap:
           name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.dashboard.label }}-dashboards{{ .Values.k8s.names.configMaps.suffix }}
+          # Project every glob'd dashboard except mediarvester.json, which
+          # ships into the Media folder instead (see the dashboard-mediarvester
+          # volume below) -- one explicit exclusion, so any *other* new file
+          # dropped into files/dashboards/ still ships to Platform automatically.
+          items:
+          {{- range $path, $_ := .Files.Glob "files/dashboards/*.json" }}
+          {{- $name := base $path }}
+          {{- if ne $name "mediarvester.json" }}
+          - key: {{ $name }}
+            path: {{ $name }}
+          {{- end }}
+          {{- end }}
+      - name: dashboard-mediarvester
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.dashboard.label }}-dashboards{{ .Values.k8s.names.configMaps.suffix }}
+          items:
+          - key: mediarvester.json
+            path: mediarvester.json
       - name: dashboards-claude
         configMap:
           name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.dashboard.label }}-dashboards-claude{{ .Values.k8s.names.configMaps.suffix }}

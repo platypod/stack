@@ -11,7 +11,7 @@
       "title": "Active downloads",
       "datasource": { "type": "prometheus", "uid": "metrics" },
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-      "targets": [{ "refId": "A", "expr": "mediarvester_download_active" }],
+      "targets": [{ "refId": "A", "expr": "max(mediarvester_download_active)" }],
       "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
     },
     {
@@ -19,7 +19,7 @@
       "title": "Queue depth",
       "datasource": { "type": "prometheus", "uid": "metrics" },
       "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-      "targets": [{ "refId": "A", "expr": "mediarvester_download_queue_depth" }],
+      "targets": [{ "refId": "A", "expr": "max(mediarvester_download_queue_depth)" }],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -41,7 +41,7 @@
       "description": "1 if recent failures look site-wide (see mediarvester's service_status.py heuristic), else 0.",
       "datasource": { "type": "prometheus", "uid": "metrics" },
       "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-      "targets": [{ "refId": "A", "expr": "mediarvester_service_degraded" }],
+      "targets": [{ "refId": "A", "expr": "max(mediarvester_service_degraded)" }],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -59,16 +59,76 @@
     {
       "type": "stat",
       "title": "Library size",
+      "description": "max(...) over instance: every redeploy briefly leaves the old pod's last-reported value alongside the new pod's (Mimir holds a dead series for ~5min), which would otherwise show as two numbers in this panel.",
       "datasource": { "type": "prometheus", "uid": "metrics" },
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "targets": [{ "refId": "A", "expr": "mediarvester_media_items_total" }],
+      "targets": [{ "refId": "A", "expr": "max(mediarvester_media_items_total)" }],
       "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
     },
     {
-      "type": "timeseries",
-      "title": "Download success rate",
+      "type": "state-timeline",
+      "title": "Now downloading",
+      "description": "One bar per download, from when it starts to when it finishes -- same idea as the Jellyfin dashboard's now-playing panel, but for downloads instead of playback sessions. A row appears per owner.",
       "datasource": { "type": "prometheus", "uid": "metrics" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 4 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (owner, title) (mediarvester_download_in_progress)",
+          "legendFormat": "{{owner}}: {{title}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "continuous-GrYlRd" },
+          "custom": {
+            "axisPlacement": "auto",
+            "fillOpacity": 70,
+            "lineWidth": 0,
+            "spanNulls": false
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "alignValue": "left",
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "mergeValues": true,
+        "rowHeight": 0.9,
+        "showValue": "never",
+        "tooltip": { "hideZeros": false, "mode": "multi", "sort": "none" }
+      }
+    },
+    {
+      "type": "logs",
+      "title": "Errors",
+      "description": "mediarvester's own error-level log lines (stdout/stderr scraped straight from the pod, not a separate log pipeline). Loki auto-detects the level from each line's text.",
+      "datasource": { "type": "loki", "uid": "logs" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{service_name=\"unknown_service\"} | log_file_path=~\".*mediarvester.*\" | detected_level=\"error\""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Success rate",
+      "description": "% of finished downloads that completed without error, over the last 15 minutes.",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
       "targets": [
         {
           "refId": "A",
@@ -80,57 +140,64 @@
     },
     {
       "type": "timeseries",
-      "title": "Downloads started, by collection vs single video",
+      "title": "Downloads started: single videos vs. playlists/channels",
       "datasource": { "type": "prometheus", "uid": "metrics" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (is_collection) (rate(mediarvester_download_started[15m]))",
-          "legendFormat": "collection={{is_collection}}"
+          "expr": "sum(rate(mediarvester_download_started{is_collection=\"false\"}[15m]))",
+          "legendFormat": "Single videos"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(mediarvester_download_started{is_collection=\"true\"}[15m]))",
+          "legendFormat": "Playlists / channels"
         }
       ],
       "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
     },
     {
       "type": "timeseries",
-      "title": "Download duration (p50 / p95) by outcome",
+      "title": "How long downloads take: typical vs. worst case",
+      "description": "Typical = median: half of downloads finish faster than this. Worst case = 95th percentile: only 1 in 20 downloads takes longer than this. Split by outcome (done/error).",
       "datasource": { "type": "prometheus", "uid": "metrics" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
       "targets": [
         {
           "refId": "A",
           "expr": "histogram_quantile(0.5, sum by (le, status) (rate(mediarvester_download_duration_bucket[15m])))",
-          "legendFormat": "p50 {{status}}"
+          "legendFormat": "Typical time - {{status}}"
         },
         {
           "refId": "B",
           "expr": "histogram_quantile(0.95, sum by (le, status) (rate(mediarvester_download_duration_bucket[15m])))",
-          "legendFormat": "p95 {{status}}"
+          "legendFormat": "Worst case (1 in 20) - {{status}}"
         }
       ],
       "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
     },
     {
       "type": "timeseries",
-      "title": "Auto-retries scheduled, by attempt",
-      "description": "Attempt 1/2/3 -- see downloader.py's _MAX_AUTO_RETRIES / _RETRY_DELAYS_SECONDS. A rising attempt-3 count means items are exhausting all retries and staying failed.",
+      "title": "Retries needed before giving up",
+      "description": "How many failed downloads get auto-requeued, broken down by which attempt it is (up to 3 before mediarvester gives up for good -- see downloader.py's _MAX_AUTO_RETRIES). A rising 3rd-attempt count means items are exhausting all retries and staying failed.",
       "datasource": { "type": "prometheus", "uid": "metrics" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
       "targets": [
         {
           "refId": "A",
           "expr": "sum by (attempt) (rate(mediarvester_download_retry[15m]))",
-          "legendFormat": "attempt {{attempt}}"
+          "legendFormat": "attempt {{attempt}} of 3"
         }
       ],
       "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
     },
     {
       "type": "timeseries",
-      "title": "Source polls, by outcome",
+      "title": "Checking followed channels/playlists for new videos",
+      "description": "How often mediarvester checks a followed source for new content, and whether the check itself worked (\"degraded\" = it worked but recent downloads from it have been failing a lot).",
       "datasource": { "type": "prometheus", "uid": "metrics" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
       "targets": [
         {
           "refId": "A",
@@ -142,29 +209,34 @@
     },
     {
       "type": "timeseries",
-      "title": "New entries discovered by followed sources",
+      "title": "New videos discovered from followed sources",
       "datasource": { "type": "prometheus", "uid": "metrics" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 36 },
       "targets": [
         {
           "refId": "A",
           "expr": "sum(rate(mediarvester_poller_new_entries[1h]))",
-          "legendFormat": "new entries/s"
+          "legendFormat": "new videos/s"
         }
       ],
       "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
     },
     {
       "type": "timeseries",
-      "title": "Playlist-folder placement lookups, hit rate",
-      "description": "How often a followed creator's new video matched an already-downloaded playlist (see poller.py's _matching_known_playlist / folder_hint).",
+      "title": "New videos: placed in an existing playlist folder, or new location",
+      "description": "When a followed creator posts a new video, mediarvester checks whether it belongs in a playlist folder already downloaded. This shows how often that lookup finds a match vs. falls back to the default location (see poller.py's _matching_known_playlist / folder_hint).",
       "datasource": { "type": "prometheus", "uid": "metrics" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 28 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 44 },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (matched) (rate(mediarvester_poller_playlist_match[1h]))",
-          "legendFormat": "matched={{matched}}"
+          "expr": "sum(rate(mediarvester_poller_playlist_match{matched=\"true\"}[1h]))",
+          "legendFormat": "Placed in an existing playlist folder"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(mediarvester_poller_playlist_match{matched=\"false\"}[1h]))",
+          "legendFormat": "New/default folder used"
         }
       ],
       "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
