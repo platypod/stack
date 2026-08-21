@@ -10,7 +10,11 @@ observability:
         cpu: 100m
         memory: 128Mi
       limits:
-        memory: 256Mi
+        # Was 256Mi; the pod OOMKilled instantly (<1s after start) once it
+        # actually had OTLP trace ingestion enabled (see the otlpHttp comment
+        # above) -- 256Mi was already borderline at idle. Matches the same
+        # kind of headroom bump given to Pyroscope and mediarvester earlier.
+        memory: 512Mi
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
     ports:
       grpc:
@@ -19,5 +23,16 @@ observability:
       http:
         name: http
         targetPort: 80
+      # Dedicated OTLP/HTTP ingest port. Tempo's own `server.http_listen_port`
+      # (the `http` port above) only serves the query-frontend/API -- it does
+      # NOT double as an OTLP receiver unless `distributor.receivers` is
+      # explicitly configured, which it wasn't until 2026-08-21 (discovered
+      # during the mediarvester telemetry rollout: the gateway collector's
+      # otlphttp/tempo exporter had been 404ing against port 80/v1/traces since
+      # this module's original deployment -- traces were never actually
+      # reaching Tempo).
+      otlpHttp:
+        name: otlp-http
+        targetPort: 4318
     logging:
       level: info

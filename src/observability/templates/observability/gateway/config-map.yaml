@@ -386,7 +386,7 @@ data:
       otlphttp/tempo:
         compression: gzip
         encoding: proto
-        traces_endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.traces.ports.http.targetPort }}/v1/traces
+        traces_endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.traces.ports.otlpHttp.targetPort }}/v1/traces
         tls:
           insecure: true
 

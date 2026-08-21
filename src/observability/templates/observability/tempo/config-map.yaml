@@ -11,6 +11,13 @@ data:
       http_listen_port: {{ .Values.observability.traces.ports.http.targetPort }}
       log_level: {{ .Values.observability.traces.logging.level }}
 
+    distributor:
+      receivers:
+        otlp:
+          protocols:
+            http:
+              endpoint: "0.0.0.0:{{ .Values.observability.traces.ports.otlpHttp.targetPort }}"
+
     query_frontend:
       search:
         duration_slo: 5s

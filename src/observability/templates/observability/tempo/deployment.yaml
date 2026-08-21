@@ -51,6 +51,7 @@ spec:
         ports:
         - containerPort: {{ .Values.observability.traces.ports.http.targetPort }}
         - containerPort: {{ .Values.observability.traces.ports.grpc.targetPort }}
+        - containerPort: {{ .Values.observability.traces.ports.otlpHttp.targetPort }}
         volumeMounts:
         - name: conf
           mountPath: /etc/tempo.yaml

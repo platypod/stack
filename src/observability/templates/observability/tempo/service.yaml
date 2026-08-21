@@ -14,5 +14,9 @@ spec:
     name: {{ .Values.observability.traces.ports.http.name }}
     port: {{ .Values.observability.traces.ports.http.targetPort }}
     targetPort: {{ .Values.observability.traces.ports.http.targetPort }}
+  - protocol: TCP
+    name: {{ .Values.observability.traces.ports.otlpHttp.name }}
+    port: {{ .Values.observability.traces.ports.otlpHttp.targetPort }}
+    targetPort: {{ .Values.observability.traces.ports.otlpHttp.targetPort }}
   selector:
     app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.pods.suffix }}

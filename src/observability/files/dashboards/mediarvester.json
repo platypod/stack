@@ -72,7 +72,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(mediarvester_download_completed_total{status=\"done\"}[15m])) / sum(rate(mediarvester_download_completed_total[15m])) * 100",
+          "expr": "sum(rate(mediarvester_download_completed{status=\"done\"}[15m])) / sum(rate(mediarvester_download_completed[15m])) * 100",
           "legendFormat": "success rate"
         }
       ],
@@ -86,7 +86,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (is_collection) (rate(mediarvester_download_started_total[15m]))",
+          "expr": "sum by (is_collection) (rate(mediarvester_download_started[15m]))",
           "legendFormat": "collection={{is_collection}}"
         }
       ],
@@ -120,7 +120,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (attempt) (rate(mediarvester_download_retry_total[15m]))",
+          "expr": "sum by (attempt) (rate(mediarvester_download_retry[15m]))",
           "legendFormat": "attempt {{attempt}}"
         }
       ],
@@ -134,7 +134,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (result) (rate(mediarvester_poller_poll_total[15m]))",
+          "expr": "sum by (result) (rate(mediarvester_poller_poll[15m]))",
           "legendFormat": "{{result}}"
         }
       ],
@@ -148,7 +148,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(mediarvester_poller_new_entries_total[1h]))",
+          "expr": "sum(rate(mediarvester_poller_new_entries[1h]))",
           "legendFormat": "new entries/s"
         }
       ],
@@ -163,7 +163,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (matched) (rate(mediarvester_poller_playlist_match_total[1h]))",
+          "expr": "sum by (matched) (rate(mediarvester_poller_playlist_match[1h]))",
           "legendFormat": "matched={{matched}}"
         }
       ],
