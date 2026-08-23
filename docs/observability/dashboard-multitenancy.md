@@ -15,14 +15,7 @@ point here.
 - Per-user signals (Claude Code usage, Jellyfin activity, future ones) become
   multi-user.
 - A normal user opening a dashboard sees a view scoped to **themselves**.
-- Members of the LLDAP **`admins`** group see **all** users, aggregated — as do
-  members of `grafana_admin` or `dev_admin`, the per-tool/category groups from
-  [`access-groups.yaml`](../../values/default/security/access-groups.yaml).
-  The scope-shim's `ADMIN_GROUPS` env var is generated
-  (`observability.grafanaAdminGroups` in
-  [`_helpers.tpl`](../../src/observability/templates/_helpers.tpl)) as the
-  comma-joined set of all three; `is_admin` in shim.py is true if the user's
-  LLDAP groups overlap any of them.
+- Members of the LLDAP **`admins`** group see **all** users, aggregated.
 - It must generalise to *any* future signal we decide to isolate (metrics, logs),
   not be a one-off for one dashboard.
 
@@ -295,7 +288,7 @@ identity. For untrusted shippers, the ingest path enforces that a writer may onl
 write **its own** Loki tenant, without changing the client tool:
 
 1. **Per-user gateway auth.** The OTLP/gRPC ingest rule is opened from the single
-   `otel-telemetry` account to the **`otel_writer` group** (Authelia
+   `otel-telemetry` account to the **`otel-writers` group** (Authelia
    `access_control`, [authelia.yaml](../../values/default/security/authelia.yaml)).
    Each shipper authenticates with its **own** LLDAP creds, so Authelia's
    `Remote-User` is the real identity. `otel-telemetry` stays a group member (the
@@ -313,7 +306,7 @@ header) and stays client-declared — a writer could still mislabel its own *met
 owner (fake token counts). Closing that would need payload-level stamping; left
 open deliberately since the sensitive data is the content, not the counts.
 
-Verified on dev: `otel_writer` member with matching `--owner` ships fine; the same
+Verified on dev: `otel-writers` member with matching `--owner` ships fine; the same
 creds forging another `--owner` get `PERMISSION_DENIED` on the log export (metrics
 still flow); a non-member is denied at Authelia.
 

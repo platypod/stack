@@ -53,7 +53,7 @@ spec:
         - name: LLDAP_ADMIN_PASS
           value: "{{ .Values.lldap.adminPassword }}"
         - name: GROUPS
-          value: {{ include "security.allGroupNames" . | quote }}
+          value: {{ .Values.lldap.seed.groups | toJson | quote }}
         - name: USERS
           value: {{ .Values.lldap.seed.users | toJson | quote }}
         volumeMounts:

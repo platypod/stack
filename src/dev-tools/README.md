@@ -18,16 +18,16 @@ credentials live in `values/{dev,prd}/values.yaml`. See
 
 Pinned to **24.3.5** and intentionally **excluded from version bumps** — newer
 releases have broken the saved-connection store in the past. Keeps its own admin
-login (behind Authelia `dev_user`).
+login (behind Authelia `group:dev`).
 
 ## Stateful backends
 
 BookStack, Wiki.js and Outline each have their own DB (and Outline a Redis). The
-`*-db` admin endpoints are exposed only to `dev_user`.
+`*-db` admin endpoints are exposed only to `group:dev`.
 
 ## whoami
 
-Debug echo service (`dev_user`) — useful for verifying forward-auth headers and
+Debug echo service (`group:dev`) — useful for verifying forward-auth headers and
 routing without touching a real app.
 
 ## Headroom — **disabled** (CLI-only, no working client yet)

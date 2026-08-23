@@ -323,28 +323,6 @@ data:
             {{- toYaml .resources | nindent 12 }}
           {{- end }}
         {{- end }}
-        {{- /*
-          Generated per-tool rules — one per entry in security.accessGroups
-          whose `authelia` field isn't explicitly false (bypass/own-auth tools,
-          e.g. Jellyfin, or ones with their own hand-written rule above, e.g.
-          otel). subject = its role groups + its categories' composites +
-          admins; domain = its host(s). See security.toolSubjects/toolHosts in
-          src/security/templates/_helpers.tpl and the field reference at the
-          top of values/default/security/access-groups.yaml.
-        */}}
-        {{- range $tool, $cfg := .Values.security.accessGroups }}
-        {{- if ne $cfg.authelia false }}
-        - policy: one_factor
-          subject:
-            {{- range include "security.toolSubjects" (dict "root" $ "tool" $tool) | fromJsonArray }}
-            - {{ . | quote }}
-            {{- end }}
-          domain:
-            {{- range include "security.toolHosts" (dict "root" $ "tool" $tool) | fromJsonArray }}
-            - {{ . | quote }}
-            {{- end }}
-        {{- end }}
-        {{- end }}
 
     telemetry:
       metrics:

@@ -50,10 +50,18 @@ lldap:
   # the LLDAP_LDAP_USER_PASS env var, not this job).
   seed:
     image: python:3-alpine
-    # Group list itself is generated (see security.allGroupNames in
-    # stack/src/security/templates/_helpers.tpl) off the single source of
-    # truth at values/default/security/access-groups.yaml — not hand-listed
-    # here. Only per-user group MEMBERSHIP is declared below.
+    groups:
+      - admins
+      - dev
+      - download
+      - media
+      # Built-in LLDAP group (auto-created). Listed here so the seed Job can
+      # assign the grafana-authz service account to it (read-all, no write).
+      - lldap_strict_readonly
+      # Members may push telemetry to the OTLP/gRPC gateway. The Authelia ingest
+      # rule allows this group; the tenant-guard shim then enforces that each one
+      # may only write its own Loki tenant (claude-<user>).
+      - otel-writers
     users:
       - id: admin
         email: pl@ty.pod
@@ -61,13 +69,16 @@ lldap:
         password: "{{ .Values.lldap.adminPassword }}"
         groups:
           - admins
+          - dev
+          - download
+          - media
       - id: dave
         email: dave.thedev@gmail.com
         displayName: dave
         password: davethedev
         groups:
-          - dev_user
-          - otel_writer   # may ship his own telemetry (tenant claude-dave)
+          - dev
+          - otel-writers   # may ship his own telemetry (tenant claude-dave)
       - id: guest
         email: gues@ty.pod
         displayName: guesto
@@ -75,8 +86,8 @@ lldap:
         groups: []
       # Non-interactive service account for OTLP/gRPC telemetry ingestion
       # (native Claude Code telemetry / non-human shippers). Member of
-      # otel_writer so it keeps working through the ingest rule. It writes no
-      # per-user tenant (no x-scope-orgid → lands in _shared), so the
+      # otel-writers so it keeps working through the broadened ingest rule.
+      # It writes no per-user tenant (no x-scope-orgid → lands in _shared), so the
       # tenant-guard lets it through. Remove once every shipper is a real per-user
       # account; until then it's the shared/CI path. See docs/observability/
       # dashboard-multitenancy.md.
@@ -85,7 +96,7 @@ lldap:
         displayName: OTEL Telemetry
         password: otel-telemetry-secret
         groups:
-          - otel_writer
+          - otel-writers
       # Read-only service account for the Grafana datasource scope shim: looks up
       # any user's group membership (admins-or-not) to scope dashboard queries.
       # Member of lldap_strict_readonly → can read all users/groups, no write.

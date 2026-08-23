@@ -41,18 +41,10 @@ jellyfin:
     # security/lldap.yaml (member of lldap_strict_readonly: read-all, no write).
     bindUser: jellyfin-ldap
     bindPassword: jellyfin-ldap-secret
-    # LLDAP groups whose members may log into Jellyfin at all (OR'd into one
-    # LDAP filter by jellyfin-plugins-setup) — granular + category composite +
-    # the global superuser, per values/default/security/access-groups.yaml.
-    # Includes the *_admin groups too: LdapSearchFilter gates login itself, so
-    # someone who is ONLY jellyfin_admin/media_admin (not also the _user
-    # equivalent) would otherwise be rejected before LdapAdminFilter is ever
-    # checked — confirmed by testing (qa-jellyfin-admin couldn't log in until
-    # this was added). Admin tier must always imply login access.
-    userGroup: [jellyfin_user, jellyfin_admin, media_user, media_admin, admins]
-    # LLDAP groups auto-promoted to Jellyfin Administrator on login (OR'd, same
-    # as above). Must remain a subset of userGroup so every admin can also log in.
-    adminGroup: [jellyfin_admin, media_admin, admins]
+    # LLDAP group whose members may log into Jellyfin at all.
+    userGroup: media
+    # LLDAP group auto-promoted to Jellyfin Administrator on login.
+    adminGroup: admins
     # Pinned plugin version — verify targetAbi compatibility with the pinned
     # jellyfin.image and check github.com/jellyfin/jellyfin-plugin-ldapauth
     # issue #224 (admin-sync instability) before bumping.

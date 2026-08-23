@@ -20,11 +20,7 @@ data:
     # through prom-label-proxy untouched — this shim only does per-user
     # `owner` label isolation for metrics, not per-user tenants.
     INSTANCE = os.environ.get("INSTANCE_NAME", "")
-    # Comma-separated -- any one of these forwarded/looked-up groups grants
-    # admin scope. Lets the stack point this at grafana_admin/dev_admin/admins
-    # (see values/default/security/access-groups.yaml) without this script
-    # knowing those names are related; it just checks for overlap.
-    ADMIN_GROUPS = {g.strip() for g in os.environ.get("ADMIN_GROUPS", "admins").split(",") if g.strip()}
+    ADMIN_G = os.environ.get("ADMIN_GROUP", "admins")
     HEADER  = os.environ.get("USER_HEADER", "X-Grafana-User").lower()
     PREFIX  = os.environ.get("TENANT_PREFIX", "claude-")
     SHARED_OWNER = os.environ.get("SHARED_OWNER", "_shared")
@@ -111,7 +107,7 @@ data:
         return PREFIX + slug
 
     def scope_for(user):
-        is_admin = not ADMIN_GROUPS.isdisjoint(groups_of(user))
+        is_admin = ADMIN_G in groups_of(user)
         if is_admin:
             # See everything. owner ".+" matches any non-empty owner (every series
             # carries one — personal=username, shared infra=SHARED_OWNER); Loki

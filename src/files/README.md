@@ -3,7 +3,7 @@
 Download clients: torrent (**Transmission**, **qBittorrent**, **Deluge**) and
 usenet (**SABnzbd**).
 
-All four are gated behind Authelia `download_user` and keep their own native
+All four are gated behind Authelia `group:download` and keep their own native
 login. They write into the shared **media** NFS PVC so the *arrs can hardlink/move
 completed downloads — same ownership rules as the media module apply (run as the
 media user, **never** `fsGroup` on the NFS PVC).

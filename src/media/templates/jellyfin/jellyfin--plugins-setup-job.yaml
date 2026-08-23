@@ -80,10 +80,10 @@ spec:
           value: "{{ .Values.jellyfin.ldap.bindUser }}"
         - name: LDAP_BIND_PASSWORD
           value: "{{ .Values.jellyfin.ldap.bindPassword }}"
-        - name: LDAP_USER_GROUPS
-          value: {{ .Values.jellyfin.ldap.userGroup | toJson | quote }}
-        - name: LDAP_ADMIN_GROUPS
-          value: {{ .Values.jellyfin.ldap.adminGroup | toJson | quote }}
+        - name: LDAP_USER_GROUP
+          value: "{{ .Values.jellyfin.ldap.userGroup }}"
+        - name: LDAP_ADMIN_GROUP
+          value: "{{ .Values.jellyfin.ldap.adminGroup }}"
         - name: LDAP_PLUGIN_VERSION
           value: "{{ .Values.jellyfin.ldap.pluginVersion }}"
         - name: MOONFIN_ENABLE
@@ -107,8 +107,8 @@ spec:
           LDAP_BASE_DN    = os.environ["LDAP_BASE_DN"]
           LDAP_BIND_USER  = os.environ["LDAP_BIND_USER"]
           LDAP_BIND_PASS  = os.environ["LDAP_BIND_PASSWORD"]
-          LDAP_USER_GROUPS  = json.loads(os.environ["LDAP_USER_GROUPS"])
-          LDAP_ADMIN_GROUPS = json.loads(os.environ["LDAP_ADMIN_GROUPS"])
+          LDAP_USER_GROUP  = os.environ["LDAP_USER_GROUP"]
+          LDAP_ADMIN_GROUP = os.environ["LDAP_ADMIN_GROUP"]
           LDAP_PLUGIN_VERSION = os.environ["LDAP_PLUGIN_VERSION"]
           LDAP_PLUGIN_GUID    = "958aad66-3784-4d2a-b89a-a7b6fab6e25c"  # official LDAP Authentication plugin
           MOONFIN_ENABLE   = os.environ["MOONFIN_ENABLE"] == "true"
@@ -156,13 +156,6 @@ spec:
 
           def norm_guid(g):
               return g.lower().replace("-", "")
-
-          def or_membership_filter(groups):
-              # Any of the given LLDAP groups satisfies the filter. A single-group
-              # list still gets wrapped in "(|...)" -- LDAP is fine with a
-              # single-branch OR, and it keeps this one code path for both cases.
-              clauses = "".join(f"(memberOf=cn={g},ou=groups,{LDAP_BASE_DN})" for g in groups)
-              return f"(|{clauses})"
 
           plugins = jf("GET", "/Plugins", token=token)
           have_ldap    = LDAP_ENABLE and any(norm_guid(p.get("Id", "")) == norm_guid(LDAP_PLUGIN_GUID) for p in plugins)
@@ -212,9 +205,9 @@ spec:
                   "LdapBindUser": f"uid={LDAP_BIND_USER},ou=people,{LDAP_BASE_DN}",
                   "LdapBindPassword": LDAP_BIND_PASS,
                   "LdapBaseDn": f"ou=people,{LDAP_BASE_DN}",
-                  "LdapSearchFilter": or_membership_filter(LDAP_USER_GROUPS),
+                  "LdapSearchFilter": f"(memberOf=cn={LDAP_USER_GROUP},ou=groups,{LDAP_BASE_DN})",
                   "LdapAdminBaseDn": "",
-                  "LdapAdminFilter": or_membership_filter(LDAP_ADMIN_GROUPS),
+                  "LdapAdminFilter": f"(memberOf=cn={LDAP_ADMIN_GROUP},ou=groups,{LDAP_BASE_DN})",
                   "EnableLdapAdminFilterMemberUid": False,
                   "LdapSearchAttributes": "uid, cn, mail, displayName",
                   "CreateUsersFromLdap": True,

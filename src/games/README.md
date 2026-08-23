@@ -2,7 +2,7 @@
 
 ## RomM
 
-ROM library manager (`media_user`), backed by its own **MariaDB** (`rommapp-db`).
+ROM library manager (`group:media`), backed by its own **MariaDB** (`rommapp-db`).
 Delegates login to Authelia via **OIDC** with account provisioning on first login.
 ROM files live on the media NFS share.
 

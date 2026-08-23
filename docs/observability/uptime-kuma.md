@@ -1,6 +1,6 @@
 # uptime-kuma (observability)
 
-Black-box uptime monitoring, with its own admin login (`dev_user`).
+Black-box uptime monitoring, with its own admin login (`group:dev`).
 
 - **Image:** `louislam/uptime-kuma:1.23.17` — **pinned to the 1.23.x stable line.**
   2.x is a beta that **dropped the Socket.io API** the seed Job relies on; do not bump.
