@@ -33,7 +33,7 @@ are provisioned.
 
 ## Uptime-Kuma
 
-Own admin login (`group:dev`). **Pinned to the 1.23.x stable line** — 2.x is a
+Own admin login (`dev_user`). **Pinned to the 1.23.x stable line** — 2.x is a
 beta that dropped the Socket.io API the seed Job relies on.
 
 A post-install/upgrade hook Job (`uptime-kuma-setup`) creates the admin and seeds

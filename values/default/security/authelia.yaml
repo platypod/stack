@@ -44,14 +44,14 @@ authelia:
       targetPort: 9959
   replicasNb: 1
   rules:
-    # OTLP/gRPC telemetry ingress: any member of the otel-writers group, via
+    # OTLP/gRPC telemetry ingress: any member of the otel_writer group, via
     # Authorization: Basic (1FA). The dedicated forward-auth-basic endpoint makes
     # Basic auth usable here without changing any browser-facing service. The
     # tenant-guard shim (next middleware) then enforces that each writer may only
     # write its own Loki tenant. See docs/observability/dashboard-multitenancy.md.
     - policy: one_factor
       subject:
-      - "group:otel-writers"
+      - "group:otel_writer"
       domain:
       - "{{ tpl .Values.observability.otelCollector.gateway.grpcHost . }}"
 
@@ -82,54 +82,10 @@ authelia:
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.pokeclicker.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.unbegotten.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
 
-    - subject:
-      - group:media
-      policy: one_factor
-      domain:
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bazarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.flaresolverr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.prowlarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.rommapp.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.readarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.mediarvester.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.reclaimerr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.kavita.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.audiobookshelf.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.suwayomi.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.tdarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-
-    - subject:
-      - group:download
-      policy: one_factor
-      domain:
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.deluge.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.qbittorrent.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.sabnzbd.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-
-    - subject:
-      - group:dev
-      policy: one_factor
-      domain:
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.adguard.label }}-admin{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.authelia.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bookstack.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bookstack.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.wikijs.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.wikijs.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.outline.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.dbeaver.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.database.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.dashboard.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.profiles.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.whoami.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.uptimeKuma.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+    # Per-tool rules for everything gated by access-groups.yaml (media/download/
+    # dev membership, per-tool roles) are generated in
+    # authelia--config-map.yaml — see security.toolSubjects/toolHosts in
+    # src/security/templates/_helpers.tpl. Nothing hand-written here anymore.
 
     - policy: bypass
       domain:

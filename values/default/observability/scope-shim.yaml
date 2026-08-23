@@ -36,8 +36,9 @@ observability:
     # NetworkPolicy). Override per-env if desired.
     secret: "scope-shim-shared-secret"
     secretHeader: "X-Shim-Auth"
-    # LLDAP group whose members bypass scoping (see everything).
-    adminGroup: admins
+    # Admin-granting groups are generated (observability.grafanaAdminGroups in
+    # src/observability/templates/_helpers.tpl) off
+    # values/default/security/access-groups.yaml — no adminGroup value needed here.
     # Header Grafana sends when [dataproxy] send_user_header = true.
     userHeader: X-Grafana-User
     # Owner label value stamped on all non-personal (shared/infra) metrics, so

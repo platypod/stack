@@ -60,6 +60,8 @@ spec:
           value: {{ .Values.mediarvester.auth.header | quote }}
         - name: DEFAULT_USER
           value: {{ .Values.mediarvester.auth.defaultUser | quote }}
+        - name: ADMIN_GROUPS
+          value: {{ include "media.mediarvesterAdminGroups" . | quote }}
         - name: DOWNLOAD_CONCURRENCY
           value: {{ .Values.mediarvester.downloadConcurrency | quote }}
         - name: LOG_LEVEL

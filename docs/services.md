@@ -24,10 +24,10 @@ refers to the model described in [authentication.md](authentication.md).
 | BookStack | Wiki / docs | **OIDC** |
 | Wiki.js | Wiki | **OIDC** |
 | Outline | Team knowledge base | **OIDC** |
-| CloudBeaver (dbeaver) | DB web client | own login (`group:dev`); pinned 24.3.5 |
+| CloudBeaver (dbeaver) | DB web client | own login (`dev_user`); pinned 24.3.5 |
 | IT-Tools | Dev utilities | bypass |
 | CyberChef | Data-format swiss-army knife | bypass |
-| whoami | Debug echo endpoint | forwardauth (`group:dev`) |
+| whoami | Debug echo endpoint | forwardauth (`dev_user`) |
 | ~~Headroom~~ | LLM context-compression proxy ([headroomlabs-ai/headroom](https://github.com/headroomlabs-ai/headroom)) | **disabled** — CLI-only, no working client; see [src/dev-tools/README.md](../src/dev-tools/README.md#headroom--disabled-cli-only-no-working-client-yet) |
 
 ## media
@@ -37,30 +37,30 @@ refers to the model described in [authentication.md](authentication.md).
 | Jellyfin | Media server, host-native on mini4 (GPU transcode) | own auth (bypass ingress) + optional LLDAP login via LDAP-Auth plugin — see [jellyfin-ldap.md](media/jellyfin-ldap.md) |
 | jellyfin-k8s | In-cluster Jellyfin, benchmark-only (prod only) | not exposed — internal, jellyswarrm backend only |
 | Jellyseerr | Request manager | own auth (bypass ingress) |
-| Radarr / Sonarr / Readarr | *arr automation | own auth (`group:media`) |
-| Prowlarr | Indexer manager | own auth (`group:media`) |
-| Bazarr | Subtitles | own auth (`group:media`) |
-| Mediarvester | Media tooling | `group:media` |
-| Tdarr | Media transcoding / normalization | `group:media` |
-| Reclaimerr | *arr cleanup | **OIDC** (`group:media`) |
-| Kavita | Comic/book/manga reader | **OIDC** (`group:media`) |
-| Audiobookshelf | Audiobook/podcast server | **OIDC** (`group:media`) |
-| Suwayomi | Manga downloader (feeds Kavita) | none / forwardauth (`group:media`) |
+| Radarr / Sonarr / Readarr | *arr automation | own auth (`media_user`) |
+| Prowlarr | Indexer manager | own auth (`media_user`) |
+| Bazarr | Subtitles | own auth (`media_user`) |
+| Mediarvester | Media tooling | `mediarvester_user`; `mediarvester_admin`/`media_admin`/`admins` grants in-app admin |
+| Tdarr | Media transcoding / normalization | `media_user` |
+| Reclaimerr | *arr cleanup | **OIDC** (`media_user`) |
+| Kavita | Comic/book/manga reader | **OIDC** (`media_user`) |
+| Audiobookshelf | Audiobook/podcast server | **OIDC** (`media_user`) |
+| Suwayomi | Manga downloader (feeds Kavita) | none / forwardauth (`media_user`) |
 | ~~Komga~~ | Comic reader | **disabled** (replaced by Kavita) |
 | Flaresolverr | Cloudflare solver (internal) | bypass (cluster CIDR only) |
 
 ## files
 | Service | Role | Auth |
 |---------|------|------|
-| Transmission | Torrent client | own auth (`group:download`) |
-| qBittorrent | Torrent client | own auth (`group:download`) |
-| Deluge | Torrent client | own auth (`group:download`) |
-| SABnzbd | Usenet client, auto-wired into Sonarr/Radarr/Readarr/Prowlarr | own auth (`group:download`) |
+| Transmission | Torrent client | own auth (`download_user`) |
+| qBittorrent | Torrent client | own auth (`download_user`) |
+| Deluge | Torrent client | own auth (`download_user`) |
+| SABnzbd | Usenet client, auto-wired into Sonarr/Radarr/Readarr/Prowlarr | own auth (`download_user`) |
 
 ## games
 | Service | Role | Auth |
 |---------|------|------|
-| RomM | ROM library manager | **OIDC** (`group:media`) |
+| RomM | ROM library manager | **OIDC** (`media_user`) |
 | PokéClicker | Browser game | forwardauth (`one_factor`) |
 | Unbegotten | 3D maze wrapped onto the inside of a sphere, browser game | forwardauth (`one_factor`) |
 | Palworld | Dedicated Palworld game server | direct UDP (LoadBalancer/externalIP) |
@@ -72,12 +72,12 @@ refers to the model described in [authentication.md](authentication.md).
 ## observability
 | Service | Role | Auth |
 |---------|------|------|
-| Grafana | Dashboards | **OIDC** (`group:dev`) |
-| Mimir | Metrics store (OTLP) | `group:dev` |
-| Loki | Logs store | `group:dev` |
-| Tempo | Traces store (pinned 2.10.6) | `group:dev` |
+| Grafana | Dashboards | **OIDC** (`dev_user`); `grafana_admin`/`dev_admin`/`admins` seen by the dashboard scope-shim as admin (see [observability/dashboard-multitenancy.md](observability/dashboard-multitenancy.md)) |
+| Mimir | Metrics store (OTLP) | `dev_user` |
+| Loki | Logs store | `dev_user` |
+| Tempo | Traces store (pinned 2.10.6) | `dev_user` |
 | OpenTelemetry Collector | Telemetry gateway | internal |
-| Uptime-Kuma | Status / uptime monitoring | own login (`group:dev`) |
+| Uptime-Kuma | Status / uptime monitoring | own login (`dev_user`) |
 
 ## persistence
 Shared stateful backends (no public ingress): MariaDB / PostgreSQL / Redis
