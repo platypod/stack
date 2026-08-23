@@ -14,6 +14,8 @@ spec:
     metadata:
       labels:
         app: {{ $pod }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/observability/tempo/config-map.yaml") . | sha256sum }}
     spec:
       priorityClassName: platypod-bulk
       # Prefer the bulk node (memory-rich, CPU-poor) but never require it: that

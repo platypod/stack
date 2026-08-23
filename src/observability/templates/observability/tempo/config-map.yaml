@@ -40,7 +40,15 @@ data:
       storage:
         path: /var/tempo/generator/wal
         remote_write:
-        - url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.metrics.ports.http.targetPort }}/api/v1/write
+        # Mimir's Prometheus-remote-write-compatible endpoint is /api/v1/push, not
+        # /api/v1/write -- the latter 404s (no such route). Tempo pushes directly,
+        # bypassing the OTel gateway's headers_setter that injects X-Scope-OrgID
+        # for everything else (Mimir has multitenancy_enabled: true), so it needs
+        # its own header -- "anonymous" to match the default tenant used
+        # everywhere else that doesn't claim one. See docs/observability/tempo.md.
+        - url: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.metrics.ports.http.targetPort }}/api/v1/push
+          headers:
+            X-Scope-OrgID: anonymous
           send_exemplars: true
       traces_storage:
         path: /var/tempo/generator/traces
@@ -56,5 +64,9 @@ data:
     overrides:
       defaults:
         metrics_generator:
-          processors: [service-graphs, span-metrics, local-blocks]
+          # local-blocks (TraceQL metrics) dropped: it's the memory-heaviest of the
+          # three processors -- keeps recent trace data resident for ad-hoc
+          # aggregation -- and isn't needed for the RED/service-graph metrics this
+          # deployment actually uses. See docs/observability/tempo.md.
+          processors: [service-graphs, span-metrics]
           generate_native_histograms: both

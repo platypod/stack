@@ -10,11 +10,13 @@ observability:
         cpu: 100m
         memory: 128Mi
       limits:
-        # Was 256Mi; the pod OOMKilled instantly (<1s after start) once it
-        # actually had OTLP trace ingestion enabled (see the otlpHttp comment
-        # above) -- 256Mi was already borderline at idle. Matches the same
-        # kind of headroom bump given to Pyroscope and mediarvester earlier.
-        memory: 512Mi
+        # Was 256Mi, then 512Mi -- both OOMKilled once OTLP trace ingestion
+        # actually started working (2026-08-21 receiver fix) and real trace
+        # volume from mediarvester hit it, 531 restarts/47h. Same pattern as
+        # the OTel gateway's 512Mi->1Gi bump (otel-collectors.yaml). Paired
+        # with dropping the local-blocks metrics-generator processor -- see
+        # docs/observability/tempo.md.
+        memory: 1Gi
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
     ports:
       grpc:
