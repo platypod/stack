@@ -25,7 +25,7 @@ swapping Authelia (the shim is inherent glue, not an Authelia shortcoming).
 
 `--owner` is client-declared, so a shipper could claim another user's identity. The
 ingest path now authorizes per-user writes: the OTLP/gRPC Authelia rule is opened to
-the **`otel-writers`** group (each shipper uses its own LLDAP creds → real
+the **`otel_writer`** group (each shipper uses its own LLDAP creds → real
 `Remote-User`), and a **`tenant-guard` ForwardAuth shim** (after `authelia-basic`)
 **403s** any request whose `x-scope-orgid` ≠ `claude-<Remote-User>`. So a writer can
 only write its own Loki tenant. Tenant-less traffic (metrics, native telemetry) is

@@ -2,9 +2,12 @@
 
 Jellyfin authenticates against [lldap](../security/lldap.md) via the community
 **LDAP-Auth** plugin, and ships the **Moonfin** (Moonbase) plugin for the
-[Moonfin client apps](https://moonfin.io). `media`-group members auto-provision
-and can log in with their LLDAP password; `admins`-group members are
-auto-promoted to Jellyfin Administrator. The pre-existing local admin account
+[Moonfin client apps](https://moonfin.io). Members of `jellyfin_user`,
+`jellyfin_admin`, `media_user`, `media_admin`, or `admins` auto-provision and
+can log in with their LLDAP password (the admin-tier groups are included in
+the login filter too, not just the promotion filter — see below); members of
+`jellyfin_admin`, `media_admin`, or `admins` are additionally auto-promoted to
+Jellyfin Administrator. The pre-existing local admin account
 (`jellyfin.credentials`) is left in place as a non-LDAP break-glass login.
 
 ## dev — fully automated
@@ -23,9 +26,14 @@ auto-promoted to Jellyfin Administrator. The pre-existing local admin account
 4. Pushes LDAP-Auth config unconditionally every run (config drift self-heals on
    redeploy even when the plugin was already installed): bind as `jellyfin-ldap`
    (read-only, member of `lldap_strict_readonly` — see [lldap.md](../security/lldap.md)),
-   search filter scoped to `jellyfin.ldap.userGroup` (`media`), admin filter scoped
-   to `jellyfin.ldap.adminGroup` (`admins`), `CreateUsersFromLdap: true`, `uid` as
-   the username/uid attribute (LLDAP convention).
+   search filter OR'd across `jellyfin.ldap.userGroup`
+   (`[jellyfin_user, jellyfin_admin, media_user, media_admin, admins]` —
+   includes the admin-tier groups too, not just the user ones: this filter
+   gates login itself, so a user who is *only* `jellyfin_admin`/`media_admin`
+   would otherwise be rejected before the separate admin filter is ever
+   checked, confirmed by testing), admin filter OR'd across
+   `jellyfin.ldap.adminGroup` (`[jellyfin_admin, media_admin, admins]`),
+   `CreateUsersFromLdap: true`, `uid` as the username/uid attribute (LLDAP convention).
 5. Seeds libraries from `jellyfin.libraries` via `POST /Library/VirtualFolders`.
    An init container `mkdir -p`s every configured path first — Jellyfin's API
    rejects library paths that don't exist on disk, and dev's media PVC starts

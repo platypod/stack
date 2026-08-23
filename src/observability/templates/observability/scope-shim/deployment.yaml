@@ -38,8 +38,8 @@ spec:
           value: {{ $s.lldap.user | quote }}
         - name: LLDAP_PASS
           value: {{ $s.lldap.password | quote }}
-        - name: ADMIN_GROUP
-          value: {{ $s.adminGroup | quote }}
+        - name: ADMIN_GROUPS
+          value: {{ include "observability.grafanaAdminGroups" $ | quote }}
         - name: SHIM_SECRET
           value: {{ $s.secret | quote }}
         - name: SHIM_SECRET_HEADER
