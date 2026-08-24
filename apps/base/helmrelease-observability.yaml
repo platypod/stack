@@ -10,6 +10,17 @@ spec:
   dependsOn:
     - name: core
     - name: security
+  # otel-collector's DaemonSet runs a second replica on the control-plane
+  # node (to collect its metrics too) — that node has too little free
+  # memory for it, so it sits Pending permanently on local's undersized
+  # 2-node cluster. Unlike persistence's disableWait (an inherent, expected
+  # steady state), this is local-only, capacity-driven, and this HelmRelease
+  # doesn't exist for prod yet (still Helmfile there, Phase 7) — safe to
+  # disable --wait here without masking anything on a real deploy.
+  install:
+    disableWait: true
+  upgrade:
+    disableWait: true
   chart:
     spec:
       chart: ./src/observability
