@@ -33,7 +33,12 @@ authelia:
     level: info
     format: text
   oidc:
-    hmac_secret: yI4VysTXqctmqEzUGWuxCwh4WfDr90WBY5PTVj9Gsd9jHPZ9iRHtpyVGiMHr88GY
+    # Placeholder — real value comes from values/<env>/values.yaml (gitignored)
+    # or the SOPS-encrypted secrets repo. Guarded at render time in
+    # src/security/templates/authelia/authelia--config-map.yaml. Now that
+    # hmac_secret is actually wired in (c125189), this is a live secret —
+    # signs opaque OAuth2 tokens (auth codes, access/refresh tokens).
+    hmac_secret: verySecretMuchSecureNeverGonnaBeGuessedHmacSecret
     jwks:
       caName: authelia-jwks
       commonName: authelia-jwks

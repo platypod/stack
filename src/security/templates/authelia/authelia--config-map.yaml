@@ -1,4 +1,7 @@
 {{- $jwks := genSelfSignedCert .Values.authelia.oidc.jwks.commonName nil (list .Values.authelia.oidc.jwks.commonName) 365 }}
+{{- if eq .Values.authelia.oidc.hmac_secret "verySecretMuchSecureNeverGonnaBeGuessedHmacSecret" }}
+{{- fail "authelia.oidc.hmac_secret is still the placeholder — set a real value in values/<env>/values.yaml" }}
+{{- end }}
 
 apiVersion: v1
 kind: ConfigMap
