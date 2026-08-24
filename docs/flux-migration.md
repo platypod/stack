@@ -447,8 +447,8 @@ Flux version bump) regenerates `gotk-sync.yaml` and silently reverts
 `spec.ref` back to `branch: main` — re-apply the semver edit after any
 future re-bootstrap.
 
-Two new things found doing this for real (beyond what Phase 4 already
-covered) — see gotchas 12 and 13 below.
+Three new things found doing this for real (beyond what Phase 4 already
+covered) — see gotchas 12-14 below.
 
 **Phase 8 — decommission.** Retire the Helmfile targets and the NFS values
 symlink + `REQUIRE_VALUES` guard; rewrite [make-targets.md](make-targets.md) and
@@ -622,6 +622,37 @@ smallest piece, and only makes sense once Git is authoritative.
     `local`'s original setup used the same broken assumption but never
     surfaced it because it was done by hand, one field at a time, not
     scripted until this phase.
+14. **A `HelmRelease` with no explicit `spec.releaseName` doesn't stay
+    inert next to an existing imperative release of the same chart — it
+    silently takes ownership. Found in Phase 7, post-cutover audit
+    ("are we sure this actually worked?"), on prod's `csi-driver-nfs`.**
+    Every one of the 8 app modules got `releaseName` set explicitly for
+    in-place adoption (gotcha 4) — but Phase 5's `infrastructure/csi/helm-release.yaml`
+    was authored and left inert for months without that same care, since
+    at the time nothing reconciled it yet. When Phase 7's bootstrap
+    finally applied it, Flux used its own default release name
+    (`kube-system-csi-driver-nfs`, `<namespace>-<name>`) instead of the
+    original imperative install's name (`csi-driver-nfs`, from
+    `make install-csi`, predating this migration). Helm's `install` did
+    **not** refuse — it silently rewrote the live `csi-nfs-controller`
+    Deployment's and `csi-nfs-node` DaemonSet's `meta.helm.sh/release-name`
+    annotation to the new release, leaving the old `csi-driver-nfs` release
+    record as an orphaned ghost (still `helm list`-visible as `deployed`,
+    owning nothing). No live disruption — the underlying pods were never
+    touched, same age throughout — but a real latent risk: `helm uninstall
+    csi-driver-nfs` reads *its own* stored manifest to decide what to
+    delete, not current ownership annotations, so running that later would
+    have deleted the live (now differently-owned) CSI driver objects by
+    name. Fixed: deleted only the orphaned release's Helm storage Secret
+    (`sh.helm.release.v1.csi-driver-nfs.v1` in `kube-system`) — pure
+    bookkeeping, verified zero live resources still referenced it before
+    deleting, confirmed the running pods' age/restart-count were unchanged
+    after. **Any future `HelmRelease` authored for something that might
+    already exist outside Flux needs an explicit `releaseName` matching the
+    existing release from the start — not just the 8 already-known
+    modules** — and this one slipped through because it was "pre-authored,
+    inert" for a whole phase before ever actually reconciling, so the usual
+    right-after-authoring verification never caught it.
 
 ## Open items
 
