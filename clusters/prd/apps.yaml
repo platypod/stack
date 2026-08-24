@@ -1,0 +1,21 @@
+# Mirrors clusters/local/apps.yaml — same shared apps/base/, resolved to
+# prd-platypod / prd--platypod--<module> via targetNamespace +
+# postBuild.substitute. See stack/docs/flux-migration.md Phase 7.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: apps
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  path: ./apps/base
+  prune: true
+  targetNamespace: prd-platypod
+  postBuild:
+    substitute:
+      env: prd
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: infra-crds
