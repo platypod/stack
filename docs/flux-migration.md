@@ -1,8 +1,9 @@
 # Flux migration (plan)
 
-> **Status: Phases 0-4 done (secrets local-only so far; all 8 modules ported
-> to `HelmRelease` and healthy on the laptop cluster); Phase 5 onward not
-> started.** It records the decisions (with rejected alternatives)
+> **Status: Phases 0-5 and 7 done — prod cut over onto Flux, all 8 releases
+> adopted in place and `v1.0.0`-tagged; Phase 6 retired (merged into
+> Phase 3); Phase 8 (Helmfile decommission) not started.** It records the
+> decisions (with rejected alternatives)
 > and the phased path from today's Helmfile + `make` workflow to Flux CD
 > across three clusters. Conventions live in [conventions.md](conventions.md);
 > day-to-day operations in [operations.md](operations.md); other stack
@@ -421,12 +422,33 @@ onto Flux" — folded into Phase 3 once that ran directly on the laptop
 instead of a separate new machine. Numbering left as-is rather than
 renumbering every phase after it.
 
-**Phase 7 — prod cutover.** Set `HelmRelease.spec.releaseName` to the **exact
-existing release names** (`prd--platypod--core`, …) so helm-controller adopts the
-existing releases in place rather than reinstalling — a reinstall would churn PVs
-against 18 TB of NFS media. Must be proven on local in Phase 4 first. Tag `v1.0.0`
-**in both `platypod/stack` and `platypod-sops`** to arm prod's semver ref on
-each — lockstep tagging, see the SOPS decision above.
+**Phase 7 — prod cutover. Status: done.** `HelmRelease.spec.releaseName`
+(`${env}--platypod--<module>`, resolved to the exact existing release names
+via `postBuild.substitute`) let helm-controller adopt all 8 existing
+releases in place — every one landed exactly one revision past its
+pre-cutover number (`persistence` 26→27→28, `core` 27→28→29, etc.),
+`deployed`, no reinstall, zero PVC churn against the 18 TB of NFS media.
+78/78 pods `Running`/`Completed` post-cutover; spot-checked
+`grafana`/`jellyfin`/`homepage`.platypod.ovh all still routing (302 to
+Authelia, as expected). `v1.0.0` tagged in both `platypod/stack` and
+`platypod-sops`, lockstep — both `GitRepository`s confirmed resolved to
+the tag, not `main`, via `flux get sources git`.
+
+Sequencing note (not in the original one-liner): `flux bootstrap` always
+generates `spec.ref: {branch: main}`, so the semver gate can't be a
+precondition of the cutover itself — bootstrapped on `main` first (the
+actual adoption moment), verified full health, **then** hand-edited
+`clusters/prd/flux-system/gotk-sync.yaml`'s `spec.ref` (and
+`clusters/prd/secrets.yaml`'s `platypod-sops` `GitRepository`) from
+`branch: main` to `semver: ">=1.0.0"`, then tagged. Means the tag always
+points at content already proven healthy, never an unverified guess.
+**Maintenance note**: re-running `make flux-bootstrap ENV=prd` (e.g. for a
+Flux version bump) regenerates `gotk-sync.yaml` and silently reverts
+`spec.ref` back to `branch: main` — re-apply the semver edit after any
+future re-bootstrap.
+
+Two new things found doing this for real (beyond what Phase 4 already
+covered) — see gotchas 12 and 13 below.
 
 **Phase 8 — decommission.** Retire the Helmfile targets and the NFS values
 symlink + `REQUIRE_VALUES` guard; rewrite [make-targets.md](make-targets.md) and
@@ -566,6 +588,40 @@ smallest piece, and only makes sense once Git is authoritative.
     on prod — confirmed via `make diff ENV=prd` (JSON key-order only, an
     artifact of `toJson`'s alphabetical field ordering vs. the old
     hand-written literal).
+12. **`Kustomization.spec.postBuild.substitute` scans the WHOLE rendered
+    manifest, not just the fields meant to vary. Found in Phase 7,
+    live on prod.** Making `apps/base/` shared across clusters (Phase 7)
+    needed `${env}` tokens in the 8 `HelmRelease`s, resolved per cluster via
+    `postBuild.substitute`. That substitution runs in strict mode over
+    *every* `${...}`-looking sequence in the fully-rendered output —
+    including comments embedded in generated `ConfigMap` data, which have
+    nothing to do with the substitution. A doc comment in
+    `values/default/dev-tools.yaml` describing Wiki.js's own OIDC callback
+    URL pattern (`${host}/login/${key}/callback`) broke the `apps`
+    Kustomization outright on *both* `local` and `prd` the moment either
+    reconciled against the new commit — `envsubst error: variable
+    substitution failed: variable not set (strict mode): "host"`. Fixed
+    with Flux's `$$` escape (`$${host}`, a literal `$` the scanner skips) —
+    invisible to Helm, which strips comments before rendering. Any future
+    prose anywhere in the 9 default value files that happens to contain
+    `${...}` will trip this the same way on every cluster at once — worth a
+    quick `grep -rn '\${' values/default/'` before merging new comments
+    near curly braces.
+13. **`flux create secret git --export` writes `stringData` (plain text),
+    not `data` (base64) — and `gh repo deploy-key add` has no `--read-only`
+    flag. Found in Phase 7, scripting `flux-sops-secrets`.** The first
+    version of the target read `.data."identity.pub" | base64 -d`, which
+    resolved to `null` → empty string, silently producing a garbage
+    3-byte "public key" that `gh repo deploy-key add` then rejected in a
+    way that wasn't obviously about the wrong field (an "unknown flag"
+    error from the *next* problem masked the first one in the same run).
+    Fixed: read `.stringData."identity.pub"` directly, no base64 decode;
+    drop `--read-only` entirely (it's the default — only `-w`/`--allow-write`
+    opts into write access, there's no flag to explicitly request the
+    default). Caught because this ran for real against prod, not `local` —
+    `local`'s original setup used the same broken assumption but never
+    surfaced it because it was done by hand, one field at a time, not
+    scripted until this phase.
 
 ## Open items
 
