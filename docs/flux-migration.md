@@ -1,7 +1,7 @@
 # Flux migration (plan)
 
-> **Status: Phases 0-3 done (secrets local-only so far; Flux bootstrapped on
-> the laptop cluster, no app modules ported yet); Phase 4 onward not
+> **Status: Phases 0-4 done (secrets local-only so far; all 8 modules ported
+> to `HelmRelease` and healthy on the laptop cluster); Phase 5 onward not
 > started.** It records the decisions (with rejected alternatives)
 > and the phased path from today's Helmfile + `make` workflow to Flux CD
 > across three clusters. Conventions live in [conventions.md](conventions.md);
@@ -364,8 +364,40 @@ prompt (`networksetup`), so it couldn't run non-interactively — the user
 needs to run it themselves once, to point this laptop's system DNS at the
 new cluster's AdGuard.
 
-**Phase 4 — port the 8 modules to `HelmRelease` on local.** Verify `dependsOn`
-reproduces the module ordering, especially `files` after `media`.
+**Phase 4 — port the 8 modules to `HelmRelease` on local. Status: done.** All
+8 (`persistence`, `core`, `security`, `observability`, `dev-tools`, `media`,
+`games`, `files`) ported, adopted in place, and healthy — same
+`dependsOn` graph as `helmfile.yaml.gotmpl`'s `needs:`, `files` correctly
+waiting on `media`. `apps/base/` carries the two-tier `configMapGenerator`
+set (substrate + registry + 7 per-module) plus all 8 `HelmRelease`s; every
+release gets all 7 module ConfigMaps (not just its own — see gotcha 2), the
+`platypod-sops` Secret, and `reconcileStrategy: Revision` (gotcha 8).
+
+Found and fixed four new issues beyond the original gotcha list while
+getting `observability` and `files` to actually go healthy (gotchas 8-11
+below): stale chart packaging, a `chartVersion` label that broke under
+Flux's revision suffix, two `local`-only resource-capacity walls
+(loki/otel-gateway, otel-collector's control-plane DaemonSet replica), and
+a real bug in both `files` setup Jobs (`torrent-clients-setup`,
+`sabnzbd-setup`) that unconditionally polled *arr apps regardless of their
+own `enable` flag — harmless on prod (everything enabled there) but a
+15-minute-per-disabled-app hang on `local`, where Sonarr/Radarr/Readarr/
+Prowlarr are deliberately off (undersized node). Also corrected an earlier
+wrong claim about the `prometheus-snmp-exporters` duplicate-IngressRoute
+bug (see gotcha 9) — it does not distinguish `local` from prod as cleanly
+as first thought.
+
+Deferred, not yet scripted as a Make target (same reproducibility gap
+flagged after Phase 3 for the in-cluster `platypod-sops` deploy key): the
+per-module `helmrelease-*.yaml` authoring itself was manual (one-time,
+not re-run on every rebuild, so lower priority than the Phase 3 items).
+Also unresolved: `local`'s Helmfile releases are still technically
+adoptable via `make deploy ENV=local` even though Flux now owns them —
+`make diff ENV=local` still renders/diffs fine against the live (now
+Flux-managed) releases, so there's no drift *today*, but running an actual
+`helmfile sync` against `local` would fight helm-controller for ownership.
+No guard against this exists yet; avoid running deploys against `local`
+outside Flux going forward. Real Phase 8 cleanup, called out early.
 
 **Phase 5 — CSI, remaining self-management on local.** CRD vendoring and
 Flux self-management landed already in Phase 3. `csi-driver-nfs` as a
@@ -450,6 +482,78 @@ smallest piece, and only makes sense once Git is authoritative.
    Any other module whose PVCs are provisioned ahead of their consumers
    needs the same treatment — check for this specifically when porting
    `media`/`games`.
+8. **`HelmChart`'s default `reconcileStrategy: ChartVersion` silently
+   serves a stale chart. Found in Phase 4 (`observability`).** None of
+   these charts bump `Chart.yaml`'s `version` (all static `0.1.0`), so the
+   default strategy — repackage only when that field changes — meant
+   source-controller kept serving a chart built *before* a template-only
+   git fix, even after the `GitRepository` itself had the fix. The
+   `HelmRelease` kept failing with the pre-fix error indefinitely, no
+   matter how many times `flux reconcile source git` was re-run. Fixed:
+   `reconcileStrategy: Revision` on all 8 `HelmRelease`s' `chart.spec` —
+   repackages on every git revision change instead, matching how Helmfile
+   always worked (git-driven, no chart-version bumping).
+9. **Revision strategy's `+<gitsha>` build metadata breaks any label that
+   embeds `.Chart.Version` raw. Found in Phase 4, immediately after fixing
+   gotcha 8.** `reconcileStrategy: Revision` appends `+<shortsha>` to
+   `.Chart.Version` (valid SemVer build metadata). 16 templates across
+   `core`/`security`/`observability`/`media` stamp
+   `chartVersion: {{ .Chart.Version }}` as a literal label — one of them
+   (`core/templates/traefik/traefik--deployment.yaml`'s
+   `kubernetesingress.labelselector`) uses it as a **live Traefik watch
+   selector**, not just decoration. `+` isn't a valid Kubernetes label
+   character, so every resource carrying that label failed server-side
+   apply the moment `reconcileStrategy: Revision` landed — a real
+   regression introduced by fixing gotcha 8, not a pre-existing bug. Fixed:
+   `{{ .Chart.Version | replace "+" "_" }}` everywhere it's set (all 16
+   sites, selector included) — a no-op under Helmfile's plain render
+   (no `+` ever appears there), confirmed byte-identical via
+   `make diff ENV=prd`.
+   - **Corrects an earlier wrong claim** (from investigating the
+     `prometheus-snmp-exporters/ingress-route.yaml` duplicate-`IngressRoute`
+     bug, fixed same session): checking prod's live cluster directly showed
+     the exact same duplicate has been rendering there too, on a `deployed`,
+     healthy release, for months — the "never caught because observability
+     was never installed on prod" explanation was false. The real reason it
+     only surfaced on `local`: Helm's duplicate-resource-ID guard ("may not
+     add resource with an already registered id") only fires on a fresh
+     `install`, not on `upgrade` against an already-existing release — prod
+     has only ever gone through `upgrade` since this bug was introduced.
+     Deleting the stray file is still correct regardless of the mechanism.
+10. **Local's node can't fit everything the charts ask for — two separate
+    walls, both capacity, not config bugs. Found in Phase 4
+    (`observability`).** (a) `loki` and `otel-collector-gateway` Deployments
+    had no per-component `enable` gate at all — the whole `observability`
+    module was all-or-nothing — and both sat `FailedScheduling: Insufficient
+    memory` on `local`'s single schedulable node. Added `enable` flags
+    (defaulting `true`, so prod/any fully-resourced env is unaffected) and
+    disabled both in `platypod-sops`'s `local` secrets. (b)
+    `opentelemetry-collector-collector`'s DaemonSet wants a second replica
+    on the control-plane node (to collect its metrics too); that node also
+    can't fit it, and Helm's default `--wait` blocks the whole release on
+    DaemonSet readiness. Unlike (a), no `enable` gate makes sense here
+    (prod legitimately wants both nodes covered) — used
+    `install.disableWait`/`upgrade.disableWait: true` on `observability`'s
+    `HelmRelease` instead, same precedent as gotcha 7's `persistence` fix,
+    justified because this `HelmRelease` doesn't exist for prod yet (still
+    Helmfile there until Phase 7) so it can't mask a real prod failure.
+11. **Setup Jobs that don't check their peers' `enable` flags hang for the
+    full wait-loop, not fail fast. Found in Phase 4 (`files`).**
+    `torrent-clients--setup-job.yaml` and `sabnzbd--setup-job.yaml` both
+    built their `ARR_APPS_JSON` (Sonarr/Radarr/Readarr) unconditionally,
+    and `sabnzbd--setup-job.yaml`'s Prowlarr/indexer section ran regardless
+    of `prowlarr.enable`. Harmless on prod (everything's enabled), but with
+    `local` deliberately running only a subset per service (undersized
+    node), each Job's `wait_for()` polled a Service that was never deployed
+    — DNS never resolves for a Service that doesn't exist — for the full
+    90×10s=15min *per disabled app*, up to 45 min combined, on every
+    install/upgrade. Fixed: gate each app's inclusion in `ARR_APPS_JSON` on
+    its own `.enable` (mirrors the existing `TORRENT_CLIENTS_JSON` pattern
+    already used for Transmission/QBittorrent), and skip the whole Prowlarr
+    section outright when `prowlarr.enable` is false. No functional change
+    on prod — confirmed via `make diff ENV=prd` (JSON key-order only, an
+    artifact of `toJson`'s alphabetical field ordering vs. the old
+    hand-written literal).
 
 ## Open items
 
