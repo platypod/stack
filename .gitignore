@@ -1,7 +1,11 @@
 out
 tmp
-values/*/values.yaml
 bin/kubectl-config.sh
+
+# Stale per-machine NFS symlink from the retired Helmfile workflow (Phase 8)
+# — nothing reads it anymore, but avoid accidentally tracking it if it's
+# still sitting on a machine that did the migration.
+values/*/values.yaml
 
 # Per-machine make overrides (copy from Makefile.local.example)
 Makefile.local

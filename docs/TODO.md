@@ -31,21 +31,13 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
   the dynamic per-user Loki case), and an update to dashboard-multitenancy.md
   recording this as an accepted extension once implemented.
 
-- **Trust the mkcert CA (dev only).** Run `make setup-dev-tls` once per dev
-  machine (sudo, installs the CA in the macOS Keychain). Renew the same way when
-  the cert expires (~3 years).
-  - Side effect of *not* trusting it: **Kavita OIDC cannot be validated on dev**
-    — Kavita fetches the issuer discovery doc at save-time and rejects the
-    self-signed cert. Works on prod (real Let's Encrypt cert). Dev limitation only.
-
-- **Secrets management (CRITICAL — security risk).** All secrets are plaintext in
-  Git, including prod credentials in `values/prd/values.yaml` (DB passwords, API
-  keys, OIDC client secrets, admin tokens).
-  **Fix:** SOPS + `age` (Helmfile has native support):
-  1. `age-keygen -o ~/.config/sops/age/keys.txt`
-  2. Add `.sops.yaml` with `encrypted_regex: 'password|secret|apiKey|key|passwordHash|token'`
-  3. `sops -e --in-place values/prd/values.yaml` (and dev)
-  4. Switch the secret value files from `values:` to `secrets:` in helmfile.
+- **Trust the mkcert CA (local only).** Run `make setup-local-tls` once per
+  local machine (sudo, installs the CA in the macOS Keychain). Renew the same
+  way when the cert expires (~3 years).
+  - Side effect of *not* trusting it: **Kavita OIDC cannot be validated on
+    local** — Kavita fetches the issuer discovery doc at save-time and rejects
+    the self-signed cert. Works on prod (real Let's Encrypt cert). Local
+    limitation only.
 
 - **Default-user enable/disable on Authelia** — add lifecycle management for the
   default users (activation / deactivation) in LLDAP/Authelia.
@@ -62,12 +54,14 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
   above; unrelated to it. Fix: persist the generated key (e.g. `lookup` against
   the existing Secret/ConfigMap instead of regenerating inline).
 
-- **Dev's `authelia` ConfigMap has a field-manager conflict** blocking any
-  `make deploy MODULE=security ENV=local` (`conflict with
-  "kubectl-client-side-apply" using v1: .data.configuration.yml`) — the
-  ConfigMap was modified via plain `kubectl apply` outside Helm at some point.
-  Spawned as a separate background task 2026-08-18; prod is unaffected (same
-  deploy succeeded there cleanly).
+- **Local's `authelia` ConfigMap had a field-manager conflict** blocking any
+  `security` module deploy (`conflict with "kubectl-client-side-apply" using
+  v1: .data.configuration.yml`) — the ConfigMap was modified via plain
+  `kubectl apply` outside Helm at some point. Spawned as a separate background
+  task 2026-08-18; prod was unaffected (same deploy succeeded there cleanly).
+  Unverified whether this still applies post-Phase-7 — Flux/helm-controller
+  uses server-side apply throughout, which may have already resolved it; check
+  `flux get helmreleases security -n local-platypod` before assuming it's live.
 
 - **Backups + key durability review (esp. Vaultwarden).** Vaultwarden's SQLite
   vault is on a **node-local** volume (NFS can't host SQLite WAL), protected only
@@ -134,7 +128,8 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
   expose `/dev/dri` and switch to the hardware-accelerated image variant.
 
 - **Pick a Usenet block-account (NNTP) provider** and fill in
-  `sabnzbd.provider.*` in `values/local/values.yaml` / `values/prd/values.yaml`.
+  `sabnzbd.provider.*` in `platypod-sops`'s `clusters/local/secrets.enc.yaml` /
+  `clusters/prd/secrets.enc.yaml`.
   SABnzbd + the Prowlarr/*arr auto-wiring are in place (`files` module,
   `sabnzbd-setup` Job); althub.co.za is a Newznab indexer only, not a Usenet
   server, so SABnzbd currently has nothing to fetch articles with.
@@ -149,7 +144,7 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
   device's DNS to AdGuard, any hostname the Bbox self-answers for (e.g. its
   own admin UI, `mabbox.bytel.fr`) stops resolving unless mirrored as an
   AdGuard rewrite — already done for that one (`adguard.rewrites` in
-  `values/prd/values.yaml`), but the same gotcha will hit any other
+  `platypod-sops`'s `clusters/prd/secrets.enc.yaml`), but the same gotcha will hit any other
   Bbox-hijacked name.
 
 - **Point other LAN devices (phones, etc.) at AdGuard.** The Bbox router can't

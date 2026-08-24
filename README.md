@@ -170,20 +170,16 @@ To get a copy up and running, follow these steps.
 ### Prerequisites
 
 1. A running Kubernetes cluster. This project uses [Talos Linux](https://www.talos.dev/) VMs provisioned via Terraform — see [`infra/`](../infra/README.md) for the full setup.
-2. Install the required tools (helm, helmfile, kubectl, helm-diff):
+2. Install the required tools (helm, kubectl, flux, sops, age):
     ```bash
     make install-deps
     ```
-3. Install [Traefik's CRDs](https://doc.traefik.io/traefik/providers/kubernetes-crd/) on the cluster:
-    ```bash
-    make install-crds          # dev
-    make install-crds ENV=prd  # prod
-    ```
-4. If using NFS storage (prod), install the CSI driver on the cluster:
-    ```bash
-    curl -skSL https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/v4.5.0/deploy/install-driver.sh | bash -s v4.5.0 --
-    ```
-5. Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) to be able to clone the repo.
+3. `flux` needs a `gh`-authenticated shell (`gh auth login`) — bootstrap adds
+   a read-only deploy key to `platypod/stack` and `platypod/platypod-sops`.
+4. Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) to be able to clone the repo.
+
+Traefik's CRDs and (on prod) the NFS CSI driver are Flux-managed, not
+imperative installs — see [docs/flux-migration.md](docs/flux-migration.md).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -217,44 +213,39 @@ They rely on Bash, Helm and a couple other commands I shall list to ensure they 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Configuration
-1. Create a folder **values/\<env\>**.
-2. Inside this folder, create a **values.yaml** file.
-3. **Overwrite** whatever configuration you'll like.
 
-Examples are provided in fake "[dev](values/local)" and "[prd](values/prd)" environments in this repository.
+Default values live in `apps/base/values/<module>.yaml` (one file per
+module, plus `substrate.yaml`/`registry.yaml`). Env-specific overrides and
+secrets live in the separate, private `platypod-sops` repo, SOPS-encrypted
+(`clusters/<env>/secrets.enc.yaml`) — `sops -d`/`sops -e` to read/edit. See
+[docs/flux-migration.md](docs/flux-migration.md) for the full design.
 
 Please mind the storage provisionning: default features are offered and detailed in the
-[persistence module](src/00-persistence), but may be deactivated and replaced with existing
+[persistence module](src/persistence), but may be deactivated and replaced with existing
 [Persistent Volume Claims](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Deployment
 
-**First-time dev setup** (one-shot):
-```bash
-make setup-dev
-```
-This runs in order: mkcert CA trust + wildcard TLS secret, Traefik CRDs, core module deploy, dnsmasq configuration. Requires a running local cluster (`make apply ENV=local` in `infra/`).
+Deployment is Git + [Flux](https://fluxcd.io/) — there is no `make deploy`.
+Every push to `main` reconciles onto the `local` cluster; `prd` only moves on
+a new `vX.Y.Z` tag. See [docs/operations.md](docs/operations.md) for the full
+day-to-day workflow.
 
-**Deploy the full stack:**
+**First-time local setup** (one-shot):
 ```bash
-make deploy              # dev
-make deploy ENV=prd      # prod
+make setup-local
 ```
+Runs, in order: SOPS age key restore, mkcert CA trust + wildcard TLS secret,
+Traefik CRDs, Flux bootstrap (brings up all 8 modules), DNS. Requires a
+running local cluster (`make apply ENV=local` in `infra/`).
 
-**Deploy or redeploy a single module:**
+**Day to day:**
 ```bash
-make deploy MODULE=core
-make deploy MODULE=security
-# ...
-```
-
-**Other useful commands:**
-```bash
-make diff MODULE=core    # dry-run: show what would change
-make destroy MODULE=core # uninstall a single module
-make status              # list deployed releases and their status
+make status                                        # list deployed releases
+flux get helmreleases -n local-platypod             # per-release health
+flux reconcile helmrelease core -n local-platypod   # force a release to pick up a change now
 ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>

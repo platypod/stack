@@ -1,18 +1,10 @@
 # stack/Makefile.local — per-machine overrides (COPY to Makefile.local; gitignored)
 # -----------------------------------------------------------------------------
-# Optional. Keeps the *prod* values.yaml (secrets + overrides) on the NFS share.
-# Mirrors infra/Makefile.local. Full rationale: ../infra/docs/secrets-on-nfs.md
-#
-# After copying, with the share mounted (see infra: make mount-state):
-#   make link-values ENV=prd     # symlink values/prd/values.yaml -> share
-#   make diff ENV=prd            # renders from the linked values
+# Optional. STATE_MOUNT points at the NFS share used to back up the SOPS age
+# private key (see `make setup-age-key` in Makefile) — a rebuilt or new
+# machine restores it from there instead of generating a fresh one (which
+# couldn't decrypt anything already in platypod-sops). Mirrors
+# infra/Makefile.local's STATE_MOUNT.
 # -----------------------------------------------------------------------------
 
 STATE_MOUNT := $(HOME)/nfs/platypod
-
-# Guard prod deploys/diffs against an unmounted share (the stack env token is
-# `prd`, not `prod`). local's secrets come from platypod-sops, not this share
-# (see setup-age-key — STATE_MOUNT also backs up the SOPS age key).
-ifeq ($(ENV),prd)
-  REQUIRE_VALUES := 1
-endif

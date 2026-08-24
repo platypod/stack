@@ -1,7 +1,8 @@
 # stack (services) — context for Claude
 
-The Kubernetes workload stack: each module is a Helm chart deployed via Helmfile
-onto the cluster from [`../infra`](../infra/README.md). local (the laptop's own
+The Kubernetes workload stack: each module is a Helm chart, deployed via Flux
+(Git-driven — see [docs/flux-migration.md](docs/flux-migration.md)) onto the
+cluster from [`../infra`](../infra/README.md). local (the laptop's own
 cluster, renamed from "dev" 2026-08-24) = `platypod.local`, prod = `platypod.ovh`.
 
 **Start with [README.md](README.md)** for the overview and module list. Details
@@ -39,11 +40,12 @@ Modules: `core` `dev-tools` `files` `games` `media` `observability` `persistence
   + an init container that chowns only the service's own subPath.
 - Pods mounting a ConfigMap need a `checksum/config` annotation to auto-restart.
 - Helm parses `{{ }}` in YAML comments too — escape or avoid them.
-- **Deploy with `make deploy ENV=prd` (no `MODULE`)** — one `helmfile sync` that
-  honours the `needs:` graph. `--selector name=<module>` deploys that release
-  *only* and **skips `needs`**, so looping over modules replaces the declared
-  dependency order with the loop's. `files` needs `media`, and getting it wrong
-  costs 15 min per *arr service in `torrent-clients-setup`'s wait loop.
+- **Deploy is Git + Flux, not `make`** — push to `main` (local) or tag `vX.Y.Z`
+  in both `stack` and `platypod-sops` lockstep (prod). Each module's
+  `HelmRelease.spec.dependsOn` (`apps/base/helmrelease-*.yaml`) enforces the
+  same order Helmfile's `needs:` graph used to — `files` needs `media` — but
+  now it's enforced by helm-controller itself, so `flux reconcile helmrelease
+  files` alone can't bypass it the way `helmfile --selector` used to.
 - **prod has no MetalLB.** Traefik and AdGuard reach the LAN via Service
   `externalIPs` on the bare-metal node (`traefik.externalIP` /
   `adguard.externalIP`), not `hostNetwork` — PodSecurity `baseline` forbids host

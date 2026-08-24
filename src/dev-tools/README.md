@@ -53,6 +53,6 @@ Desktop session, launched *after* the env var was set, still showed the
 hardcoded default, and Headroom's own `/stats` request counter never moved for
 either. There's no known way to override this from outside the app.
 
-To pick this back up: flip `headroom.enable: true`, `make deploy ENV=local
-MODULE=dev-tools`, then use the terminal CLI only. See
-[docs/make-targets.md](../../docs/make-targets.md).
+To pick this back up: flip `headroom.enable: true` in `platypod-sops`'s
+`clusters/local/secrets.enc.yaml`, push, then use the terminal CLI only. See
+[docs/operations.md](../../docs/operations.md).

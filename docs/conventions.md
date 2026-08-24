@@ -8,16 +8,25 @@ service catalog see [services.md](services.md); for auth see
 ## Structure
 
 ```
-src/<module>/           # Helm chart per module (Chart.yaml committed)
-  templates/<service>/  # K8s manifests (Deployment, Service, IngressRoute, …)
-  README.md             # Per-module deep-dive
-values/
-  default/<module>/     # Default values — .yaml.gotmpl (Go templates, env-agnostic)
-  dev/values.yaml       # Dev overrides
-  prd/values.yaml       # Prod overrides
-helmfile.yaml.gotmpl    # Environments, value load order, release dependency graph
-Makefile                # Primary interface (see make-targets.md)
+src/<module>/            # Helm chart per module (Chart.yaml committed)
+  templates/<service>/   # K8s manifests (Deployment, Service, IngressRoute, …)
+  README.md              # Per-module deep-dive
+apps/base/
+  values/<module>.yaml   # Default values — one file per module (substrate/
+                          # registry/7 module files), env-agnostic. The one
+                          # source of truth (see flux-migration.md gotcha 15
+                          # for why there used to be a second, drifting copy)
+  helmrelease-<module>.yaml  # Flux HelmRelease per module, shared across
+                          # clusters — ${env} tokens resolved per cluster
+                          # (see clusters/<env>/apps.yaml)
+clusters/<env>/           # Per-cluster Flux wiring: apps.yaml, secrets.yaml,
+                          # infrastructure.yaml, flux-system/ (bootstrap-generated)
+Makefile                 # Cluster bootstrap + one-time setup (see make-targets.md)
 ```
+
+Env-specific secrets/overrides live in the separate `platypod-sops` repo
+(`clusters/<env>/secrets.enc.yaml`, SOPS-encrypted), not in this repo — see
+[flux-migration.md](flux-migration.md)'s SOPS design.
 
 Modules: `persistence`, `core`, `security`, `observability`, `dev-tools`,
 `files`, `media`, `games`. See [services.md](services.md) for the full per-module
@@ -27,11 +36,15 @@ service list.
 
 - Services are exposed via Traefik **`IngressRoute` CRDs** (not standard `Ingress`).
 - SSO is an Authelia **`Middleware`** referenced from each IngressRoute.
-- Values use Go template cross-references (`{{ .Values.some.key }}`); the
-  `.gotmpl` extension tells helmfile to render them before Helm sees them.
-- Values load in dependency order in `helmfile.yaml.gotmpl` — foundational files
-  first, cross-module aggregators (authelia) last, env override last of all.
-- Module release order is declared via `needs:` in `helmfile.yaml.gotmpl`.
+- Values use Go template cross-references (`{{ .Values.some.key }}`),
+  resolved by Helm at render time — same syntax throughout, no separate
+  pre-processing step.
+- Every `HelmRelease` gets all 9 default-value ConfigMaps (substrate,
+  registry, all 7 module files) via `valuesFrom`, not just its own module's —
+  cross-module references are real (e.g. Traefik reads `jellyfin.proxy.enable`
+  from the `media` module). See [flux-migration.md](flux-migration.md) gotcha 2.
+- Module release order is declared via each `HelmRelease`'s `spec.dependsOn`
+  in `apps/base/helmrelease-*.yaml`.
 
 ## Pitfalls
 
@@ -103,8 +116,13 @@ Keep `lldap.adminPassword` in values in sync with the actual DB password.
 ## First-boot automation (setup Jobs)
 
 Services needing out-of-band init (admin creation, API keys, wiring) use Helm
-post-install/post-upgrade **hook Jobs** — they run on every `make deploy` and are
-idempotent (exit 0 on partial so the release still succeeds). Examples:
+post-install/post-upgrade **hook Jobs** — they run on every Helm upgrade
+(including Flux-triggered ones) and are idempotent (exit 0 on partial so the
+release still succeeds). Gate any *arr-app polling in these Jobs on that
+app's own `.enable` flag, not unconditionally — an app that's legitimately
+disabled (e.g. on `local`'s undersized node) has no Service to resolve, and
+an ungated wait loop hangs for its full timeout instead of skipping (see
+[flux-migration.md](flux-migration.md) gotcha 11). Examples:
 `jellyfin-setup` (w10), `kavita-setup` (w15), `audiobookshelf-setup` (w17),
 `jellyseerr-setup` (w20), `reclaimerr-setup` (w30), `suwayomi-setup` (w25),
 `uptime-kuma-setup` (w20). Hook weights order dependent jobs.
@@ -128,16 +146,12 @@ initContainers:
 ## Adding a new service
 
 1. Create `src/<module>/templates/<service>/` with the K8s manifests.
-2. Add `values/default/<module>/<service>.yaml.gotmpl` (use `{{ .Values.x.y }}`
-   to cross-reference).
-3. Add the file to the right position in `helmfile.yaml.gotmpl` (after anything it
-   references, before authelia).
-4. Override in `values/<env>/values.yaml` as needed.
-5. Pattern: Deployment → Service → IngressRoute (+ Authelia middleware if auth'd).
-
-
-## Environment variable
-
-`PLATYPOD__HELM__DEFAULT_ENV=local` — default env for `bin/helm.sh` functions when
-`--env` isn't passed. The Makefile passes `ENV` to helmfile directly, so this only
-matters if you source `bin/helm.sh` yourself.
+2. Add the service's values (image, resources, ports, config) to
+   `apps/base/values/<module>.yaml` under its own top-level key (use
+   `{{ .Values.x.y }}` to cross-reference other keys, same as any other
+   value). If it's Traefik-routed, also add its `enable`/`label`/`host`
+   triple to `apps/base/values/registry.yaml`.
+3. Override per-environment in `platypod-sops`'s
+   `clusters/<env>/secrets.enc.yaml` as needed (`sops -d`/`sops -e`
+   round-trip — see [flux-migration.md](flux-migration.md)).
+4. Pattern: Deployment → Service → IngressRoute (+ Authelia middleware if auth'd).

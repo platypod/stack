@@ -1,9 +1,9 @@
 # Flux migration (plan)
 
-> **Status: Phases 0-5 and 7 done — prod cut over onto Flux, all 8 releases
-> adopted in place and `v1.0.0`-tagged; Phase 6 retired (merged into
-> Phase 3); Phase 8 (Helmfile decommission) not started.** It records the
-> decisions (with rejected alternatives)
+> **Status: Phases 0-5 and 7-8 done — prod cut over onto Flux, all 8 releases
+> adopted in place and `v1.0.0`-tagged, Helmfile fully decommissioned; Phase 6
+> retired (merged into Phase 3); only Phase 9 (deferred image automation)
+> remains.** It records the decisions (with rejected alternatives)
 > and the phased path from today's Helmfile + `make` workflow to Flux CD
 > across three clusters. Conventions live in [conventions.md](conventions.md);
 > day-to-day operations in [operations.md](operations.md); other stack
@@ -450,10 +450,26 @@ future re-bootstrap.
 Three new things found doing this for real (beyond what Phase 4 already
 covered) — see gotchas 12-14 below.
 
-**Phase 8 — decommission.** Retire the Helmfile targets and the NFS values
-symlink + `REQUIRE_VALUES` guard; rewrite [make-targets.md](make-targets.md) and
-[operations.md](operations.md). `install-deps`, `build`, `setup-*-dns`, and
-`proxy-*` survive untouched — none of them wrap Helmfile.
+**Phase 8 — decommission. Status: done.** Turned out bigger than the
+one-liner: retired `diff`/`deploy`/`deploy-base`/`destroy`/`require-values`/
+`link-values`/`decrypt-secrets`/`install-csi` from the Makefile, deleted
+`helmfile.yaml.gotmpl`, `values/default/` (see gotcha 15 — this is also what
+surfaced that regression), `values/local/`/`values/prd/`, `bin/helm.sh` (a
+second, fully separate Helmfile-wrapping script, never wired into the
+Makefile, found auditing this), and `platypod-sops/stack/<env>/`
+(the Helmfile-era secrets copy). Rewrote
+[make-targets.md](make-targets.md), [operations.md](operations.md),
+[conventions.md](conventions.md)'s structure/adding-a-service sections, and
+fixed now-broken command references in `docs/TODO.md`,
+`src/dev-tools/README.md`, `bin/README.md`, `bin/setup-local-dns.sh`,
+`stack/README.md`, `stack/CLAUDE.md`, and the top-level `platypod/README.md`.
+`install-deps`, `build`, `setup-*-dns`, and `proxy-*` targets survive
+untouched, as planned — though `install-deps.sh`'s own helmfile/helm-diff
+installation is now dead code, not yet removed (flagged as a follow-up, not
+blocking). `setup-local`'s bootstrap chain changed shape (Flux now brings up
+all 8 modules at once instead of a manual "base only" stage) but hasn't been
+exercised end-to-end since — the one real rebuild this migration did
+(Phase 3) predates the change.
 
 **Phase 9 (deferred) — image automation.** `image-reflector` + `image-automation`
 for the four GHCR images, with a semver `filterTags` policy so only `vX.Y.Z` tags
@@ -653,6 +669,34 @@ smallest piece, and only makes sense once Git is authoritative.
     modules** — and this one slipped through because it was "pre-authored,
     inert" for a whole phase before ever actually reconciling, so the usual
     right-after-authoring verification never caught it.
+15. **`values/default/` and `apps/base/values/` silently drifted — a real,
+    active prod regression, caught auditing Phase 8, not during Phase 4 or
+    7.** Phase 4 copied `values/default/*.yaml` into `apps/base/values/`
+    once, for Flux to consume — but nothing kept the two in sync
+    afterward. A later fix this session (adding `enable: true` gates for
+    `loki`/`otelCollector.gateway`, so `local` could disable just those
+    two for its capacity constraints) only ever edited `values/default/`
+    — the copy that had stopped mattering the moment Flux took over
+    rendering. `apps/base/values/observability.yaml` and `registry.yaml`
+    kept the old, pre-gate content, where those two fields simply didn't
+    exist — which Helm's `{{- if .Values.X.enable }}` reads as falsy, same
+    as an explicit `false`. Both Deployments silently stopped rendering
+    **everywhere**, including prod, from the moment Phase 7's cutover
+    picked up that commit — no pod crash, no `Ready: False`, just two
+    Deployments that quietly ceased to exist. Prod lost centralized
+    logging (Loki) and its otel ingestion gateway (feeding
+    mimir/tempo/pyroscope) for roughly the same window this session
+    thought Phase 7 was fully verified — caught only because Phase 8
+    diffed the two directories before deleting one of them. Fixed:
+    resynced the copies, tagged `v1.0.1`, confirmed both pods `Running`
+    within minutes. Phase 8 deletes `values/default/` entirely (see
+    below) specifically to make this class of drift structurally
+    impossible going forward — `apps/base/values/` becomes the one and
+    only source. **The lesson generalizes beyond this one incident**: a
+    pod-health check (`kubectl get pods`, `flux get helmreleases`) cannot
+    catch "a whole Deployment silently stopped being desired state" — only
+    diffing against a known-good baseline (chart-level `helm get manifest`
+    comparison, or golden-manifest diffing as used in Phase 2) would have.
 
 ## Open items
 

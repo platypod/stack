@@ -1,17 +1,18 @@
 # Make targets (stack)
 
-The `Makefile` is the primary interface to the service stack (Helmfile under the
-hood). `make help` prints this list live. Default goal is `help`.
+The `Makefile` covers cluster bootstrap, one-time machine setup, and image
+builds. `make help` prints this list live. Default goal is `help`.
+**Deployment itself is Git + Flux, not `make`** — see
+[operations.md](operations.md) and [flux-migration.md](flux-migration.md).
 
 ## Common variables
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
-| `ENV` | `local` | Environment — `local` or `prd`. Selects the namespace, value overlays, and kubeconfig |
-| `MODULE` | *(all)* | Limit a deploy/diff/destroy to one module (e.g. `core`, `media`) |
+| `ENV` | `local` | Environment — `local` or `prd`. Selects the namespace and kubeconfig |
 | `KUBECONFIG` | auto | Resolved from the infra `.generated/<env>/` kubeconfig; override on the command line if needed |
-| `TRAEFIK_VERSION` | `v3.5` | Traefik CRD version for `install-crds` |
-| `CSI_DRIVER_NFS_VERSION` | `4.13.2` | NFS CSI driver chart version for `install-csi` |
+| `TRAEFIK_VERSION` | `v3.5` | Traefik CRD version for `vendor-crds`/`install-crds` |
+| `CSI_DRIVER_NFS_VERSION` | `4.13.2` | NFS CSI driver chart version — informational only; the driver itself is Flux-managed (`infrastructure/csi/`), this just keeps the two in sync when bumping |
 | `IMAGE`, `VERSION` | — | For `build` (custom image name + tag) |
 
 > `ENV` uses `local`/`prd`, but the infra writes kubeconfigs under `local`/`prod` —
@@ -22,7 +23,7 @@ hood). `make help` prints this list live. Default goal is `help`.
 
 | Target | What it does |
 |--------|--------------|
-| `make install-deps` | Install required tools (helm, helmfile, kubectl, helm-diff) |
+| `make install-deps` | Install required tools (helm, kubectl, flux, sops, age, …) |
 | `make check-deps` | Report which tools are installed without installing |
 
 ## Local setup (macOS, one-time)
@@ -32,7 +33,7 @@ hood). `make help` prints this list live. Default goal is `help`.
 | `make setup-local-tls` | Trust the mkcert CA + create/refresh the wildcard TLS secret in the cluster |
 | `make setup-local-dns` | Point system DNS at AdGuard (primary) + `1.1.1.1` (fallback); clean up dnsmasq |
 | `make setup-prod-dns` | Same, for prod's AdGuard (`192.168.1.156`) — also serves the `k8s.platypod.lan` rewrite. Keep a manual `/etc/hosts` line for that name too; see `../infra/docs/decisions.md` |
-| `make setup-local` | Full local bootstrap: age key → TLS → CRDs → base deploy → DNS → Flux |
+| `make setup-local` | Full local bootstrap: age key → TLS → CRDs → Flux (brings up all 8 modules) → DNS. Hasn't been exercised end-to-end since Phase 8 (see `flux-migration.md`) — the one real rebuild this migration did predates it |
 
 ## Cluster bootstrap
 
@@ -40,19 +41,23 @@ hood). `make help` prints this list live. Default goal is `help`.
 |--------|--------------|
 | `make setup-age-key` | Restore the SOPS age key from the NFS backup, or generate + back up a fresh one (only when no backup exists) |
 | `make vendor-crds` | Re-fetch the vendored Traefik CRDs from upstream (`TRAEFIK_VERSION=v3.5`) — run when bumping the version |
-| `make install-crds` | Apply the vendored Traefik CRDs (IngressRoute, Middleware, …) to the cluster |
-| `make install-csi` | Install the NFS CSI driver — required for NFS-backed **prod** storage |
-| `make flux-bootstrap` | Bootstrap/reconcile Flux against `clusters/$(ENV)` — idempotent, safe to re-run (`ENV=local`) |
+| `make install-crds` | Apply the vendored Traefik CRDs (IngressRoute, Middleware, …) imperatively — Flux applies the same vendored copy on its own via `infra-crds` |
+| `make flux-bootstrap` | Bootstrap/reconcile Flux against `clusters/$(ENV)` — idempotent, safe to re-run (`ENV=local`\|`prd`) |
+| `make flux-sops-secrets` | Create the in-cluster deploy key + `sops-age` Secret the `platypod-sops` `GitRepository` needs — idempotent, one-time per cluster (`ENV=local`\|`prd`) |
 
-## Deployment
+`csi-driver-nfs` (NFS CSI driver, prod-only) is Flux-managed —
+`infrastructure/csi/`, wired in via `clusters/prd/infrastructure.yaml`. No
+`make` target installs it imperatively anymore.
+
+## Status
 
 | Target | What it does |
 |--------|--------------|
-| `make status` | List deployed Helm releases for `ENV` |
-| `make diff` | Dry-run: show what a deploy would change (`ENV=local MODULE=core`) |
-| `make deploy-base` | Deploy the always-on base only: persistence, core, security |
-| `make deploy` | Deploy the full stack, or one module with `MODULE=` |
-| `make destroy` | Uninstall the full stack, or one module with `MODULE=` |
+| `make status` | List deployed Helm releases and their status for `ENV` (`helm list`) |
+
+For anything beyond a status check — diffing a pending change, forcing a
+reconcile, checking why a release is stuck — use `flux`/`kubectl` directly.
+See [operations.md](operations.md#day-to-day) for the common ones.
 
 ## Images
 
@@ -92,10 +97,11 @@ already-running process isn't enough.
 ## Examples
 
 ```bash
-make setup-local                        # one-time local bootstrap
-make deploy ENV=local MODULE=core         # redeploy just the core module on local
-make deploy ENV=prd                     # deploy the full stack to prod
-make diff ENV=prd MODULE=security       # preview a prod change
+make setup-local                              # one-time local bootstrap
+make status ENV=prd                           # list prod's Helm releases
 make build IMAGE=pokeclicker VERSION=v0.10.25
-make deploy ENV=local MODULE=dev-tools    # redeploy dev-tools (Headroom currently disabled)
 ```
+
+Everything else — deploying a change, checking what a commit would do,
+forcing a stuck release to retry — is Git + `flux`/`kubectl`, not `make`. See
+[operations.md](operations.md).

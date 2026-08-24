@@ -1,27 +1,14 @@
 # bin/
 
-Convenience shell scripts. Source them to get the functions.
+Convenience shell scripts, mostly wrapped by `make` targets — see
+[../docs/make-targets.md](../docs/make-targets.md).
 
 ## Requirements
 
-- [`helmfile`](https://helmfile.readthedocs.io/en/latest/#installation)
 - [`helm`](https://helm.sh/docs/intro/install/)
+- [`flux`](https://fluxcd.io/flux/installation/) — deploys are Git + Flux now
+  (Helmfile retired, see [../docs/flux-migration.md](../docs/flux-migration.md))
 - [`docker`](https://docs.docker.com/get-docker/) (for image builds only)
-
-## helm.sh — deploy/destroy wrappers
-
-```sh
-. bin/helm.sh
-
-deploy --env dev              # deploy full stack
-deploy --env dev --dry-run    # diff only
-deploy_one --env dev --module core
-
-destroy --env dev             # uninstall full stack
-destroy_one --env dev --module core
-```
-
-Default env is `dev` (override with `PLATYPOD__HELM__DEFAULT_ENV`).
 
 ## build.sh — build and push a custom image to GHCR
 

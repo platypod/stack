@@ -84,7 +84,7 @@ if [ -z "$ADGUARD_IP" ]; then
   printf 'Adguard LoadBalancer IP: '
   read -r ADGUARD_IP
 fi
-[ -n "$ADGUARD_IP" ] || die "ADGUARD_IP is required (deploy security first: make deploy-base)."
+[ -n "$ADGUARD_IP" ] || die "ADGUARD_IP is required (security module not deployed/reconciled yet — check 'flux get helmreleases security -n \${ENV}-platypod')."
 
 # ---------------------------------------------------------------------------
 # Auto-detect active network service (e.g. "Wi-Fi", "Ethernet")

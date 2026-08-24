@@ -3,7 +3,7 @@ MODULE ?=
 
 # Always point at the kubeconfig written by ../infra,
 # ignoring any KUBECONFIG already set in the shell (e.g. OrbStack).
-# Command-line override still works: make deploy KUBECONFIG=/other/path
+# Command-line override still works: make status KUBECONFIG=/other/path
 #
 # Services use env names local/prd, but infra writes its kubeconfigs under
 # local/prod. Map service env -> infra kubeconfig path explicitly.
@@ -19,38 +19,13 @@ KUBECONFIG_local := $(GENERATED)/local/kubeconfig
 KUBECONFIG_prd := $(GENERATED)/prod/kubeconfig
 export KUBECONFIG := $(KUBECONFIG_$(ENV))
 
-HELMFILE = helmfile --environment $(ENV)
-SELECTOR = $(if $(MODULE),--selector name=$(ENV)--platypod--$(MODULE),)
-
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Optional per-machine overrides (gitignored). On a fresh clone this file is
-# absent → no-op. A machine that keeps the prod values.yaml on the NFS share sets
-# STATE_MOUNT here so `make link-values` can symlink it. See
-# ../infra/docs/secrets-on-nfs.md.
+# absent → no-op. Only used today to set STATE_MOUNT for setup-age-key's
+# SOPS age key NFS backup — see Makefile.local.example.
 STATE_MOUNT ?=
 -include $(ROOT)/Makefile.local
-
-# REQUIRE_VALUES (set by Makefile.local for prd) makes deploy/diff abort if the
-# env values.yaml is missing/dangling — e.g. the NFS share isn't mounted — rather
-# than letting helmfile render a half-empty release from default values alone.
-REQUIRE_VALUES ?=
-
-.PHONY: require-values link-values
-require-values:
-	@if [ "$(REQUIRE_VALUES)" = "1" ] && [ ! -e "values/$(ENV)/values.yaml" ]; then \
-	  echo "ERROR: values/$(ENV)/values.yaml is missing or dangling (NFS share not mounted?)."; \
-	  echo "  Run 'make link-values ENV=$(ENV)' after mounting, or check the share is up."; \
-	  echo "  Refusing to deploy from defaults only — secrets/overrides would be absent."; \
-	  exit 1; \
-	fi
-
-link-values:   ## Symlink the env values.yaml to the NFS share  (ENV=prd)
-	@test -n "$(STATE_MOUNT)" || { echo "STATE_MOUNT not set — configure Makefile.local first (see ../infra/docs/secrets-on-nfs.md)"; exit 1; }
-	@target="$(STATE_MOUNT)/stack/$(ENV)/values.yaml"; \
-	test -f "$$target" || { echo "Not found on share: $$target (mounted? copied?)"; exit 1; }; \
-	ln -sfn "$$target" "values/$(ENV)/values.yaml" && \
-	  echo "Linked values/$(ENV)/values.yaml -> $$target"
 
 # SOPS_AGE_KEY_FILE: where `sops` finds the local age private key (see
 # ../platypod-sops, stack/docs/flux-migration.md). Not settable via
@@ -90,26 +65,12 @@ setup-age-key: ## Restore the SOPS age key from NFS, or generate + back it up (f
 	  echo "Generated + backed up to $(STATE_MOUNT)/sops-age-key.txt"; \
 	fi
 
-# ../platypod-sops/stack/<env>/secrets.enc.yaml -> tmp/secrets/<env>.yaml.
-# Direct `sops -d`, not helmfile's native `secrets:` stanza — the
-# helm-secrets plugin it shells out to is currently broken on Helm v4 (see
-# helmfile.yaml.gotmpl). No-ops for envs with no secrets.enc.yaml yet (prd,
-# pre-migration).
-.PHONY: decrypt-secrets
-decrypt-secrets:
-	@src="../platypod-sops/stack/$(ENV)/secrets.enc.yaml"; \
-	if [ -f "$$src" ]; then \
-	  mkdir -p tmp/secrets && \
-	  sops -d "$$src" > "tmp/secrets/$(ENV).yaml" && \
-	  echo "Decrypted $$src -> tmp/secrets/$(ENV).yaml"; \
-	fi
-
 # ---------------------------------------------------------------------------
 # Dependencies
 # ---------------------------------------------------------------------------
 
 .PHONY: install-deps check-deps
-install-deps:  ## Install required tools (helm, helmfile, kubectl)
+install-deps:  ## Install required tools (kubectl, helm, flux, sops, age — also helmfile/helm-diff, unused since Phase 8, not yet cleaned up)
 	sh bin/install-deps.sh
 
 check-deps:    ## Check which tools are installed without installing anything
@@ -134,10 +95,21 @@ setup-local-dns:  ## Set system DNS to Adguard (primary) + 1.1.1.1 (fallback); c
 setup-prod-dns:  ## Set system DNS to Adguard (prod) + 1.1.1.1 (fallback)
 	@KUBECONFIG=$(KUBECONFIG_prd) ENV=prd sh bin/setup-local-dns.sh
 
-setup-local: setup-age-key setup-local-tls install-crds  ## Full local bootstrap: age key, TLS, CRDs, base deploy, DNS, Flux
-	@$(MAKE) --no-print-directory deploy-base
-	@$(MAKE) --no-print-directory setup-local-dns
+# Post-Helmfile (Phase 8): Flux itself deploys all 8 modules once
+# bootstrapped, ordered by each HelmRelease's dependsOn — no more manual
+# "base only" staging. flux-bootstrap creates the flux-system namespace;
+# flux-sops-secrets needs it to exist first, so bootstrap runs before it.
+# setup-local-dns needs AdGuard's LoadBalancer IP, which only exists once
+# the `apps` Kustomization has actually reconciled — force that explicitly
+# rather than relying on its next poll interval (up to 10m otherwise).
+# NOTE: this sequence hasn't been exercised end-to-end since Phase 8 — the
+# only rebuild that happened this migration predates it (Phase 3).
+setup-local: setup-age-key setup-local-tls install-crds  ## Full local bootstrap: age key, TLS, CRDs, Flux (all 8 modules), DNS
 	@$(MAKE) --no-print-directory flux-bootstrap ENV=local
+	@$(MAKE) --no-print-directory flux-sops-secrets ENV=local
+	@flux reconcile kustomization apps -n flux-system --timeout=5m || \
+	  flux reconcile kustomization apps -n flux-system --timeout=5m
+	@$(MAKE) --no-print-directory setup-local-dns
 
 # ---------------------------------------------------------------------------
 # Cluster bootstrap
@@ -153,7 +125,15 @@ CSI_DRIVER_NFS_VERSION ?= 4.13.2
 # that same vendored copy imperatively — one source of truth for both the
 # imperative and Flux-managed paths, and cluster bootstrap no longer depends
 # on raw.githubusercontent.com being reachable.
-.PHONY: vendor-crds install-crds install-csi
+#
+# There is deliberately no install-csi target anymore. csi-driver-nfs is
+# Flux-managed (infrastructure/csi/, prod-only) since Phase 7 — re-running
+# an imperative `helm upgrade --install csi-driver-nfs ...` under the OLD
+# release name would recreate the exact ownership-conflict bug fixed in
+# docs/flux-migration.md gotcha 14 (a HelmRelease with no matching
+# releaseName silently takes over the live Deployment/DaemonSet from
+# whichever release installed it, imperative or not).
+.PHONY: vendor-crds install-crds
 vendor-crds:   ## Re-fetch the vendored Traefik CRDs from upstream (TRAEFIK_VERSION=v3.5)
 	curl -fsSL https://raw.githubusercontent.com/traefik/traefik/$(TRAEFIK_VERSION)/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml -o infrastructure/crds/traefik-crds.yaml
 	curl -fsSL https://raw.githubusercontent.com/traefik/traefik/$(TRAEFIK_VERSION)/docs/content/reference/dynamic-configuration/kubernetes-crd-rbac.yml -o infrastructure/crds/traefik-rbac.yaml
@@ -161,12 +141,6 @@ vendor-crds:   ## Re-fetch the vendored Traefik CRDs from upstream (TRAEFIK_VERS
 
 install-crds:  ## Apply the vendored Traefik CRDs to the cluster
 	kubectl apply -k infrastructure/crds/
-
-install-csi:   ## Install the NFS CSI driver (nfs.csi.k8s.io) — required for NFS-backed prod storage
-	helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
-	helm repo update csi-driver-nfs
-	helm upgrade --install csi-driver-nfs csi-driver-nfs/csi-driver-nfs \
-	  --namespace kube-system --version $(CSI_DRIVER_NFS_VERSION) --wait
 
 # Idempotent — safe to re-run (e.g. after rotating the deploy key, or to pick
 # up a new flux version). Adds a read-only deploy key to platypod/stack and
@@ -213,27 +187,14 @@ flux-sops-secrets: ## Create in-cluster deploy key + sops-age Secret for platypo
 	fi
 
 # ---------------------------------------------------------------------------
-# Deployment
+# Deployment — via Git + Flux, not this Makefile. See docs/operations.md.
+# `flux get helmreleases -n <env>-platypod` / `flux reconcile helmrelease
+# <module> -n <env>-platypod` are the day-to-day equivalents of the old
+# `make diff`/`make deploy`.
 # ---------------------------------------------------------------------------
 
-.PHONY: diff deploy deploy-base destroy
-
-status:        ## List deployed releases and their status  (ENV=local)
+status:        ## List deployed Helm releases and their status  (ENV=local)
 	helm list --namespace $(ENV)-platypod
-
-diff: require-values decrypt-secrets  ## Dry-run: show what would change  (ENV=local MODULE=core)
-	$(HELMFILE) $(SELECTOR) diff --args="--disable-validation"
-
-deploy-base: require-values decrypt-secrets  ## Deploy always-on base only: persistence, core, security  (ENV=local)
-	@helmfile --environment $(ENV) --selector name=$(ENV)--platypod--persistence sync
-	@helmfile --environment $(ENV) --selector name=$(ENV)--platypod--core sync
-	@helmfile --environment $(ENV) --selector name=$(ENV)--platypod--security sync
-
-deploy: require-values decrypt-secrets  ## Deploy full stack or a single module  (ENV=local MODULE=core)
-	$(HELMFILE) $(SELECTOR) sync --args="--timeout 10m0s"
-
-destroy:       ## Destroy full stack or a single module  (ENV=local MODULE=core)
-	$(HELMFILE) $(SELECTOR) destroy
 
 # ---------------------------------------------------------------------------
 # Images
