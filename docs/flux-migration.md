@@ -1,9 +1,11 @@
 # Flux migration (plan)
 
-> **Status: Phases 0-5 and 7-8 done — prod cut over onto Flux, all 8 releases
-> adopted in place and `v1.0.0`-tagged, Helmfile fully decommissioned; Phase 6
-> retired (merged into Phase 3); only Phase 9 (deferred image automation)
-> remains.** It records the decisions (with rejected alternatives)
+> **Status: all phases done.** Prod cut over onto Flux, all 8 releases
+> adopted in place and `v1.0.0`-tagged; Helmfile fully decommissioned;
+> image update automation live for all 5 GHCR images. Phase 6 retired
+> (merged into Phase 3). This document is now a historical/reference
+> record of the migration, not an active plan. It records the decisions
+> (with rejected alternatives)
 > and the phased path from today's Helmfile + `make` workflow to Flux CD
 > across three clusters. Conventions live in [conventions.md](conventions.md);
 > day-to-day operations in [operations.md](operations.md); other stack
@@ -471,13 +473,35 @@ all 8 modules at once instead of a manual "base only" stage) but hasn't been
 exercised end-to-end since — the one real rebuild this migration did
 (Phase 3) predates the change.
 
-**Phase 9 (deferred) — image automation.** `image-reflector` + `image-automation`
-for the four GHCR images, with a semver `filterTags` policy so only `vX.Y.Z` tags
-are considered and the `:latest` tag both CI workflows also push is ignored.
-Images without an `ImagePolicy` and without a `$imagepolicy` marker are never
-touched, so today's "every image pinned" rule holds by default and tracking is
-opt-in per image. Deliberately last: it is the original motivation but the
-smallest piece, and only makes sense once Git is authoritative.
+**Phase 9 — image automation. Status: done.** `image-reflector-controller` +
+`image-automation-controller`, installed on `local` only (`prd` stays
+tag-gated, unaffected by anything landing on `main`) via
+`--components-extra` on `flux-bootstrap`. **Five images, not four** — the
+one-liner missed `unbegotten` (added to the repo after this doc was
+originally written); found re-checking against `apps/base/values/*.yaml`
+before scoping this. **Not every image tags `vX.Y.Z`** either —
+`transmission-exporter` tags bare `X.Y.Z` (confirmed via `git tag -l` in
+each of the 5 image repos before assuming), so its `ImagePolicy` omits
+`filterTags` while the other four (`cyber-chef`, `mediarvester`,
+`pokeclicker`, `unbegotten`) use `pattern: '^v(?P<version>.*)$'` to strip
+the prefix before semver-comparing. `:latest` needs no special exclusion —
+it never parses as semver, so the policy silently never selects it.
+
+`ImageUpdateAutomation` pushes straight to `main` through a **dedicated,
+read-write-scoped `GitRepository`** (its own deploy key via the new
+`image-automation-deploy-key` Make target) — not `flux-system`'s primary
+sync `GitRepository`, which stays read-only, exactly as `flux bootstrap`
+created it. The first read-write credential this entire migration has
+created; every other deploy key (both clusters, both repos) stayed
+read-only throughout. `$imagepolicy` marker comments on the 5 pinned lines
+are the actual opt-in — verified the comment doesn't leak into what Helm
+actually renders (`helm template` + `kubectl kustomize` both checked
+clean) before trusting it. All 5 `ImagePolicy` objects resolved correctly
+to the exact versions already pinned (nothing was actually behind), and
+`ImageUpdateAutomation`'s first run reported "repository up-to-date" with
+no commit pushed — confirms the read path end-to-end; the actual
+bump-and-redeploy path is unverified until a real new tag appears (nothing
+to test it against yet).
 
 ## Gotchas requiring empirical verification
 
@@ -697,6 +721,15 @@ smallest piece, and only makes sense once Git is authoritative.
     catch "a whole Deployment silently stopped being desired state" — only
     diffing against a known-good baseline (chart-level `helm get manifest`
     comparison, or golden-manifest diffing as used in Phase 2) would have.
+16. **The image-automation CRDs (`ImageRepository`/`ImagePolicy`/
+    `ImageUpdateAutomation`) are all `v1` on Flux 2.9.4, not `v1beta1`/
+    `v1beta2`.** Older Flux docs/examples floating around the web still
+    show the beta versions. Manifests written against the beta apiVersions
+    fail CRD validation outright rather than working with a deprecation
+    warning — checked the actual installed CRDs
+    (`kubectl get crd imageupdateautomations.image.toolkit.fluxcd.io -o
+    jsonpath='{.spec.versions[*].name}'`) before writing the real
+    manifests, rather than trusting an assumed version.
 
 ## Open items
 
