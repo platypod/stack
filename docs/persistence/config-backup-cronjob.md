@@ -15,4 +15,4 @@ can't host SQLite WAL.
 
 **Rationale:** live SQLite is local (fast, WAL-safe); the backup lands on the
 backed-up Synology, so a node loss doesn't lose app state. See
-[[sqlite-on-nfs-localconfig]].
+[conventions.md](../conventions.md).

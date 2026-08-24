@@ -2,7 +2,7 @@
 
 The media stack: acquisition (*arr), serving (Jellyfin/Komga/Kavita/Suwayomi),
 requests (Jellyseerr), and housekeeping. Many apps use SQLite on the **local
-`config` volume** (NFS can't host WAL — [[sqlite-on-nfs-localconfig]]).
+`config` volume** (NFS can't host WAL — see [conventions.md](../conventions.md)).
 
 ## Services
 | Service | Image | Notes |

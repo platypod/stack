@@ -351,6 +351,63 @@ tenant), not token *counts* (the label).
 reasons — then deriving the tenant from `Remote-User` becomes the natural, pod-free
 choice.
 
+## Status update (2026-07-02): first non-admin user + admin-only dashboards
+
+The design above got its first real non-admin user (`laureusson`, `dev`+
+`otel-writers` groups) — the trigger condition the `metrics-ai` datasource's
+`scopeMetrics: false` prod override had a comment anticipating. Bringing it to
+`scopeMetrics: true` surfaced several independent bugs, fixed along the way:
+
+- **Gateway OOM loop.** `memory_limiter` thresholds (4000Mi/800Mi) were sized for
+  a pod running with a 512Mi limit. Bumped the pod to 512Mi request/1Gi limit,
+  the thresholds to 800Mi/200Mi, and reordered `memory_limiter` first in every
+  pipeline.
+- **prompt-meter metrics landing in the wrong Mimir tenant over the external
+  ingress path** (fine direct-to-gateway). Root cause never fully pinned down;
+  worked around by giving `metrics/otlp` a hardcoded-tenant exporter
+  (`otlphttp/mimir_ai`) for that one pipeline instead of relying on
+  `headers_setter`'s `from_context` extraction. That first fix was too broad —
+  it also rerouted the node-collector's shared `otlp` receiver traffic (infra
+  metrics) into the `ai` tenant, breaking Cluster Overview/Pod Detail/Workloads.
+  Split into `metrics/otlp_ai` / `metrics/otlp_infra` by metric-name-prefix filter.
+- **`${session:regex}` PromQL bug** — produced single-backslash regex escapes for
+  session titles containing literal dots (filenames), which PromQL string
+  literals reject, breaking every panel filtered to such a session. Fixed by
+  dropping `:regex`, matching how `$project` already worked.
+- **Jellyfin owner matching was case-sensitive** (profile casing vs Authelia
+  login casing). The shim regex now uses `(?i)`.
+- **Native Claude Code CLI telemetry** (`claude_code_*`, no owner concept) now
+  stamps `owner` from the `Remote-User` header Authelia already sets — metrics
+  only, see below.
+
+### New: `_admin` sentinel + admin-only dashboards
+
+A second sentinel value, `owner="_admin"`, is excluded by non-admins' existing
+`^(user|_shared)$` regex with **no shim change** — enforced in `transform/owner`
+(gateway), not a separate shim instance/datasource (that approach only gates
+pre-built dashboard panels, not Explore or ad-hoc queries against the regular
+"Metrics" datasource, which non-admin `dev`-group users get **Editor** on).
+
+Dashboards moved to `_admin`: **Pod Detail, Workloads, Transmission, Synology
+NAS**. `k8s_pod_phase`/`k8s_container_restarts` (Cluster Overview) and
+`ifHCInOctets`/`ifHCOutOctets` (Jellyfin's network panel) stay `_shared` on
+purpose — an open dashboard also needs them and one metric name can't be split
+two ways by owner label.
+
+### Open / not done
+
+- **Native Claude CLI *logs*** still land in the `_shared` Loki tenant, visible
+  to everyone — only the metrics side was fixed. The Loki-tenant equivalent hits
+  the same `headers_setter`-can't-template-a-prefix wall this doc's *Ingest
+  hardening* section already rejected a similar approach for.
+- The original "laureusson sees pittinic's data" report that started this pass
+  was **never conclusively resolved** — live verification of the exact panel
+  query through the real shim chain came back correctly scoped every time.
+  Suspected but unconfirmed: an Authelia SSO session bleed on a shared device
+  (`auto_login: true` in `grafana.ini` would silently authenticate as whoever's
+  session cookie is present) — check what username Grafana's own profile menu
+  shows if this resurfaces.
+
 ## Rollout / testing note
 
 Prefer to validate on the **dev** cluster first. Dev has had OIDC trouble in the

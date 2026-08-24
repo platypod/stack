@@ -11,4 +11,4 @@ REST/GraphQL API.
   (the default `lldap.yaml` seed is fully overridden in prod), where the
   `otel-telemetry` service account is defined for the OTLP Basic-auth path.
 
-See [lldap](lldap.md), [[otel-telemetry-auth]].
+See [lldap](lldap.md).

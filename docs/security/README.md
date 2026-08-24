@@ -13,5 +13,5 @@ Identity + access for the whole stack: **LLDAP** (user directory) → **Authelia
 ## Jobs
 - [lldap-seed-job](lldap-seed-job.md) — idempotently seeds groups + users.
 
-Deep dive on the auth flows: [docs/authentication.md](../authentication.md). Related
-memory: [[otel-telemetry-auth]].
+Deep dive on the auth flows: [docs/authentication.md](../authentication.md). External
+OTLP telemetry ingest auth is covered in [decisions.md](../decisions.md).

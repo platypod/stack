@@ -16,7 +16,7 @@ Ships no user-facing service; everything else mounts what this defines.
   own flag and is exempt from the localStorage/nfs either-or guard. Pinned to
   nodes via the `platypod.io/local-storage` nodeAffinity label.
 
-See [[sqlite-on-nfs-localconfig]] for the failure mode that motivated this.
+See [conventions.md](../conventions.md) for the failure mode that motivated this.
 
 ## Jobs
 - [config-backup-cronjob](config-backup-cronjob.md) — nightly backup of the local

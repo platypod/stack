@@ -14,4 +14,4 @@ metrics. Scraped by the [gateway](otel-collector-gateway.md) via `/probe?module=
 - **Same metric name ⇒ identical `help`** across every entry, or the prometheus client
   **panics** (`inconsistent label names or help`).
 - `follow_redirects: true` is needed for hosts that 301 (frankfurter`.app` → `.dev`).
-- See [[grafana-claude-cost-currency]] for the FX setup.
+- See the "Cost currency conversion" section of [src/observability/README.md](../../src/observability/README.md) for the full FX setup.

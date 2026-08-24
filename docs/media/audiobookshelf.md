@@ -5,7 +5,7 @@ Audiobook/podcast server.
 - **Image:** `ghcr.io/advplyr/audiobookshelf:2.35.1` (pinned).
 - **Auth:** on the Authelia `media_user` access rule (own login) + optional OIDC.
 - **Storage:** SQLite DB on the **local `config` volume** — same constraint as
-  Kavita/Komga ([[sqlite-on-nfs-localconfig]]); `/metadata` (covers, backups,
+  Kavita/Komga (see [conventions.md](../conventions.md)); `/metadata` (covers, backups,
   logs) is also on the local volume. The whole NFS media share is mounted at
   `/data` — add a library in the UI pointing at a sub-folder (e.g.
   `/data/audio-books`), same minimal-config pattern as Kavita.

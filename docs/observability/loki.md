@@ -24,6 +24,11 @@ Logs store. Single-binary, filesystem storage, TSDB schema v13.
 ## Gotchas
 - The delete API is **time-range based on log timestamp**, async, and only processes
   after `delete_request_cancel_period`. Re-shipping same-timestamped data during that
-  window gets deleted too. See [[claude-transcript-shipper]].
+  window gets deleted too. Combined with `entry too far behind` (Loki also rejects
+  a backfill once a stream's head is recent), any historical bulk-loader — e.g. the
+  `prompt-meter` submodule that ships Claude Code transcripts here — should stamp
+  records with a monotonic **ingestion** timestamp (always ahead of the head) and
+  keep the true time as a separate attribute, rather than backfilling at the real
+  historical timestamp.
 - OTLP label promotion: only `service_name` is indexed by default — hence the explicit
   `otlp_config` above.

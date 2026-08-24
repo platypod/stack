@@ -14,7 +14,7 @@ as an **OIDC provider** for apps that speak OIDC. Users come from [lldap](lldap.
   uses the `authelia` Traefik middleware.
 - **`forward-auth-basic`** — adds `HeaderAuthorization` so **`Authorization: Basic`**
   works (for non-interactive clients). Its own `authelia-basic` middleware. Used by
-  the Claude Code OTLP telemetry path. See [[otel-telemetry-auth]].
+  the Claude Code OTLP telemetry path. See [decisions.md](../decisions.md).
 - **OIDC** (`generic_oauth`) — for apps that authenticate via OIDC (Grafana, Kavita,
   RomM, Vaultwarden, etc.); clients declared under `oidc.clients`.
 
@@ -29,4 +29,4 @@ as an **OIDC provider** for apps that speak OIDC. Users come from [lldap](lldap.
 - Grafana OIDC back-channel needs the Authelia hostname resolvable in-cluster →
   a `hostAlias` to the Traefik LB IP (see grafana deployment).
 - Bearer-token authz is available on 4.39 but the OTEL path uses Basic (static header,
-  no 1h expiry). See [[otel-telemetry-auth]].
+  no 1h expiry). See [decisions.md](../decisions.md).
