@@ -117,6 +117,25 @@ install_age_linux() {
 }
 
 # ---------------------------------------------------------------------------
+# Install flux binary directly (Linux fallback)
+# ---------------------------------------------------------------------------
+
+FLUX_VERSION="2.9.4"
+
+install_flux_linux() {
+  local arch
+  arch="$(uname -m)"
+  case "${arch}" in
+    x86_64)  arch="amd64" ;;
+    aarch64) arch="arm64" ;;
+  esac
+  local url="https://github.com/fluxcd/flux2/releases/download/v${FLUX_VERSION}/flux_${FLUX_VERSION}_linux_${arch}.tar.gz"
+  info "Downloading flux v${FLUX_VERSION} for linux/${arch}"
+  curl -fsSL "${url}" | tar -xz -C /usr/local/bin flux
+  chmod +x /usr/local/bin/flux
+}
+
+# ---------------------------------------------------------------------------
 # Install helm-diff plugin
 # ---------------------------------------------------------------------------
 
@@ -161,6 +180,7 @@ check helmfile  "https://helmfile.readthedocs.io/en/latest/#installation" || ALL
 helm_diff_installed && ok "helm-diff  ($(helm diff version 2>/dev/null))" || { missing "helm-diff  — helm plugin (auto-installed below)"; ALL_OK=0; }
 check sops      "https://github.com/getsops/sops#download"      || ALL_OK=0
 check age       "https://github.com/FiloSottile/age#installation" || ALL_OK=0
+check flux      "https://fluxcd.io/flux/installation/"           || ALL_OK=0
 check docker    "https://docs.docker.com/get-docker/ (only needed to build custom images)" || true  # optional
 
 echo ""
@@ -185,6 +205,7 @@ if [ "${OS}" = "Darwin" ]; then
   has helmfile || brew_install helmfile
   has sops     || brew_install sops
   has age      || brew_install age
+  has flux     || brew_install fluxcd/tap/flux
   helm_diff_installed || install_helm_diff
 elif [ "${OS}" = "Linux" ]; then
   if has apt-get; then
@@ -201,6 +222,7 @@ elif [ "${OS}" = "Linux" ]; then
   has helmfile || install_helmfile_linux
   has sops     || install_sops_linux
   has age      || install_age_linux
+  has flux     || install_flux_linux
   helm_diff_installed || install_helm_diff
 else
   missing "Unsupported OS: ${OS} — please install tools manually"
@@ -215,4 +237,5 @@ check helm     ""
 check helmfile ""
 check sops     ""
 check age      ""
+check flux     ""
 helm_diff_installed && ok "helm-diff  ($(helm diff version 2>/dev/null))" || missing "helm-diff  — install failed"

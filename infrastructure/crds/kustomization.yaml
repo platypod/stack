@@ -1,0 +1,10 @@
+# Traefik CRDs, vendored (Flux's kustomize-controller runs with network access
+# disabled, so it can't fetch these from raw.githubusercontent.com the way
+# `make install-crds` does today — see stack/docs/flux-migration.md gotcha 1).
+# Pinned to v3.5, matching TRAEFIK_VERSION in stack/Makefile. Re-vendor by
+# re-running the curl commands in that doc's Phase 3 notes when bumping.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - traefik-crds.yaml
+  - traefik-rbac.yaml
