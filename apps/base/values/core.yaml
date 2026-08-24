@@ -1,0 +1,19 @@
+# Implementation tier — core module. Registry fields (enable/label/host) for
+# these services live in values/default/registry.yaml instead.
+
+homepage:
+  image:
+    registry: ghcr.io/
+    namespace: gethomepage/
+    repository: homepage
+    tag: v1.13.2
+  ports:
+    http:
+      name: homepage-http
+      targetPort: 3000
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi

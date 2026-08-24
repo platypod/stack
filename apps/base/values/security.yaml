@@ -1,0 +1,592 @@
+# Implementation tier — security module. Registry fields (enable/label/host,
+# where present) for adguard/vaultwarden/lldap/authelia live in
+# values/default/registry.yaml instead. `security.accessGroups` (below) has
+# no per-service enable/label/host shape of its own and stays here in full.
+
+adguard:
+  # Address AdGuard answers on from the LAN (see traefik.externalIP for the
+  # mechanism and why it is not hostNetwork). LAN clients point their resolver
+  # here. Ports 53/tcp+udp are served on this address.
+  #
+  # NOTE: ports.http.targetPort must not collide with another Service claiming
+  # the same externalIP — the default 80 clashes with Traefik's http entrypoint,
+  # so prod moves AdGuard's web UI to 8080 (the ConfigMap bind_port, Service and
+  # IngressRoute all derive from that one value).
+  externalIP: ""
+  loadBalancerIP: ""  # MetalLB path only (e.g. dev: 192.168.122.201).
+  # Pin to the node that owns externalIP.
+  nodeSelector: {}
+  adminHost: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.adguard.label }}-admin{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  credentials:
+    username: admin
+    password: password
+    passwordHash: "$2y$10$XEjNfXLsHj7CBrnT1fdMaeqVv.tA.cfpWfulEAKBupXFUUgunxgRS"
+  image: adguard/adguardhome:v0.107.78
+  ports:
+    dnsUdp:
+      name: dns-udp
+      nodePort: 32049
+      targetPort: 53
+    dnsTcp:
+      name: dns-tcp
+      nodePort: 30154
+      targetPort: 53
+    http:
+      name: http
+      nodePort: 30155
+      targetPort: 80
+    admin:
+      name: admin
+      nodePort: 30156
+      targetPort: 3000
+  # Extra DNS rewrites, appended after the automatic "*.<traefik.domain>" one.
+  # LAN-only names live here (e.g. the Kubernetes API endpoint) so laptops and
+  # hosts resolve them without a public DNS record.
+  #
+  # NOTE: Talos nodes do NOT use AdGuard — their machine config pins
+  # nameservers to 1.1.1.1/8.8.8.8, and AdGuard runs *inside* the cluster, so it
+  # can never resolve the cluster's own API endpoint for them. Node-side
+  # resolution is handled by machine.network.extraHostEntries in infra/.
+  rewrites: []
+    # - domain: k8s.platypod.lan
+    #   answer: 192.168.1.156
+
+  pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+lldap:
+  image: lldap/lldap:v0.6.3-alpine
+  # Internal LDAP base DN — environment-independent, not tied to the public domain.
+  baseDn: dc=platypod,dc=home
+  # LLDAP always exposes its bind user as uid=admin,ou=people,<baseDn>.
+  adminUser: admin
+  # Placeholder — real value comes from values/<env>/values.yaml (gitignored)
+  # or the SOPS-encrypted secrets repo. Guarded at render time in
+  # src/security/templates/lldap/lldap--deployment.yaml.
+  adminPassword: verySecretMuchSecureNeverGonnaBeGuessedAdminPassword
+  # Placeholder — real value comes from values/<env>/values.yaml (gitignored)
+  # or the SOPS-encrypted secrets repo. Guarded at render time in
+  # src/security/templates/lldap/lldap--deployment.yaml.
+  jwtSecret: verySecretMuchSecureNeverGonnaBeGuessedJwtSecret
+  database:
+    image: postgres:17
+    name: "{{ .Values.lldap.label }}"
+    label: "{{ .Values.lldap.label }}-db"
+    credentials:
+      username: admin
+      # Internal-only Postgres sidecar, not network-exposed — placeholder,
+      # real value comes from values/<env>/values.yaml (gitignored).
+      password: verySecretMuchSecureNeverGonnaBeGuessedLldapDbPassword
+    ports:
+      http:
+        name: pgsql
+        targetPort: 5432
+    replicasNb: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+  ports:
+    http:
+      name: http
+      targetPort: 17170
+    ldap:
+      name: ldap
+      targetPort: 3890
+  # LDAPS for clients outside the cluster (e.g. prod's host-native Jellyfin —
+  # see docs/media/jellyfin-ldap.md). Routed through Traefik's "ldaps" TCP
+  # entrypoint (see traefik.yaml), which terminates TLS with the same trusted
+  # cert as everything else and forwards PLAINTEXT to this Service internally
+  # — same edge-TLS/plaintext-inside pattern as every HTTPS-fronted app here.
+  # LLDAP itself needs no TLS config; Traefik does all of it.
+  ldaps:
+    enable: false
+  storage:
+    pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  # Post-install/upgrade hook that pre-creates groups and users via the LLDAP
+  # REST/GraphQL API. Idempotent: skips already-existing groups/users.
+  # Passwords are only set on user creation — existing users keep theirs.
+  # The built-in LLDAP 'admin' user is always skipped (its password comes from
+  # the LLDAP_LDAP_USER_PASS env var, not this job).
+  seed:
+    image: python:3-alpine
+    # Group list itself is generated (see security.allGroupNames in
+    # stack/src/security/templates/_helpers.tpl) off the single source of
+    # truth at values/default/security.yaml's accessGroups — not hand-listed
+    # here. Only per-user group MEMBERSHIP is declared below.
+    users:
+      - id: admin
+        email: pl@ty.pod
+        displayName: admini
+        password: "{{ .Values.lldap.adminPassword }}"
+        groups:
+          - admins
+      - id: dave
+        email: dave.thedev@gmail.com
+        displayName: dave
+        # Placeholder — dev/local fixture user, real value per env if used.
+        password: verySecretMuchSecureNeverGonnaBeGuessedDavePassword
+        groups:
+          - dev_user
+          - otel_writer   # may ship his own telemetry (tenant claude-dave)
+      - id: guest
+        email: gues@ty.pod
+        displayName: guesto
+        # Placeholder — dev/local fixture user, real value per env if used.
+        password: verySecretMuchSecureNeverGonnaBeGuessedGuestPassword
+        groups: []
+      # Non-interactive service account for OTLP/gRPC telemetry ingestion
+      # (native Claude Code telemetry / non-human shippers). Member of
+      # otel_writer so it keeps working through the ingest rule. It writes no
+      # per-user tenant (no x-scope-orgid → lands in _shared), so the
+      # tenant-guard lets it through. Remove once every shipper is a real per-user
+      # account; until then it's the shared/CI path. See docs/observability/
+      # dashboard-multitenancy.md.
+      - id: otel-telemetry
+        email: otel-telemetry@platypod.local
+        displayName: OTEL Telemetry
+        # Placeholder — real value comes from values/<env>/values.yaml (gitignored).
+        password: verySecretMuchSecureNeverGonnaBeGuessedOtelTelemetryPassword
+        groups:
+          - otel_writer
+      # Read-only service account for the Grafana datasource scope shim: looks up
+      # any user's group membership (admins-or-not) to scope dashboard queries.
+      # Member of lldap_strict_readonly → can read all users/groups, no write.
+      # See docs/observability/dashboard-multitenancy.md.
+      - id: grafana-authz
+        email: grafana-authz@platypod.local
+        displayName: Grafana Authz
+        # Placeholder — must match values/default/observability.yaml's
+        # scopeShim.lldap.password. Real value comes from values/<env>/values.yaml.
+        password: verySecretMuchSecureNeverGonnaBeGuessedGrafanaAuthzPassword
+        groups:
+          - lldap_strict_readonly
+      # Read-only bind account for the Jellyfin LDAP-Auth plugin. Same
+      # rationale as grafana-authz: a scoped bind, not the LLDAP admin.
+      # See stack/docs/media/jellyfin-ldap.md.
+      - id: jellyfin-ldap
+        email: jellyfin-ldap@platypod.local
+        displayName: Jellyfin LDAP
+        # Placeholder — must match values/default/media.yaml's jellyfin.ldap.bindPassword.
+        # Real value comes from values/<env>/values.yaml.
+        password: verySecretMuchSecureNeverGonnaBeGuessedJellyfinLdapPassword
+        groups:
+          - lldap_strict_readonly
+  replicasNb: 1
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+
+vaultwarden:
+  # OIDC login via Authelia. Empty clientId disables the integration entirely
+  # (Authelia client block and app-side config are both gated on it).
+  # Set real values per-env; hash: authelia crypto hash generate pbkdf2
+  oidc:
+    clientId: ""
+    clientSecret:
+      plain: ""
+      hashed: ""
+  image: vaultwarden/server:1.36.0
+  ports:
+    http:
+      name: vw-http
+      targetPort: 80
+    websocket:
+      name: vw-ws
+      targetPort: 3012
+  credentials:
+    adminToken: password
+  signupsAllowed: false
+  invitationsAllowed: true
+  logLevel: warn
+  # SQLite DB → dedicated local volume (NFS can't host SQLite WAL). See the
+  # persistence localConfig volume.
+  pvc: "{{ .Values.storage.defaultVolumes.config }}"
+  replicasNb: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+authelia:
+  database:
+    type: postgres
+    host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.authelia.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+    name: "{{ .Values.authelia.label }}"
+    logQueries: false
+    credentials:
+      username: admin
+      # Internal-only Postgres sidecar, not network-exposed — placeholder,
+      # real value comes from values/<env>/values.yaml (gitignored).
+      password: verySecretMuchSecureNeverGonnaBeGuessedAutheliaDbPassword
+    # Distinct from authelia.storage.pvc (used by redis) so the two can be
+    # repointed independently — on prod this goes to a dedicated local volume,
+    # redis stays on the shared apps volume.
+    pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+    image: postgres:17
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
+    label: "{{ .Values.authelia.label }}-db"
+    ports:
+      http:
+        name: pgsql
+        targetPort: 5432
+    replicasNb: 1
+  image: authelia/authelia:4.39.20
+  log:
+    level: info
+    format: text
+  oidc:
+    # Placeholder — real value comes from values/<env>/values.yaml (gitignored)
+    # or the SOPS-encrypted secrets repo. Guarded at render time in
+    # src/security/templates/authelia/authelia--config-map.yaml. Now that
+    # hmac_secret is actually wired in (c125189), this is a live secret —
+    # signs opaque OAuth2 tokens (auth codes, access/refresh tokens).
+    hmac_secret: verySecretMuchSecureNeverGonnaBeGuessedHmacSecret
+    jwks:
+      caName: authelia-jwks
+      commonName: authelia-jwks
+  ports:
+    http:
+      name: authelia
+      targetPort: 9091
+    metrics:
+      name: auth-metrics
+      targetPort: 9959
+  replicasNb: 1
+  rules:
+    # OTLP/gRPC telemetry ingress: any member of the otel_writer group, via
+    # Authorization: Basic (1FA). The dedicated forward-auth-basic endpoint makes
+    # Basic auth usable here without changing any browser-facing service. The
+    # tenant-guard shim (next middleware) then enforces that each writer may only
+    # write its own Loki tenant. See docs/observability/dashboard-multitenancy.md.
+    - policy: one_factor
+      subject:
+      - "group:otel_writer"
+      domain:
+      - "{{ tpl .Values.observability.otelCollector.gateway.grpcHost . }}"
+
+    - policy: bypass
+      domain:
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bazarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.flaresolverr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.prowlarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.readarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.reclaimerr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      networks:
+      - "{{ .Values.k8s.clusterCIDR }}"
+
+    # PWA manifest is fetched as a credentialed CORS request; if Authelia answers
+    # with a 302 to its own (cross-origin) login, the browser blocks it on CORS.
+    # Bypassing the manifest path lets it be served same-origin (it's harmless).
+    - policy: bypass
+      domain:
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.kavita.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      resources:
+      - '^/site\.webmanifest$'
+
+    - policy: one_factor
+      domain:
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.homepage.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.pokeclicker.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.unbegotten.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+
+    # Per-tool rules for everything gated by security.yaml's accessGroups (media/
+    # download/dev membership, per-tool roles) are generated in
+    # authelia--config-map.yaml — see security.toolSubjects/toolHosts in
+    # src/security/templates/_helpers.tpl. Nothing hand-written here anymore.
+
+    - policy: bypass
+      domain:
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.lldap.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.itTools.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.cyberChef.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      # Proxy mode is called by CLI/agent traffic (Authorization carries the
+      # upstream Anthropic/OpenAI key), not a browser session — forward-auth's
+      # login redirect would break it. Same bypass rationale as IT-Tools/CyberChef.
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.headroom.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      # OPDS clients (e.g. CrossInk on an e-reader) can't follow forward-auth's
+      # browser login redirect — same rationale as Jellyfin. Komga has its own
+      # login/API-key auth, so this doesn't drop authentication, just moves it.
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.komga.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyswarrm.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.traefik.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.vaultwarden.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  redis:
+    image: redis:7-alpine
+    label: "{{ .Values.authelia.label }}-redis"
+    ports:
+      http:
+        name: redis
+        targetPort: 6379
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 64Mi
+  secrets:
+    encryptionKey: verySecretMuchSecureNeverGonnaBeGuessedWoah
+    jwt: verySecretMuchSecureNeverGonnaBeGuessedWoooow
+    session: verySecretMuchSecureNeverGonnaBeGuessedWoowee
+  storage:
+    pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 192Mi
+    limits:
+      memory: 384Mi
+
+# Single source of truth for the LDAP group / Authelia rule redesign
+# (per-tool + per-category groups, replacing the flat media/download/dev groups).
+# See stack/docs/authentication.md for the write-up once wired in.
+#
+# This file is NOT yet consumed by any template — it's the draft table for
+# review before the LLDAP seed / Authelia rule generation is built on top of it.
+#
+# Field reference:
+#   valuesPath      Dotted path under .Values to the tool's own values block
+#                    (only set when it differs from the map key itself, e.g.
+#                    the observability.* services). The rule generator reads
+#                    `<valuesPath-or-key>.host` from it — every tool already
+#                    defines its own `host:` template string, so this is just
+#                    "where to find it", not a full domain to rebuild.
+#   host            Raw Authelia-rule-domain template string, used INSTEAD of
+#                    valuesPath/`.host` for the handful of tools whose gated
+#                    hostname isn't their own `.host` (e.g. a "-db" admin-UI
+#                    hostname built from a different tool's label). Same
+#                    `{{ }}`-templated-string convention as every `host:` value
+#                    elsewhere in this repo — resolved with `tpl` at render time.
+#   extraHosts      Additional raw host template strings gated by the exact
+#                    same rule as the main one (e.g. AdGuard's "-admin" hostname).
+#   roles           Which per-tool groups to create: [] | [user] | [admin, user]
+#                    | [writer]. Only tools with a REAL in-app role split get
+#                    more than one entry — see the "Role granularity" decision.
+#                    Produces groups named "<toolKey>_<role>".
+#   categories      Which composite groups (<category>_user / <category>_admin)
+#                    this tool's access should also be grantable through.
+#                    LLDAP has no nested groups — composites are flat sibling
+#                    groups, referenced alongside the granular ones wherever
+#                    access is checked (Authelia subject list, LDAP filters).
+#   authelia        Whether an Authelia access_control rule should be generated
+#                    for this tool's domain at all. false = the tool's ingress
+#                    is fully bypass / own-auth (e.g. Jellyfin) — LDAP groups
+#                    still exist for it, but Authelia never checks them.
+#   roleEnforcement "authelia" (default, omitted) = the generated Authelia rule
+#                    itself lists the per-tool role groups, so reaching the
+#                    tool at all differs by role.
+#                    "app" = Authelia only gates by category (any dev/media/etc
+#                    member reaches the login), and the role split is enforced
+#                    *inside* the app via its own group lookup — see `evidence`
+#                    below for how each one currently does it (or would need to).
+#   evidence        Where the admin/user split was confirmed for THIS repo, or
+#                    a note that it's the upstream app's general capability
+#                    and not yet verified against what's actually deployed here.
+#   verified        true = confirmed by reading this repo's code/docs (see
+#                    `evidence`). false = plausible from general knowledge of
+#                    the upstream app, but nothing in this repo proves the
+#                    pinned version/config here actually has it wired up —
+#                    treat as "worth checking before relying on", not settled.
+#                    Omitted where the question doesn't apply (roles: [user]).
+#
+# `admins` is NOT listed here — it's the existing global superuser composite,
+# implicitly appended to every generated Authelia rule and to any app-side
+# role check, on top of whatever's declared below.
+#
+# Composite groups: `categories` (below) is the map that actually gets built —
+# every category always gets a `<category>_user` composite, but `<category>_admin`
+# is ONLY generated when `admin: true`, i.e. when at least one tool in that
+# category has a real, currently-usable admin mechanism (see that tool's
+# `evidence`). An admin composite for a category where nothing can consume it
+# would just be a duplicate of the `_user` one — same rule as per-tool groups.
+
+security:
+  categories:
+    media:    { admin: true }    # jellyfin_admin, mediarvester_admin both consume it
+    download: { admin: false }   # no tool here has any admin tier
+    dev:      { admin: true }    # grafana_admin, bookstack_admin both consume it
+
+  accessGroups:
+    # --- media ---
+    jellyfin:
+      roles: [admin, user]
+      categories: [media]
+      authelia: false          # bypass ingress, own auth
+      roleEnforcement: app
+      verified: true
+      evidence: "LDAP-Auth plugin's adminGroup/userGroup filters — stack/docs/media/jellyfin-ldap.md"
+
+    mediarvester:
+      roles: [admin, user]
+      categories: [media]
+      roleEnforcement: app
+      verified: true
+      evidence: "mediarvester/src/api/deps.py:is_admin() reads Authelia's forwarded Remote-Groups header, checks overlap with ADMIN_GROUPS (env, comma-separated set). Wired: the Mediarvester Deployment sets ADMIN_GROUPS via media.mediarvesterAdminGroups (src/media/templates/_helpers.tpl) → 'mediarvester_admin,media_admin,admins'."
+
+    jellyseerr:
+      roles: [user]
+      categories: [media]
+      authelia: false           # bypass ingress today (own auth) — see authentication.md
+      # Has a real admin bit in its own DB, but jellyseerr-setup-job writes it by
+      # hardcoded username, not by reading any LDAP group — no mechanism exists
+      # today for a jellyseerr_admin group to grant anything. Deferred: would need
+      # the setup job taught to look up group membership before it's worth creating.
+      evidence: "jellyseerr-setup-job writes the ADMIN bit directly into its DB (stack/docs/media/jellyseerr.md) — not group-driven, so no admin group would do anything yet"
+
+    kavita:
+      roles: [user]
+      categories: [media]
+      # First OIDC-registered user becomes admin — a provisioning-order fluke,
+      # not a group check. No mechanism for a kavita_admin group to plug into yet.
+      evidence: "first OIDC-registered user becomes admin (stack/docs/media/kavita-setup-job.md) — not group-driven, deferred until it is"
+
+    audiobookshelf:
+      roles: [user]
+      categories: [media]
+      # Root user is fixed at first-init; app supports more roles upstream but
+      # nothing here reads a group to grant them. Deferred, same as Kavita.
+      evidence: "root user fixed at first-init via POST /init (stack/docs/media/audiobookshelf-setup-job.md); Root/Admin/User/Guest tiers exist upstream, not group-driven here"
+
+    bazarr:        { roles: [user], categories: [media] }
+    flaresolverr:  { roles: [user], categories: [media] }
+    radarr:        { roles: [user], categories: [media] }
+    prowlarr:      { roles: [user], categories: [media] }
+    readarr:       { roles: [user], categories: [media] }
+    sonarr:        { roles: [user], categories: [media] }
+    reclaimerr:    { roles: [user], categories: [media] }
+    suwayomi:      { roles: [user], categories: [media] }   # AUTH_MODE=none, no user system at all
+    tdarr:         { roles: [user], categories: [media] }
+
+    rommapp:
+      roles: [user]
+      categories: [media]
+      # RomM has a real upstream viewer/editor/admin role system, but nothing in
+      # this repo confirms it's configured — no role-seed job like BookStack's.
+      # Left single-tier until that's actually verified against the pinned version.
+      verified: false
+      evidence: "unverified — upstream RomM has roles, not confirmed wired here"
+
+    # --- download (no RBAC in any of these — single shared credential, confirmed
+    #     by how each is described in stack/docs/files/*.md) ---
+    transmission:  { roles: [user], categories: [download] }
+    qbittorrent:   { roles: [user], categories: [download] }
+    deluge:        { roles: [user], categories: [download] }
+    sabnzbd:       { roles: [user], categories: [download] }
+
+    # --- dev ---
+    grafana:
+      valuesPath: observability.dashboard
+      roles: [admin, user]
+      categories: [dev]
+      roleEnforcement: app
+      verified: true
+      evidence: "dashboard scope-shim — stack/docs/observability/dashboard-multitenancy.md. Wired: ADMIN_GROUPS is generated via observability.grafanaAdminGroups (src/observability/templates/_helpers.tpl) → 'grafana_admin,dev_admin,admins'."
+
+    bookstack:
+      roles: [admin, user]
+      categories: [dev]
+      roleEnforcement: app
+      verified: true
+      evidence: "bookstack-role-seed-job maps the admins group's display name to BookStack's built-in admin role — stack/docs/dev-tools/bookstack-role-seed-job.md. Already group-driven, just not per-tool (bookstack_admin) yet."
+
+    wikijs:
+      roles: [user]
+      categories: [dev]
+      # Wiki.js has a real upstream Admin/group RBAC system, but this repo only
+      # wires an OIDC login strategy (wikijs-oidc-seed-job), no role sync.
+      verified: false
+      evidence: "unverified — upstream Wiki.js has groups/roles, not confirmed wired here"
+
+    outline:
+      roles: [user]
+      categories: [dev]
+      # Outline has real upstream Admin/Member/Viewer/Guest roles and even
+      # supports SSO-group role sync, but nothing in this repo configures it.
+      verified: false
+      evidence: "unverified — upstream Outline has team roles, not confirmed wired here"
+
+    dbeaver:
+      roles: [user]
+      categories: [dev]
+      # CloudBeaver has a real upstream admin flag per user, but nothing in
+      # this repo wires LDAP/OIDC groups to it.
+      verified: false
+      evidence: "unverified — upstream CloudBeaver has an admin flag, not confirmed wired here"
+
+    loki:
+      valuesPath: observability.logs
+      roles: [user]
+      categories: [dev]
+    mimir:
+      valuesPath: observability.metrics
+      roles: [user]
+      categories: [dev]
+    tempo:
+      valuesPath: observability.traces
+      roles: [user]
+      categories: [dev]
+    pyroscope:
+      valuesPath: observability.profiles
+      roles: [user]
+      categories: [dev]
+    adguard:
+      roles: [user]
+      categories: [dev]
+      # single admin account only; same rule also gates the "-admin" hostname
+      extraHosts:
+        - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.adguard.label }}-admin{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+
+    bookstack-db:
+      roles: [user]
+      categories: [dev]
+      # Not bookstack's own host — a separate DB-admin-UI hostname built from
+      # bookstack's label, same construction as the original hand-written rule.
+      host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bookstack.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+
+    wikijs-db:
+      roles: [user]
+      categories: [dev]
+      host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.wikijs.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+
+    database:      { roles: [user], categories: [dev] }
+
+    authelia-db:
+      roles: [user]
+      categories: [dev]
+      host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.authelia.label }}-db{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+    whoami:        { roles: [user], categories: [dev] }
+    uptimeKuma:    { roles: [user], categories: [dev] }   # 1.x: single admin account only, confirmed by stack/docs/observability/uptime-kuma.md
+
+    # --- standalone (no category composite) ---
+    otel:
+      roles: [writer]          # produces otel_writer, replacing otel-writers
+      categories: []
+      valuesPath: observability.otelCollector
+      # Gated by its own hand-written Basic-auth rule (grpcHost, not host, and
+      # 1FA over Authorization: Basic rather than a browser login) — excluded
+      # from the generated per-tool rules.
+      authelia: false

@@ -1,0 +1,16 @@
+# Teaches Kustomize's nameReference transformer that HelmRelease.spec.valuesFrom[].name
+# points at a ConfigMap/Secret name — without this, configMapGenerator/secretGenerator's
+# content-hash suffix (e.g. platypod-registry-a1b2c3) never gets substituted into the
+# HelmRelease, and it silently references a ConfigMap/Secret that doesn't exist.
+# See stack/docs/flux-migration.md gotcha 2.
+nameReference:
+  - kind: ConfigMap
+    version: v1
+    fieldSpecs:
+      - path: spec/valuesFrom/name
+        kind: HelmRelease
+  - kind: Secret
+    version: v1
+    fieldSpecs:
+      - path: spec/valuesFrom/name
+        kind: HelmRelease

@@ -1,0 +1,46 @@
+# Substrate/registry/per-module ConfigMaps + the 8 HelmReleases. The Secrets
+# tier (secretGenerator) is NOT here — it's sourced from the platypod-sops
+# GitRepository, which needs its own Kustomization with a different
+# sourceRef; see clusters/local/secrets.yaml. See stack/docs/flux-migration.md
+# for the tier design and gotcha 2 (kustomizeconfig.yaml, below).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: local-platypod
+
+configurations:
+  - kustomizeconfig.yaml
+
+configMapGenerator:
+  - name: platypod-substrate
+    files:
+      - substrate.yaml=values/substrate.yaml
+  - name: platypod-registry
+    files:
+      - registry.yaml=values/registry.yaml
+  - name: platypod-core
+    files:
+      - core.yaml=values/core.yaml
+  - name: platypod-dev-tools
+    files:
+      - dev-tools.yaml=values/dev-tools.yaml
+  - name: platypod-files
+    files:
+      - files.yaml=values/files.yaml
+  - name: platypod-games
+    files:
+      - games.yaml=values/games.yaml
+  - name: platypod-media
+    files:
+      - media.yaml=values/media.yaml
+  - name: platypod-observability
+    files:
+      - observability.yaml=values/observability.yaml
+  - name: platypod-security
+    files:
+      - security.yaml=values/security.yaml
+
+generatorOptions:
+  disableNameSuffixHash: false
+
+resources: []
