@@ -7,14 +7,14 @@ hood). `make help` prints this list live. Default goal is `help`.
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
-| `ENV` | `dev` | Environment — `dev` or `prd`. Selects the namespace, value overlays, and kubeconfig |
+| `ENV` | `local` | Environment — `local` or `prd`. Selects the namespace, value overlays, and kubeconfig |
 | `MODULE` | *(all)* | Limit a deploy/diff/destroy to one module (e.g. `core`, `media`) |
 | `KUBECONFIG` | auto | Resolved from the infra `.generated/<env>/` kubeconfig; override on the command line if needed |
 | `TRAEFIK_VERSION` | `v3.5` | Traefik CRD version for `install-crds` |
 | `CSI_DRIVER_NFS_VERSION` | `4.13.2` | NFS CSI driver chart version for `install-csi` |
 | `IMAGE`, `VERSION` | — | For `build` (custom image name + tag) |
 
-> `ENV` uses `dev`/`prd`, but the infra writes kubeconfigs under `dev`/`prod` —
+> `ENV` uses `local`/`prd`, but the infra writes kubeconfigs under `local`/`prod` —
 > the Makefile maps `prd` to `.../prod/kubeconfig` automatically. Prod's control
 > plane is bare metal on the LAN, directly reachable — no tunnel involved.
 
@@ -25,14 +25,14 @@ hood). `make help` prints this list live. Default goal is `help`.
 | `make install-deps` | Install required tools (helm, helmfile, kubectl, helm-diff) |
 | `make check-deps` | Report which tools are installed without installing |
 
-## Dev setup (macOS, one-time)
+## Local setup (macOS, one-time)
 
 | Target | What it does |
 |--------|--------------|
-| `make setup-dev-tls` | Trust the mkcert CA + create/refresh the wildcard TLS secret in the cluster |
-| `make setup-dev-dns` | Point system DNS at AdGuard (primary) + `1.1.1.1` (fallback); clean up dnsmasq |
+| `make setup-local-tls` | Trust the mkcert CA + create/refresh the wildcard TLS secret in the cluster |
+| `make setup-local-dns` | Point system DNS at AdGuard (primary) + `1.1.1.1` (fallback); clean up dnsmasq |
 | `make setup-prod-dns` | Same, for prod's AdGuard (`192.168.1.156`) — also serves the `k8s.platypod.lan` rewrite. Keep a manual `/etc/hosts` line for that name too; see `../infra/docs/decisions.md` |
-| `make setup-dev` | Full dev bootstrap: TLS → CRDs → base deploy → DNS |
+| `make setup-local` | Full local bootstrap: TLS → CRDs → base deploy → DNS |
 
 ## Cluster bootstrap
 
@@ -46,7 +46,7 @@ hood). `make help` prints this list live. Default goal is `help`.
 | Target | What it does |
 |--------|--------------|
 | `make status` | List deployed Helm releases for `ENV` |
-| `make diff` | Dry-run: show what a deploy would change (`ENV=dev MODULE=core`) |
+| `make diff` | Dry-run: show what a deploy would change (`ENV=local MODULE=core`) |
 | `make deploy-base` | Deploy the always-on base only: persistence, core, security |
 | `make deploy` | Deploy the full stack, or one module with `MODULE=` |
 | `make destroy` | Uninstall the full stack, or one module with `MODULE=` |
@@ -78,7 +78,7 @@ the durable, restart-proof way to set it.
 | `make proxy-off` | Remove `env.ANTHROPIC_BASE_URL` from `~/.claude/settings.json` |
 
 ```bash
-make proxy-on ENV=dev   # then quit + relaunch the terminal `claude` CLI
+make proxy-on ENV=local   # then quit + relaunch the terminal `claude` CLI
 make proxy-off          # then quit + relaunch again to stop routing through the proxy
 ```
 
@@ -89,10 +89,10 @@ already-running process isn't enough.
 ## Examples
 
 ```bash
-make setup-dev                          # one-time dev bootstrap
-make deploy ENV=dev MODULE=core         # redeploy just the core module on dev
+make setup-local                        # one-time local bootstrap
+make deploy ENV=local MODULE=core         # redeploy just the core module on local
 make deploy ENV=prd                     # deploy the full stack to prod
 make diff ENV=prd MODULE=security       # preview a prod change
 make build IMAGE=pokeclicker VERSION=v0.10.25
-make deploy ENV=dev MODULE=dev-tools    # redeploy dev-tools (Headroom currently disabled)
+make deploy ENV=local MODULE=dev-tools    # redeploy dev-tools (Headroom currently disabled)
 ```

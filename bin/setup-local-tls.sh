@@ -2,12 +2,12 @@
 # Install the mkcert local CA, generate a wildcard cert for *.DOMAIN, and
 # store it as a Kubernetes TLS secret so Traefik can serve it.
 #
-# Run once per dev machine, and again whenever the cert expires (~3 years).
+# Run once per local machine, and again whenever the cert expires (~3 years).
 # Requires: mkcert (auto-installed), kubectl in PATH, KUBECONFIG set.
 #
 # Usage:
-#   bin/setup-dev-tls.sh
-#   DOMAIN=platypod.local NAMESPACE=dev-platypod bin/setup-dev-tls.sh
+#   bin/setup-local-tls.sh
+#   DOMAIN=platypod.local NAMESPACE=local-platypod bin/setup-local-tls.sh
 
 set -e
 
@@ -23,15 +23,21 @@ die()  { printf '\033[0;31m[error]\033[0m  %s\n' "$*" >&2; exit 1; }
 
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
+# Secrets moved off values/local/values.yaml into platypod-sops (SOPS-encrypted)
+# — read the decrypted copy `make decrypt-secrets` produces instead. Falls back
+# to values/local/values.yaml (pre-migration shape) if that's what's present.
+LOCAL_VALUES="$SCRIPT_DIR/tmp/secrets/local.yaml"
+[ -f "$LOCAL_VALUES" ] || LOCAL_VALUES="$SCRIPT_DIR/values/local/values.yaml"
+
 if [ -z "$DOMAIN" ] && command -v yq > /dev/null 2>&1; then
-  DOMAIN="$(yq e '.traefik.domain' "$SCRIPT_DIR/values/dev/values.yaml" 2>/dev/null || true)"
+  DOMAIN="$(yq e '.traefik.domain' "$LOCAL_VALUES" 2>/dev/null || true)"
 fi
 DOMAIN="${DOMAIN:-platypod.local}"
 
 if [ -z "$NAMESPACE" ] && command -v yq > /dev/null 2>&1; then
-  NAMESPACE="$(yq e '.k8s.namespace' "$SCRIPT_DIR/values/dev/values.yaml" 2>/dev/null || true)"
+  NAMESPACE="$(yq e '.k8s.namespace' "$LOCAL_VALUES" 2>/dev/null || true)"
 fi
-NAMESPACE="${NAMESPACE:-dev-platypod}"
+NAMESPACE="${NAMESPACE:-local-platypod}"
 
 SECRET_NAME="platypod-local-tls"
 CERT_DIR="$(mktemp -d)"
@@ -91,7 +97,7 @@ ok "Secret '$SECRET_NAME' ready in namespace '$NAMESPACE'"
 # verification (e.g. BookStack's OIDC back-channel, which has no skip-verify
 # option) can trust the self-signed wildcard cert Traefik serves. Containers
 # don't trust the mkcert CA by default; charts mount this CM and run
-# update-ca-certificates at startup. Dev-only — prod uses real ACME certs.
+# update-ca-certificates at startup. Local-only — prod uses real ACME certs.
 # ---------------------------------------------------------------------------
 
 CA_CM_NAME="mkcert-ca"

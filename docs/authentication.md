@@ -139,7 +139,7 @@ scope.
 
 1. Add the client block to `authelia--config-map.yaml` (hash the secret with
    `authelia crypto hash generate pbkdf2 --variant sha512`).
-2. Add per-env `oidc.clientId` / `clientSecret` to `values/dev/values.yaml` and
+2. Add per-env `oidc.clientId` / `clientSecret` to `values/local/values.yaml` and
    `values/prd/values.yaml`.
 3. Add `hostAliases` (Authelia public host → `traefik.loadBalancerIP`) to the
    app's Deployment, gated on `oidc.clientId`.

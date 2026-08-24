@@ -43,7 +43,7 @@ CLI/agent traffic carrying an upstream API key, not a browser session.
 
 **Only the terminal `claude` CLI can be pointed at it.** `ANTHROPIC_BASE_URL`
 has to be set in `~/.claude/settings.json`'s `env` block (`make proxy-on
-ENV=dev` / `make proxy-off`, via `bin/set-claude-proxy.sh`) — a shell `export`
+ENV=local` / `make proxy-off`, via `bin/set-claude-proxy.sh`) — a shell `export`
 doesn't work, since Claude Desktop doesn't inherit terminal environment.
 **Claude Desktop cannot be routed through it at all**: it hardcodes
 `ANTHROPIC_BASE_URL=https://api.anthropic.com` for every embedded `claude`
@@ -53,6 +53,6 @@ Desktop session, launched *after* the env var was set, still showed the
 hardcoded default, and Headroom's own `/stats` request counter never moved for
 either. There's no known way to override this from outside the app.
 
-To pick this back up: flip `headroom.enable: true`, `make deploy ENV=dev
+To pick this back up: flip `headroom.enable: true`, `make deploy ENV=local
 MODULE=dev-tools`, then use the terminal CLI only. See
 [docs/make-targets.md](../../docs/make-targets.md).

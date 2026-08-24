@@ -1,12 +1,12 @@
-ENV    ?= dev
+ENV    ?= local
 MODULE ?=
 
 # Always point at the kubeconfig written by ../infra,
 # ignoring any KUBECONFIG already set in the shell (e.g. OrbStack).
 # Command-line override still works: make deploy KUBECONFIG=/other/path
 #
-# Services use env names dev/prd, but infra writes its kubeconfigs under
-# dev/prod. Map service env -> infra kubeconfig path explicitly.
+# Services use env names local/prd, but infra writes its kubeconfigs under
+# local/prod. Map service env -> infra kubeconfig path explicitly.
 #
 # prd's control plane is bare metal on the LAN (chuwi-cp1), directly reachable
 # at https://k8s.platypod.lan:6443 — the generated kubeconfig works as-is.
@@ -15,7 +15,7 @@ MODULE ?=
 # (`kubeconfig-tunnel`); that tunnel is retired, see
 # ../infra/docs/baremetal-cp-migration.md.
 GENERATED   := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/../infra/.generated
-KUBECONFIG_dev := $(GENERATED)/dev/kubeconfig
+KUBECONFIG_local := $(GENERATED)/local/kubeconfig
 KUBECONFIG_prd := $(GENERATED)/prod/kubeconfig
 export KUBECONFIG := $(KUBECONFIG_$(ENV))
 
@@ -85,27 +85,27 @@ check-deps:    ## Check which tools are installed without installing anything
 	sh bin/install-deps.sh --check
 
 # ---------------------------------------------------------------------------
-# Local dev setup (macOS)
+# Local machine setup (macOS)
 # ---------------------------------------------------------------------------
 
-.PHONY: setup-dev-tls setup-dev-dns setup-prod-dns setup-dev
+.PHONY: setup-local-tls setup-local-dns setup-prod-dns setup-local
 
-setup-dev-tls:  ## Trust mkcert CA + create/refresh wildcard TLS secret in the cluster
-	@sh bin/setup-dev-tls.sh
+setup-local-tls:  ## Trust mkcert CA + create/refresh wildcard TLS secret in the cluster
+	@sh bin/setup-local-tls.sh
 
-setup-dev-dns:  ## Set system DNS to Adguard (primary) + 1.1.1.1 (fallback); clean up dnsmasq
-	@sh bin/setup-dev-dns.sh
+setup-local-dns:  ## Set system DNS to Adguard (primary) + 1.1.1.1 (fallback); clean up dnsmasq
+	@sh bin/setup-local-dns.sh
 
 # Same script, prod's Adguard/domain/namespace/kubeconfig. Keep a manual
-# /etc/hosts entry for k8s.platypod.lan too (see bin/setup-dev-dns.sh) — if
+# /etc/hosts entry for k8s.platypod.lan too (see bin/setup-local-dns.sh) — if
 # Adguard itself is ever down, that's the only way kubectl still resolves the
 # API to fix it.
 setup-prod-dns:  ## Set system DNS to Adguard (prod) + 1.1.1.1 (fallback)
-	@KUBECONFIG=$(KUBECONFIG_prd) ENV=prd sh bin/setup-dev-dns.sh
+	@KUBECONFIG=$(KUBECONFIG_prd) ENV=prd sh bin/setup-local-dns.sh
 
-setup-dev: setup-dev-tls install-crds  ## Full dev bootstrap: TLS, CRDs, base deploy, DNS
+setup-local: setup-local-tls install-crds  ## Full local bootstrap: TLS, CRDs, base deploy, DNS
 	@$(MAKE) --no-print-directory deploy-base
-	@$(MAKE) --no-print-directory setup-dev-dns
+	@$(MAKE) --no-print-directory setup-local-dns
 
 # ---------------------------------------------------------------------------
 # Cluster bootstrap
@@ -131,21 +131,21 @@ install-csi:   ## Install the NFS CSI driver (nfs.csi.k8s.io) — required for N
 
 .PHONY: diff deploy deploy-base destroy
 
-status:        ## List deployed releases and their status  (ENV=dev)
+status:        ## List deployed releases and their status  (ENV=local)
 	helm list --namespace $(ENV)-platypod
 
-diff: require-values decrypt-secrets  ## Dry-run: show what would change  (ENV=dev MODULE=core)
+diff: require-values decrypt-secrets  ## Dry-run: show what would change  (ENV=local MODULE=core)
 	$(HELMFILE) $(SELECTOR) diff --args="--disable-validation"
 
-deploy-base: require-values decrypt-secrets  ## Deploy always-on base only: persistence, core, security  (ENV=dev)
+deploy-base: require-values decrypt-secrets  ## Deploy always-on base only: persistence, core, security  (ENV=local)
 	@helmfile --environment $(ENV) --selector name=$(ENV)--platypod--persistence sync
 	@helmfile --environment $(ENV) --selector name=$(ENV)--platypod--core sync
 	@helmfile --environment $(ENV) --selector name=$(ENV)--platypod--security sync
 
-deploy: require-values decrypt-secrets  ## Deploy full stack or a single module  (ENV=dev MODULE=core)
+deploy: require-values decrypt-secrets  ## Deploy full stack or a single module  (ENV=local MODULE=core)
 	$(HELMFILE) $(SELECTOR) sync --args="--timeout 10m0s"
 
-destroy:       ## Destroy full stack or a single module  (ENV=dev MODULE=core)
+destroy:       ## Destroy full stack or a single module  (ENV=local MODULE=core)
 	$(HELMFILE) $(SELECTOR) destroy
 
 # ---------------------------------------------------------------------------
@@ -170,12 +170,13 @@ ship-transcripts: ## [retired → prompt-meter submodule] Ship AI usage telemetr
 # Headroom proxy (dev-tools module)
 # ---------------------------------------------------------------------------
 
-# Mirrors the dev/prd domains set in values/{dev,prd}/values.yaml.
-DOMAIN_dev := platypod.local
+# Mirrors the local/prd domains (local's now in platypod-sops, prd's in
+# values/prd/values.yaml).
+DOMAIN_local := platypod.local
 DOMAIN_prd := platypod.ovh
 
 .PHONY: proxy-on proxy-off
-proxy-on:      ## Route Claude Code (terminal + Desktop) through the Headroom proxy: sets ANTHROPIC_BASE_URL in ~/.claude/settings.json  (ENV=dev)
+proxy-on:      ## Route Claude Code (terminal + Desktop) through the Headroom proxy: sets ANTHROPIC_BASE_URL in ~/.claude/settings.json  (ENV=local)
 	@sh bin/set-claude-proxy.sh on https://headroom.$(DOMAIN_$(ENV))
 
 proxy-off:     ## Stop routing through the Headroom proxy: removes ANTHROPIC_BASE_URL from ~/.claude/settings.json

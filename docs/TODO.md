@@ -63,7 +63,7 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
   the existing Secret/ConfigMap instead of regenerating inline).
 
 - **Dev's `authelia` ConfigMap has a field-manager conflict** blocking any
-  `make deploy MODULE=security ENV=dev` (`conflict with
+  `make deploy MODULE=security ENV=local` (`conflict with
   "kubectl-client-side-apply" using v1: .data.configuration.yml`) — the
   ConfigMap was modified via plain `kubectl apply` outside Helm at some point.
   Spawned as a separate background task 2026-08-18; prod is unaffected (same
@@ -134,7 +134,7 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
   expose `/dev/dri` and switch to the hardware-accelerated image variant.
 
 - **Pick a Usenet block-account (NNTP) provider** and fill in
-  `sabnzbd.provider.*` in `values/dev/values.yaml` / `values/prd/values.yaml`.
+  `sabnzbd.provider.*` in `values/local/values.yaml` / `values/prd/values.yaml`.
   SABnzbd + the Prowlarr/*arr auto-wiring are in place (`files` module,
   `sabnzbd-setup` Job); althub.co.za is a Newznab indexer only, not a Usenet
   server, so SABnzbd currently has nothing to fetch articles with.

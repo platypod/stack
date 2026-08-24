@@ -1,13 +1,13 @@
 # stack (services) — context for Claude
 
 The Kubernetes workload stack: each module is a Helm chart deployed via Helmfile
-onto the cluster from [`../infra`](../infra/README.md). dev = `platypod.local`,
-prod = `platypod.ovh`.
+onto the cluster from [`../infra`](../infra/README.md). local (the laptop's own
+cluster, renamed from "dev" 2026-08-24) = `platypod.local`, prod = `platypod.ovh`.
 
 **Start with [README.md](README.md)** for the overview and module list. Details
 live in `docs/` and in each module's `src/<module>/README.md`:
 
-- [docs/operations.md](docs/operations.md) — dev/prod lifecycle, day-to-day, dev-vs-prod, PV access
+- [docs/operations.md](docs/operations.md) — local/prod lifecycle, day-to-day, local-vs-prod, PV access
 - [docs/make-targets.md](docs/make-targets.md) — every `make` target + variables
 - [docs/conventions.md](docs/conventions.md) — chart structure, value conventions, pitfalls, setup Jobs, adding a service/image
 - [docs/services.md](docs/services.md) — service catalog by module
@@ -23,7 +23,7 @@ live in `docs/` and in each module's `src/<module>/README.md`:
 | Which service is in which module / the catalog | [docs/services.md](docs/services.md) |
 | Deep-dive on one service | `docs/<module>/<service>.md` (e.g. [docs/media/jellyfin.md](docs/media/jellyfin.md), [docs/security/authelia.md](docs/security/authelia.md)) |
 | Auth: Authelia forward-auth, OIDC, LLDAP seeding | [docs/authentication.md](docs/authentication.md) + [docs/security/](docs/security/README.md) |
-| Deploy/lifecycle, dev-vs-prod, PV access, day-to-day | [docs/operations.md](docs/operations.md) |
+| Deploy/lifecycle, local-vs-prod, PV access, day-to-day | [docs/operations.md](docs/operations.md) |
 | `make` targets + variables | [docs/make-targets.md](docs/make-targets.md) |
 | Backlog | [docs/TODO.md](docs/TODO.md) |
 
@@ -47,7 +47,7 @@ Modules: `core` `dev-tools` `files` `games` `media` `observability` `persistence
 - **prod has no MetalLB.** Traefik and AdGuard reach the LAN via Service
   `externalIPs` on the bare-metal node (`traefik.externalIP` /
   `adguard.externalIP`), not `hostNetwork` — PodSecurity `baseline` forbids host
-  namespaces and host ports, and `prd-platypod` stays at baseline. dev is
+  namespaces and host ports, and `prd-platypod` stays at baseline. local is
   unchanged and still uses MetalLB.
 - **Every image is pinned**; no `:latest`. Pins were taken from the digests
   running on 2026-07-30 and verified to resolve back to the same digest.

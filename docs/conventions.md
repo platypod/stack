@@ -138,6 +138,6 @@ initContainers:
 
 ## Environment variable
 
-`PLATYPOD__HELM__DEFAULT_ENV=dev` — default env for `bin/helm.sh` functions when
+`PLATYPOD__HELM__DEFAULT_ENV=local` — default env for `bin/helm.sh` functions when
 `--env` isn't passed. The Makefile passes `ENV` to helmfile directly, so this only
 matters if you source `bin/helm.sh` yourself.

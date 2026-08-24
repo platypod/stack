@@ -19,18 +19,18 @@
 {{- $releaseValues := append $defaultValues (printf "values/%s/values.yaml" .Environment.Name) -}}
 
 environments:
-  # dev: migrated to platypod-sops (Phase 1, dev-only for now — see
+  # local: migrated to platypod-sops (Phase 1, local-only for now — see
   # stack/docs/flux-migration.md). `make decrypt-secrets` (a prerequisite of
-  # diff/deploy) decrypts the SOPS file to tmp/secrets/dev.yaml via the sops
+  # diff/deploy) decrypts the SOPS file to tmp/secrets/local.yaml via the sops
   # binary directly — NOT helmfile's native `secrets:` stanza, which shells
   # out to the helm-secrets plugin; that plugin is currently broken on Helm
   # v4 (drops its `helm secrets` CLI subcommand for legacy plugins that also
   # declare `downloaders:`). prd stays on the NFS-linked values.yaml until
-  # its own migration; this dev/prd split is temporary scaffolding, collapsed
+  # its own migration; this local/prd split is temporary scaffolding, collapsed
   # back to one code path once prd migrates too.
-  dev:
+  local:
     values:
-{{ append $defaultValues "tmp/secrets/dev.yaml" | toYaml | indent 6 }}
+{{ append $defaultValues "tmp/secrets/local.yaml" | toYaml | indent 6 }}
   prd:
     values:
 {{ append $defaultValues "values/prd/values.yaml" | toYaml | indent 6 }}
@@ -53,16 +53,16 @@ environments:
   "values/default/security.yaml"
 -}}
 {{- /*
-  dev: migrated to platypod-sops (Phase 1, dev-only — see
+  local: migrated to platypod-sops (Phase 1, local-only — see
   stack/docs/flux-migration.md). `make decrypt-secrets` decrypts the SOPS
-  file to tmp/secrets/dev.yaml before helmfile runs (not helmfile's native
+  file to tmp/secrets/local.yaml before helmfile runs (not helmfile's native
   `secrets:` stanza — see the comment on the environments block above for
   why). prd: unchanged, still the NFS-linked values.yaml. Temporary
   scaffolding until prd migrates too.
 */ -}}
 {{- $releaseValues := $defaultValues -}}
-{{- if eq .Environment.Name "dev" }}
-{{- $releaseValues = append $defaultValues "tmp/secrets/dev.yaml" }}
+{{- if eq .Environment.Name "local" }}
+{{- $releaseValues = append $defaultValues "tmp/secrets/local.yaml" }}
 {{- else }}
 {{- $releaseValues = append $defaultValues (printf "values/%s/values.yaml" .Environment.Name) }}
 {{- end }}

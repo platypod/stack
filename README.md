@@ -221,7 +221,7 @@ They rely on Bash, Helm and a couple other commands I shall list to ensure they 
 2. Inside this folder, create a **values.yaml** file.
 3. **Overwrite** whatever configuration you'll like.
 
-Examples are provided in fake "[dev](values/dev)" and "[prd](values/prd)" environments in this repository.
+Examples are provided in fake "[dev](values/local)" and "[prd](values/prd)" environments in this repository.
 
 Please mind the storage provisionning: default features are offered and detailed in the
 [persistence module](src/00-persistence), but may be deactivated and replaced with existing
@@ -235,7 +235,7 @@ Please mind the storage provisionning: default features are offered and detailed
 ```bash
 make setup-dev
 ```
-This runs in order: mkcert CA trust + wildcard TLS secret, Traefik CRDs, core module deploy, dnsmasq configuration. Requires a running dev cluster (`make apply ENV=dev` in `infra/`).
+This runs in order: mkcert CA trust + wildcard TLS secret, Traefik CRDs, core module deploy, dnsmasq configuration. Requires a running local cluster (`make apply ENV=local` in `infra/`).
 
 **Deploy the full stack:**
 ```bash
@@ -280,7 +280,7 @@ kubectl get ingressroutes --namespace <namespace>
 Talos nodes have no SSH. Use `talosctl` to browse and transfer files on the worker node:
 
 ```bash
-export TALOSCONFIG=../infra/.generated/dev/talosconfig
+export TALOSCONFIG=../infra/.generated/local/talosconfig
 
 # Browse
 talosctl -n 192.168.122.102 ls /var/local/platypod/volumes/

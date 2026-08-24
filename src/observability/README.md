@@ -171,7 +171,7 @@ close instead of remembering to run `make`. Add a hook to the laptop's
   Traefik/Authelia):
 
   ```sh
-  kubectl -n dev-platypod port-forward svc/opentelemetry-collector-gateway 4317:4317 &
+  kubectl -n local-platypod port-forward svc/opentelemetry-collector-gateway 4317:4317 &
   PLATYPOD_TRANSCRIPT_STATE=~/.claude/.platypod-transcript-shipper.dev.json \
   OTEL_EXPORTER_OTLP_ENDPOINT=localhost:4317 \
     bin/.venv/bin/python bin/ship-transcripts --reset --insecure
