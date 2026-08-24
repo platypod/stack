@@ -1,7 +1,8 @@
 # Flux migration (plan)
 
-> **Status: Phases 0-2 done (dev-only where secrets are involved); Phase 3
-> onward not started.** It records the decisions (with rejected alternatives)
+> **Status: Phases 0-3 done (secrets local-only so far; Flux bootstrapped on
+> the laptop cluster, no app modules ported yet); Phase 4 onward not
+> started.** It records the decisions (with rejected alternatives)
 > and the phased path from today's Helmfile + `make` workflow to Flux CD
 > across three clusters. Conventions live in [conventions.md](conventions.md);
 > day-to-day operations in [operations.md](operations.md); other stack
@@ -331,24 +332,55 @@ the golden manifests at every step (including the port-threading step, since
 the port default is empty for both envs today) — confirmed via
 `helmfile template` diffing for both `dev` and `prd`, plus `make diff ENV=prd`.
 
-**Phase 3 — Flux on the new dev machine (greenfield).** `flux bootstrap` against
-`main`, path `clusters/dev`. Nothing at risk; this is where the gotchas below get
-discovered.
+**Phase 3 — Flux on the laptop cluster. Status: done, merged with the old
+Phase 6.** Originally planned as two separate phases — bootstrap Flux
+greenfield on a *new* dev machine first (zero stakes, discover gotchas
+there), only *then* redo it on the laptop (old Phase 6), once proven
+elsewhere. The new machine doesn't exist (2017 Mac mini can't run Talos);
+per the user's call, merged the two — bootstrapped directly on the laptop's
+own cluster instead, accepting that gotchas get found on the cluster used
+day-to-day rather than a throwaway (mitigated: it's a disposable vfkit VM
+pair, `make destroy && make apply` rebuilds it from scratch).
 
-**Phase 4 — port the 8 modules to `HelmRelease` on dev.** Verify `dependsOn`
+Bundled in the same rebuild: the `dev`→`local` rename (deferred in Open
+Items to "at its next rebuild" — this was that rebuild; see `infra/TODO.md`'s
+prod→prd precedent for why a live env can't be renamed in place). Destroyed
+the old `dev` VMs, applied fresh as `local`, re-ran the existing bootstrap
+sequence (`setup-local-tls`, `install-crds`, `deploy-base`, `setup-local-dns`)
+unchanged in shape — proved the rename worked via Helmfile *before* touching
+Flux at all. Installed the `flux` CLI, vendored the Traefik CRDs into
+`infrastructure/crds/` (gotcha 1), ran `flux bootstrap github` against
+`platypod/stack` path `clusters/local` — added one read-only deploy key,
+pushed `clusters/local/flux-system/*` directly to `main`. Wired the vendored
+CRDs in via a `clusters/local/infrastructure.yaml` `Kustomization`
+(`infra-crds`) — `flux get kustomizations` shows both `flux-system` and
+`infra-crds` reconciled and healthy. **Scope boundary held**: no app
+modules/`HelmRelease`s yet — the existing Helmfile-deployed
+persistence/core/security releases kept running throughout, completely
+unmanaged by Flux. That's Phase 4.
+
+One deferred step: `setup-local-dns` needs an interactive `sudo` password
+prompt (`networksetup`), so it couldn't run non-interactively — the user
+needs to run it themselves once, to point this laptop's system DNS at the
+new cluster's AdGuard.
+
+**Phase 4 — port the 8 modules to `HelmRelease` on local.** Verify `dependsOn`
 reproduces the module ordering, especially `files` after `media`.
 
-**Phase 5 — CRDs, CSI, self-management on dev.** Vendor Traefik CRDs; csi-driver-nfs
-as a `HelmRelease`; Flux managing its own manifests. `infra/` gains a bootstrap step.
+**Phase 5 — CSI, remaining self-management on local.** CRD vendoring and
+Flux self-management landed already in Phase 3. `csi-driver-nfs` as a
+`HelmRelease` is prod-only (local uses hostPath, not NFS) — likely nothing
+left to do here for local specifically; revisit once Phase 4 is underway.
 
-**Phase 6 — local cluster.** Rebuild the laptop cluster onto Flux, validating the
-mkcert/self-signed path and confirming the tier split holds for a cluster with no
-ACME and most modules disabled.
+**Phase 6 — retired, merged into Phase 3.** Was "rebuild the laptop cluster
+onto Flux" — folded into Phase 3 once that ran directly on the laptop
+instead of a separate new machine. Numbering left as-is rather than
+renumbering every phase after it.
 
 **Phase 7 — prod cutover.** Set `HelmRelease.spec.releaseName` to the **exact
 existing release names** (`prd--platypod--core`, …) so helm-controller adopts the
 existing releases in place rather than reinstalling — a reinstall would churn PVs
-against 18 TB of NFS media. Must be proven on dev in Phase 4 first. Tag `v1.0.0`
+against 18 TB of NFS media. Must be proven on local in Phase 4 first. Tag `v1.0.0`
 **in both `platypod/stack` and `platypod-sops`** to arm prod's semver ref on
 each — lockstep tagging, see the SOPS decision above.
 
@@ -367,10 +399,11 @@ smallest piece, and only makes sense once Git is authoritative.
 
 ## Gotchas requiring empirical verification
 
-1. **Flux forbids remote Kustomize bases.** `make install-crds` currently applies
-   Traefik CRDs from `raw.githubusercontent.com`; kustomize-controller runs with
-   network access disabled, so the CRDs must be **vendored** into the repo. Side
-   benefit: they become explicitly pinned.
+1. **Flux forbids remote Kustomize bases. Verified in Phase 3.** `make
+   install-crds` applies Traefik CRDs from `raw.githubusercontent.com`;
+   kustomize-controller runs with network access disabled, so the CRDs had to
+   be **vendored** into `infrastructure/crds/` — done, reconciling cleanly via
+   the `infra-crds` Kustomization. Side benefit: explicitly pinned now.
 2. **ConfigMap/Secret hash suffixes break `valuesFrom`.** Both
    `configMapGenerator` (globals/services/per-module tiers) and
    `secretGenerator` (the Secrets tier, wrapping decrypted content from
@@ -394,14 +427,16 @@ smallest piece, and only makes sense once Git is authoritative.
 
 ## Open items
 
-- **Environment naming.** Today `ENV=dev` is the laptop. After this migration the
-  laptop is `local` and the new machine is `dev`. Renaming touches
-  `infra/environments/*.tfvars`, `.generated/<env>/`, and the host LaunchDaemons
-  (`com.platypod.nat.<env>`, `~/.platypod/<env>`). Per the precedent in
-  [../../infra/docs/decisions.md](../../infra/docs/decisions.md), an env name is
-  baked into a live cluster and should not be renamed in place — but the laptop
-  cluster is ephemeral, so the rename is cheap **at its next rebuild**. Sequence
-  the rename with that rebuild rather than as a standalone change.
+- **Environment naming — done (Phase 3).** The laptop is now `local`;
+  `dev` is free for the eventual WAN-reachable machine (still blocked on
+  hardware — a 2017 Mac mini can't run Talos). Renamed across
+  `infra/environments/*.tfvars`, `.generated/<env>/`,
+  `stack/values/dev/`→`values/local/`, `platypod-sops/stack/dev/`→`local/`,
+  and every `ENV=dev`/`dev-platypod` reference in both repos' Makefiles,
+  scripts, and docs — sequenced with the Phase 3 rebuild, per the precedent
+  in `infra/TODO.md` (an env name is baked into live Terraform state as
+  attribute values, not just resource addresses; destroy-under-old-name +
+  apply-fresh-under-new-name is the only clean path).
 - **`stack/docs/TODO.md` is stale on secrets** — it states all secrets are
   plaintext in Git including `values/prd/values.yaml`. That file has never been
   committed. The real (narrower) exposure is Phase 0 above. Fix separately.
