@@ -23,20 +23,11 @@ die()  { printf '\033[0;31m[error]\033[0m  %s\n' "$*" >&2; exit 1; }
 
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-# Secrets moved off values/local/values.yaml into platypod-sops (SOPS-encrypted)
-# — read the decrypted copy `make decrypt-secrets` produces instead. Falls back
-# to values/local/values.yaml (pre-migration shape) if that's what's present.
-LOCAL_VALUES="$SCRIPT_DIR/tmp/secrets/local.yaml"
-[ -f "$LOCAL_VALUES" ] || LOCAL_VALUES="$SCRIPT_DIR/values/local/values.yaml"
-
-if [ -z "$DOMAIN" ] && command -v yq > /dev/null 2>&1; then
-  DOMAIN="$(yq e '.traefik.domain' "$LOCAL_VALUES" 2>/dev/null || true)"
-fi
+# DOMAIN/NAMESPACE default to local's actual values below — override via env
+# if either ever needs to differ (values live in platypod-sops's
+# clusters/local/secrets.enc.yaml now; sops -d it and pass DOMAIN=/NAMESPACE=
+# explicitly if this ever needs to read them instead of the defaults).
 DOMAIN="${DOMAIN:-platypod.local}"
-
-if [ -z "$NAMESPACE" ] && command -v yq > /dev/null 2>&1; then
-  NAMESPACE="$(yq e '.k8s.namespace' "$LOCAL_VALUES" 2>/dev/null || true)"
-fi
 NAMESPACE="${NAMESPACE:-local-platypod}"
 
 SECRET_NAME="platypod-local-tls"
