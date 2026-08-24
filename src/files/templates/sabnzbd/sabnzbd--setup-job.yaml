@@ -37,6 +37,13 @@
   Every step is best-effort with retries; failures are logged, not fatal, so a
   slow-starting app doesn't fail the release — the next deploy re-runs and
   heals it.
+
+  ARR_APPS_JSON is gated per-app on its own .enable (same fix as
+  torrent-clients--setup-job.yaml), and the whole Prowlarr/indexer section is
+  skipped when .Values.prowlarr.enable is false — otherwise wait_for() polls
+  a Service that doesn't exist for the full 90x10s per disabled app. Caught
+  on local (2026-08-24 Flux Phase 4 rebuild): Sonarr/Radarr/Readarr/Prowlarr
+  are all enable:false there (undersized node), and this Job hung regardless.
 */ -}}
 {{- $sabSvc      := print .Values.k8s.names.services.prefix .Values.sabnzbd.label .Values.k8s.names.services.suffix }}
 {{- $sonarrSvc   := print .Values.k8s.names.services.prefix .Values.sonarr.label .Values.k8s.names.services.suffix }}
@@ -89,10 +96,23 @@ spec:
         - name: ARR_APPS_JSON
           value: |-
             [
-              {"name": "Sonarr", "baseUrl": "http://{{ $sonarrSvc }}:{{ .Values.sonarr.ports.http.targetPort }}", "apiKey": "{{ .Values.sonarr.apiKey }}", "category": "sonarr", "categoryField": "tvCategory", "apiVersion": "v3"},
-              {"name": "Radarr", "baseUrl": "http://{{ $radarrSvc }}:{{ .Values.radarr.ports.http.targetPort }}", "apiKey": "{{ .Values.radarr.apiKey }}", "category": "radarr", "categoryField": "movieCategory", "apiVersion": "v3"},
-              {"name": "Readarr", "baseUrl": "http://{{ $readarrSvc }}:{{ .Values.readarr.ports.http.targetPort }}", "apiKey": "{{ .Values.readarr.apiKey }}", "category": "readarr", "categoryField": "musicCategory", "apiVersion": "v1"}
+            {{- $apps := list }}
+            {{- if .Values.sonarr.enable }}
+              {{- $apps = append $apps (dict "name" "Sonarr" "baseUrl" (print "http://" $sonarrSvc ":" .Values.sonarr.ports.http.targetPort) "apiKey" .Values.sonarr.apiKey "category" "sonarr" "categoryField" "tvCategory" "apiVersion" "v3") }}
+            {{- end }}
+            {{- if .Values.radarr.enable }}
+              {{- $apps = append $apps (dict "name" "Radarr" "baseUrl" (print "http://" $radarrSvc ":" .Values.radarr.ports.http.targetPort) "apiKey" .Values.radarr.apiKey "category" "radarr" "categoryField" "movieCategory" "apiVersion" "v3") }}
+            {{- end }}
+            {{- if .Values.readarr.enable }}
+              {{- $apps = append $apps (dict "name" "Readarr" "baseUrl" (print "http://" $readarrSvc ":" .Values.readarr.ports.http.targetPort) "apiKey" .Values.readarr.apiKey "category" "readarr" "categoryField" "musicCategory" "apiVersion" "v1") }}
+            {{- end }}
+            {{- range $i, $a := $apps }}
+              {{- if $i }},{{ end }}
+              {{ $a | toJson }}
+            {{- end }}
             ]
+        - name: PROWLARR_ENABLED
+          value: "{{ .Values.prowlarr.enable }}"
         command:
         - python3
         - -u
@@ -108,6 +128,7 @@ spec:
           ALTHUB_KEY    = os.environ.get("ALTHUB_API_KEY", "").strip()
           PROVIDER_HOST = os.environ.get("PROVIDER_HOST", "").strip()
           ARR_APPS      = json.loads(os.environ["ARR_APPS_JSON"])
+          PROWLARR_ENABLED = os.environ.get("PROWLARR_ENABLED", "").strip().lower() == "true"
 
           def call(method, url, body=None, headers=None):
               data = json.dumps(body).encode() if body is not None else None
@@ -334,7 +355,9 @@ spec:
                   print(f"  [{app['name']}] remote path mapping raised: {e}")
 
           # 5. Prowlarr <-> *arr app sync
-          if wait_for("Prowlarr", f"{PROWLARR_URL}/api/v1/system/status", arr_headers(PROWLARR_KEY)):
+          if not PROWLARR_ENABLED:
+              print("Prowlarr not enabled — skipping Prowlarr/indexer wiring.")
+          elif wait_for("Prowlarr", f"{PROWLARR_URL}/api/v1/system/status", arr_headers(PROWLARR_KEY)):
               for app in ARR_APPS:
                   for attempt in range(3):
                       try:
