@@ -200,9 +200,10 @@ flux-sops-secrets: ## Create in-cluster deploy key + sops-age Secret for platypo
 	    --url=ssh://git@github.com/platypod/platypod-sops \
 	    --export > /tmp/platypod-sops-deploy-key.yaml && \
 	  kubectl apply -f /tmp/platypod-sops-deploy-key.yaml && \
-	  gh repo deploy-key add <(yq '.data."identity.pub"' /tmp/platypod-sops-deploy-key.yaml | base64 -d) \
-	    --repo platypod/platypod-sops --title "flux-system ($(ENV))" --read-only && \
-	  rm /tmp/platypod-sops-deploy-key.yaml; \
+	  yq '.stringData."identity.pub"' /tmp/platypod-sops-deploy-key.yaml > /tmp/platypod-sops-deploy-key.pub && \
+	  gh repo deploy-key add /tmp/platypod-sops-deploy-key.pub \
+	    --repo platypod/platypod-sops --title "flux-system ($(ENV))" && \
+	  rm /tmp/platypod-sops-deploy-key.yaml /tmp/platypod-sops-deploy-key.pub; \
 	fi
 	@if kubectl get secret sops-age -n flux-system >/dev/null 2>&1; then \
 	  echo "sops-age secret already exists — skipping."; \
