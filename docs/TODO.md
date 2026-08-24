@@ -54,14 +54,13 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
   above; unrelated to it. Fix: persist the generated key (e.g. `lookup` against
   the existing Secret/ConfigMap instead of regenerating inline).
 
-- **Local's `authelia` ConfigMap had a field-manager conflict** blocking any
-  `security` module deploy (`conflict with "kubectl-client-side-apply" using
-  v1: .data.configuration.yml`) — the ConfigMap was modified via plain
-  `kubectl apply` outside Helm at some point. Spawned as a separate background
-  task 2026-08-18; prod was unaffected (same deploy succeeded there cleanly).
-  Unverified whether this still applies post-Phase-7 — Flux/helm-controller
-  uses server-side apply throughout, which may have already resolved it; check
-  `flux get helmreleases security -n local-platypod` before assuming it's live.
+- ~~**Local's `authelia` ConfigMap had a field-manager conflict**~~ —
+  **resolved**, confirmed 2026-08-24: `kubectl get configmap authelia -n
+  local-platypod -o jsonpath='{.metadata.managedFields[*].manager}'` shows
+  only `helm`/`helm-controller`, no leftover `kubectl-client-side-apply`,
+  and `security`'s `HelmRelease` has 23+ clean revisions this session with
+  no conflicts. Flux/helm-controller's server-side apply resolved it as a
+  side effect of the Phase 7 cutover, without needing a dedicated fix.
 
 - **Backups + key durability review (esp. Vaultwarden).** Vaultwarden's SQLite
   vault is on a **node-local** volume (NFS can't host SQLite WAL), protected only
