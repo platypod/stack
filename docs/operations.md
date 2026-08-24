@@ -17,16 +17,23 @@ make deploy          # full stack
 
 `make setup-local` runs, in order:
 
-1. **`setup-local-tls`** — installs mkcert, trusts the local CA in the macOS
+1. **`setup-age-key`** — restores the SOPS age key from the NFS backup (or
+   generates + backs up a fresh one on a genuinely first-ever setup).
+2. **`setup-local-tls`** — installs mkcert, trusts the local CA in the macOS
    Keychain (sudo prompt), generates a `*.platypod.local` cert, stores it as the
    `platypod-local-tls` secret.
-2. **`install-crds`** — applies the Traefik CRDs (IngressRoute, Middleware).
-3. **`deploy MODULE=core`** — Traefik (gets a `192.168.122.200+` MetalLB IP) + Homepage.
-4. **`setup-local-dns`** — points system DNS at AdGuard's LoadBalancer IP
-   (`192.168.122.201`) with `1.1.1.1` fallback. AdGuard rewrites
+3. **`install-crds`** — applies the vendored Traefik CRDs (IngressRoute, Middleware).
+4. **`deploy-base`** — persistence + core (Traefik, gets a `192.168.122.200+`
+   MetalLB IP, + Homepage) + security (AdGuard, Authelia, LLDAP).
+5. **`setup-local-dns`** — points system DNS at AdGuard's LoadBalancer IP
+   (`192.168.122.201`) with `1.1.1.1` fallback (sudo prompt). AdGuard rewrites
    `*.platypod.local → 192.168.122.200` (Traefik) internally. When the cluster is
    suspended, internet DNS falls through to `1.1.1.1`; `*.platypod.local` simply
    won't resolve.
+6. **`flux-bootstrap`** — bootstraps Flux against `clusters/local` (adds a
+   read-only deploy key to `platypod/stack`, pushes `flux-system` manifests).
+   Idempotent — safe to re-run. Doesn't yet manage any app modules (see
+   [flux-migration.md](flux-migration.md)).
 
 After `setup-local` the base stack (persistence + core + security) is running.
 Add modules individually — the 4 GB local worker can't run everything at once:

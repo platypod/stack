@@ -32,14 +32,17 @@ hood). `make help` prints this list live. Default goal is `help`.
 | `make setup-local-tls` | Trust the mkcert CA + create/refresh the wildcard TLS secret in the cluster |
 | `make setup-local-dns` | Point system DNS at AdGuard (primary) + `1.1.1.1` (fallback); clean up dnsmasq |
 | `make setup-prod-dns` | Same, for prod's AdGuard (`192.168.1.156`) — also serves the `k8s.platypod.lan` rewrite. Keep a manual `/etc/hosts` line for that name too; see `../infra/docs/decisions.md` |
-| `make setup-local` | Full local bootstrap: TLS → CRDs → base deploy → DNS |
+| `make setup-local` | Full local bootstrap: age key → TLS → CRDs → base deploy → DNS → Flux |
 
 ## Cluster bootstrap
 
 | Target | What it does |
 |--------|--------------|
-| `make install-crds` | Install Traefik CRDs (IngressRoute, Middleware, …) |
+| `make setup-age-key` | Restore the SOPS age key from the NFS backup, or generate + back up a fresh one (only when no backup exists) |
+| `make vendor-crds` | Re-fetch the vendored Traefik CRDs from upstream (`TRAEFIK_VERSION=v3.5`) — run when bumping the version |
+| `make install-crds` | Apply the vendored Traefik CRDs (IngressRoute, Middleware, …) to the cluster |
 | `make install-csi` | Install the NFS CSI driver — required for NFS-backed **prod** storage |
+| `make flux-bootstrap` | Bootstrap/reconcile Flux against `clusters/$(ENV)` — idempotent, safe to re-run (`ENV=local`) |
 
 ## Deployment
 
