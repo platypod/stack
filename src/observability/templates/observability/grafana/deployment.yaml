@@ -1,3 +1,4 @@
+{{- if .Values.observability.dashboard.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.observability.dashboard.label .Values.k8s.names.pods.suffix }}
 {{- $appVolume := "app-volume" }}
 
@@ -149,3 +150,4 @@ spec:
       - name: dashboards-claude
         configMap:
           name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.dashboard.label }}-dashboards-claude{{ .Values.k8s.names.configMaps.suffix }}
+{{- end }}

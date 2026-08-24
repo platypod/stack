@@ -1,3 +1,4 @@
+{{- if .Values.observability.tenantGuard.enable }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -59,3 +60,4 @@ data:
 
     if __name__ == "__main__":
         ThreadingHTTPServer(("0.0.0.0", PORT), H).serve_forever()
+{{- end }}

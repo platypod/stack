@@ -1,3 +1,4 @@
+{{- if .Values.observability.tenantGuard.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.observability.tenantGuard.label .Values.k8s.names.pods.suffix }}
 apiVersion: apps/v1
 kind: Deployment
@@ -50,3 +51,4 @@ spec:
       - name: script
         configMap:
           name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.tenantGuard.label }}{{ .Values.k8s.names.configMaps.suffix }}
+{{- end }}

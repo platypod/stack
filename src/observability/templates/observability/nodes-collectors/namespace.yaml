@@ -1,3 +1,4 @@
+{{- if .Values.observability.otelCollector.collectors.enable }}
 {{- /*
   Dedicated namespace for node-level agents that legitimately need elevated
   host access (the OTel node collector mounts hostPath / and runs as root to
@@ -21,3 +22,4 @@ metadata:
     pod-security.kubernetes.io/enforce: privileged
     pod-security.kubernetes.io/warn: privileged
     pod-security.kubernetes.io/audit: privileged
+{{- end }}

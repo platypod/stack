@@ -117,10 +117,13 @@ satisfactory:
 # prometheusSnmpExporter/scopeShim/tenantGuard/labelProxy have no host of
 # their own (internal-only) and stay entirely in observability.yaml.
 observability:
-  # Gates the observability stack's homepage tile (Grafana). The module itself is
-  # deployed/withheld via the helmfile selector; set false where it isn't running.
+  # Gates the observability stack's homepage tile (Grafana). Each sub-service
+  # underneath (dashboard/logs/metrics/traces/profiles/etc.) has its own
+  # enable flag too — this one only controls the homepage tile, not whether
+  # any of them actually deploy.
   enable: true
   dashboard:
+    enable: true
     label: grafana
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.dashboard.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   logs:
@@ -128,12 +131,15 @@ observability:
     label: loki
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   metrics:
+    enable: true
     label: mimir
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   traces:
+    enable: true
     label: tempo
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   profiles:
+    enable: true
     label: pyroscope
     host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.profiles.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
 

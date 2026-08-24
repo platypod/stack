@@ -1,3 +1,4 @@
+{{- if .Values.observability.prometheusJsonExporter.enable }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -46,3 +47,4 @@ data:
             session_id: '{ .Id }'
           values:
             is_paused: '{ .PlayState.IsPaused }'
+{{- end }}

@@ -1,3 +1,4 @@
+{{- if .Values.observability.tenantGuard.enable }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -10,3 +11,4 @@ spec:
     targetPort: {{ .Values.observability.tenantGuard.ports.http.targetPort }}
   selector:
     app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.observability.tenantGuard.label }}{{ .Values.k8s.names.pods.suffix }}
+{{- end }}

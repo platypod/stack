@@ -1,3 +1,4 @@
+{{- if .Values.observability.traces.enable }}
 apiVersion: v1
 kind: Service
 
@@ -20,3 +21,4 @@ spec:
     targetPort: {{ .Values.observability.traces.ports.otlpHttp.targetPort }}
   selector:
     app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.pods.suffix }}
+{{- end }}

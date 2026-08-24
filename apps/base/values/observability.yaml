@@ -1,8 +1,8 @@
 # Implementation tier — observability module. Registry fields for the
 # sub-services with a `host` (dashboard/logs/metrics/traces/profiles) plus
-# the module's own `enable` gate live in values/default/registry.yaml
+# the module's own `enable` gate live in apps/base/values/registry.yaml
 # instead — see the comment there for which sub-services don't (no host of
-# their own, stay here in full).
+# their own, stay here in full, `enable` included).
 
 observability:
   mounts:
@@ -122,6 +122,7 @@ observability:
           name: otel-http
           targetPort: 4318
     collectors:
+      enable: true
       label: "{{ .Values.observability.otelCollector.label }}-collector"
       # Node-level collectors mount the host root (hostPath /) and run as root to
       # read host metrics, which requires `privileged` PodSecurity. To avoid
@@ -159,6 +160,7 @@ observability:
         logLevel: info
 
   prometheusJsonExporter:
+    enable: true
     label: prometheus-json-exporter
     image: quay.io/prometheuscommunity/json-exporter:v0.7.0
     resources:
@@ -173,6 +175,7 @@ observability:
         targetPort: 9115
 
   prometheusSnmpExporter:
+    enable: true
     label: prometheus-snmp-exporter
     image: prom/snmp-exporter:v0.29.0
     resources:
@@ -212,6 +215,7 @@ observability:
   #   X-Scope-OrgID → Loki tenant (tenant isolation)
   # See docs/observability/dashboard-multitenancy.md.
   scopeShim:
+    enable: true
     # One shim Deployment per backend (same script, different upstream): metrics
     # → prom-label-proxy, logs → Loki. Each is a ClusterIP reverse-proxy.
     instances:
@@ -278,6 +282,7 @@ observability:
   # its own Loki tenant (x-scope-orgid == claude-<slug(Remote-User)>). Chained
   # after authelia-basic on the OTLP/gRPC ingress. See dashboard-multitenancy.md.
   tenantGuard:
+    enable: true
     label: tenant-guard
     image: python:3-alpine
     tenantPrefix: "claude-"   # must match the shipper's tenant + scopeShim
@@ -299,6 +304,7 @@ observability:
   # matcher supplied (as a regex) by the scope shim via the X-Owner header.
   # Fronts Mimir so the Grafana metrics datasource is per-user scoped.
   labelProxy:
+    enable: true
     label: prom-label-proxy
     image: quay.io/prometheuscommunity/prom-label-proxy:v0.13.0
     enforceLabel: owner

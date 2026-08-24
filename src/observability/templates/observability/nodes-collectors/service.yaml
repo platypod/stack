@@ -1,3 +1,4 @@
+{{- if .Values.observability.otelCollector.collectors.enable }}
 apiVersion: v1
 kind: Service
 
@@ -17,3 +18,4 @@ spec:
     targetPort: {{ .Values.observability.otelCollector.collectors.ports.http.targetPort }}
   selector:
     app: {{ .Values.k8s.names.pods.prefix }}{{ tpl .Values.observability.otelCollector.collectors.label . }}{{ .Values.k8s.names.pods.suffix }}
+{{- end }}

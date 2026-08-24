@@ -1,3 +1,4 @@
+{{- if .Values.observability.traces.enable }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -70,3 +71,4 @@ data:
           # deployment actually uses. See docs/observability/tempo.md.
           processors: [service-graphs, span-metrics]
           generate_native_histograms: both
+{{- end }}

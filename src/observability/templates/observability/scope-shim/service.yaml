@@ -1,3 +1,4 @@
+{{- if .Values.observability.scopeShim.enable }}
 {{- $s := .Values.observability.scopeShim }}
 {{- range $i := $s.instances }}
 ---
@@ -13,4 +14,5 @@ spec:
     targetPort: {{ $s.ports.http.targetPort }}
   selector:
     app: {{ $.Values.k8s.names.pods.prefix }}{{ $i.label }}{{ $.Values.k8s.names.pods.suffix }}
+{{- end }}
 {{- end }}

@@ -1,3 +1,4 @@
+{{- if .Values.observability.dashboard.enable }}
 # Platform dashboards (cluster, workloads, services) live as plain JSON files
 # under the chart's files/dashboards/ and are bundled here via .Files.Glob —
 # mounted as a whole directory, unlike the legacy per-file subPath mounts in
@@ -12,4 +13,5 @@ data:
 {{- range $path, $_ := .Files.Glob "files/dashboards/*.json" }}
   {{ base $path }}: |
 {{ $.Files.Get $path | indent 4 }}
+{{- end }}
 {{- end }}

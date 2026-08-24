@@ -1,3 +1,4 @@
+{{- if .Values.observability.scopeShim.enable }}
 {{- $lldapSvc := print .Values.k8s.names.services.prefix .Values.lldap.label .Values.k8s.names.services.suffix }}
 {{- $s := .Values.observability.scopeShim }}
 {{- range $i := $s.instances }}
@@ -80,4 +81,5 @@ spec:
       - name: script
         configMap:
           name: {{ $.Values.k8s.names.configMaps.prefix }}{{ $s.scriptConfigMap }}{{ $.Values.k8s.names.configMaps.suffix }}
+{{- end }}
 {{- end }}

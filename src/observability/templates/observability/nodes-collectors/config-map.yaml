@@ -1,3 +1,4 @@
+{{- if .Values.observability.otelCollector.collectors.enable }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -143,3 +144,4 @@ data:
         logs:
           level: {{ .Values.observability.otelCollector.logging.level }}
           encoding: {{ .Values.observability.otelCollector.logging.format }}
+{{- end }}

@@ -1,3 +1,4 @@
+{{- if .Values.observability.labelProxy.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.observability.labelProxy.label .Values.k8s.names.pods.suffix }}
 {{- $mimirSvc := print .Values.k8s.names.services.prefix .Values.observability.metrics.label .Values.k8s.names.services.suffix }}
 apiVersion: apps/v1
@@ -31,3 +32,4 @@ spec:
         - containerPort: {{ .Values.observability.labelProxy.ports.http.targetPort }}
         resources:
           {{- toYaml .Values.observability.labelProxy.resources | nindent 10 }}
+{{- end }}

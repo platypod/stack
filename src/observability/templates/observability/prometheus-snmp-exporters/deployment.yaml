@@ -1,3 +1,4 @@
+{{- if .Values.observability.prometheusSnmpExporter.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.observability.prometheusSnmpExporter.label .Values.k8s.names.pods.suffix }}
 {{- $appVolume := "app-volume" }}
 
@@ -69,3 +70,4 @@ spec:
           name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.prometheusSnmpExporter.label }}{{ .Values.k8s.names.configMaps.suffix }}
       - name: generated-config
         emptyDir: {}
+{{- end }}
