@@ -19,6 +19,7 @@ data:
 
     identity_providers:
       oidc:
+        hmac_secret: {{ .Values.authelia.oidc.hmac_secret }}
         cors:
           allowed_origins_from_client_redirect_uris: true
           endpoints:
