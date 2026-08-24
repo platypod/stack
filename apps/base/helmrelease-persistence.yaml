@@ -1,0 +1,31 @@
+# persistence has no implementation-tier ConfigMap (values/default/ has no
+# persistence.yaml — its only default file, storage.yaml, is pure substrate).
+# releaseName matches the existing Helmfile release exactly, so helm-controller
+# adopts it in place instead of reinstalling (rehearses gotcha 4 on local,
+# ahead of needing it for real on prd in Phase 7).
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: persistence
+  namespace: local-platypod
+spec:
+  interval: 10m0s
+  releaseName: local--platypod--persistence
+  targetNamespace: local-platypod
+  chart:
+    spec:
+      chart: ./src/persistence
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+        namespace: flux-system
+  valuesFrom:
+    - kind: ConfigMap
+      name: platypod-substrate
+      valuesKey: substrate.yaml
+    - kind: ConfigMap
+      name: platypod-registry
+      valuesKey: registry.yaml
+    - kind: Secret
+      name: platypod-secrets
+      valuesKey: platypod-secrets.yaml

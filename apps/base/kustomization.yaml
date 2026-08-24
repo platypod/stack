@@ -43,4 +43,5 @@ configMapGenerator:
 generatorOptions:
   disableNameSuffixHash: false
 
-resources: []
+resources:
+  - helmrelease-persistence.yaml
