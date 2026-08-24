@@ -182,6 +182,35 @@ flux-bootstrap: ## Bootstrap/reconcile Flux against clusters/$(ENV) (ENV=local)
 	  --branch=main \
 	  --personal
 
+# Idempotent — safe to re-run. Creates the in-cluster deploy key +
+# decryption secret the platypod-sops GitRepository/Kustomization
+# (clusters/$(ENV)/secrets.yaml) need: a read-only deploy key on
+# platypod/platypod-sops (one per cluster, since a GitRepository's
+# secretRef is scoped to that cluster alone), and the sops-age Secret
+# holding the local age private key so kustomize-controller can decrypt
+# secrets.enc.yaml. Was done ad-hoc in the terminal for local (twice,
+# flagged both times) — scripted now per docs/flux-migration.md Phase 7.
+.PHONY: flux-sops-secrets
+flux-sops-secrets: ## Create in-cluster deploy key + sops-age Secret for platypod-sops (ENV=local|prd)
+	@if kubectl get secret platypod-sops-deploy-key -n flux-system >/dev/null 2>&1; then \
+	  echo "platypod-sops-deploy-key already exists — skipping (delete it first to rotate)."; \
+	else \
+	  flux create secret git platypod-sops-deploy-key \
+	    --namespace=flux-system \
+	    --url=ssh://git@github.com/platypod/platypod-sops \
+	    --export > /tmp/platypod-sops-deploy-key.yaml && \
+	  kubectl apply -f /tmp/platypod-sops-deploy-key.yaml && \
+	  gh repo deploy-key add <(yq '.data."identity.pub"' /tmp/platypod-sops-deploy-key.yaml | base64 -d) \
+	    --repo platypod/platypod-sops --title "flux-system ($(ENV))" --read-only && \
+	  rm /tmp/platypod-sops-deploy-key.yaml; \
+	fi
+	@if kubectl get secret sops-age -n flux-system >/dev/null 2>&1; then \
+	  echo "sops-age secret already exists — skipping."; \
+	else \
+	  kubectl create secret generic sops-age --namespace=flux-system \
+	    --from-file=age.agekey=$(SOPS_AGE_KEY_FILE); \
+	fi
+
 # ---------------------------------------------------------------------------
 # Deployment
 # ---------------------------------------------------------------------------
