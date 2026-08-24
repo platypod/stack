@@ -47,3 +47,8 @@ resources:
   - helmrelease-persistence.yaml
   - helmrelease-core.yaml
   - helmrelease-security.yaml
+  - helmrelease-observability.yaml
+  - helmrelease-dev-tools.yaml
+  - helmrelease-media.yaml
+  - helmrelease-games.yaml
+  - helmrelease-files.yaml

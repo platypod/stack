@@ -1,0 +1,61 @@
+# torrent-clients-setup (post-install/post-upgrade hook) polls each *arr app
+# up to 15 min before giving up (stack/CLAUDE.md, gotcha 3 in
+# stack/docs/flux-migration.md) — up to ~45 min worst case across 3 apps.
+# Helm always waits for hook Jobs regardless of disableWait; Flux's default
+# 5m operation timeout would kill it long before that finishes. Generous
+# timeout instead of disableWait here.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: files
+  namespace: local-platypod
+spec:
+  interval: 10m0s
+  timeout: 50m0s
+  releaseName: local--platypod--files
+  targetNamespace: local-platypod
+  dependsOn:
+    - name: core
+    - name: security
+    - name: persistence
+    - name: media
+  chart:
+    spec:
+      chart: ./src/files
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+        namespace: flux-system
+  # Carries ALL 7 per-module ConfigMaps, not just its own — matching
+  # Helmfile's actual behavior. See stack/docs/flux-migration.md gotcha 2.
+  valuesFrom:
+    - kind: ConfigMap
+      name: platypod-substrate
+      valuesKey: substrate.yaml
+    - kind: ConfigMap
+      name: platypod-registry
+      valuesKey: registry.yaml
+    - kind: ConfigMap
+      name: platypod-core
+      valuesKey: core.yaml
+    - kind: ConfigMap
+      name: platypod-dev-tools
+      valuesKey: dev-tools.yaml
+    - kind: ConfigMap
+      name: platypod-files
+      valuesKey: files.yaml
+    - kind: ConfigMap
+      name: platypod-games
+      valuesKey: games.yaml
+    - kind: ConfigMap
+      name: platypod-media
+      valuesKey: media.yaml
+    - kind: ConfigMap
+      name: platypod-observability
+      valuesKey: observability.yaml
+    - kind: ConfigMap
+      name: platypod-security
+      valuesKey: security.yaml
+    - kind: Secret
+      name: platypod-secrets
+      valuesKey: platypod-secrets.yaml

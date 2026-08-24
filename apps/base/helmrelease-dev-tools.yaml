@@ -1,0 +1,52 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: dev-tools
+  namespace: local-platypod
+spec:
+  interval: 10m0s
+  releaseName: local--platypod--dev-tools
+  targetNamespace: local-platypod
+  dependsOn:
+    - name: core
+    - name: security
+  chart:
+    spec:
+      chart: ./src/dev-tools
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+        namespace: flux-system
+  # Carries ALL 7 per-module ConfigMaps, not just its own — matching
+  # Helmfile's actual behavior. See stack/docs/flux-migration.md gotcha 2.
+  valuesFrom:
+    - kind: ConfigMap
+      name: platypod-substrate
+      valuesKey: substrate.yaml
+    - kind: ConfigMap
+      name: platypod-registry
+      valuesKey: registry.yaml
+    - kind: ConfigMap
+      name: platypod-core
+      valuesKey: core.yaml
+    - kind: ConfigMap
+      name: platypod-dev-tools
+      valuesKey: dev-tools.yaml
+    - kind: ConfigMap
+      name: platypod-files
+      valuesKey: files.yaml
+    - kind: ConfigMap
+      name: platypod-games
+      valuesKey: games.yaml
+    - kind: ConfigMap
+      name: platypod-media
+      valuesKey: media.yaml
+    - kind: ConfigMap
+      name: platypod-observability
+      valuesKey: observability.yaml
+    - kind: ConfigMap
+      name: platypod-security
+      valuesKey: security.yaml
+    - kind: Secret
+      name: platypod-secrets
+      valuesKey: platypod-secrets.yaml
