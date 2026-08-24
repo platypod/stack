@@ -95,6 +95,7 @@ observability:
       level: info
       format: json
     gateway:
+      enable: true
       host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.otelCollector.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       # Dedicated host for the OTLP/gRPC ingress (h2c → port 4317), guarded by the
       # Basic-auth Authelia endpoint. Used by non-interactive clients (e.g. Claude
