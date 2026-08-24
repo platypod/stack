@@ -26,6 +26,13 @@
   deployed on prod today, so TORRENT_CLIENTS_JSON only contains Transmission
   there; this activates automatically once qbittorrent.enable flips true.
 
+  ARR_APPS_JSON is built the same gated way, per Sonarr/Radarr/Readarr's own
+  .enable — otherwise wait_for() polls a Service that was never deployed
+  (DNS never resolves) for the full 90x10s per app, every install/upgrade.
+  Caught on local (2026-08-24 Flux Phase 4 rebuild): Radarr/Readarr/Sonarr
+  are enable:false there (node too small to run the full media module), but
+  this Job still tried all three unconditionally.
+
   Also upserts a remote path mapping (host=<client>) per app/client pair —
   same /data subPath-scoping mismatch as sabnzbd-setup (see its header
   comment). Transmission already had this configured by hand; this makes
@@ -61,9 +68,20 @@ spec:
         - name: ARR_APPS_JSON
           value: |-
             [
-              {"name": "Sonarr", "baseUrl": "http://{{ $sonarrSvc }}:{{ .Values.sonarr.ports.http.targetPort }}", "apiKey": "{{ .Values.sonarr.apiKey }}", "category": "sonarr", "categoryField": "tvCategory", "apiVersion": "v3"},
-              {"name": "Radarr", "baseUrl": "http://{{ $radarrSvc }}:{{ .Values.radarr.ports.http.targetPort }}", "apiKey": "{{ .Values.radarr.apiKey }}", "category": "radarr", "categoryField": "movieCategory", "apiVersion": "v3"},
-              {"name": "Readarr", "baseUrl": "http://{{ $readarrSvc }}:{{ .Values.readarr.ports.http.targetPort }}", "apiKey": "{{ .Values.readarr.apiKey }}", "category": "readarr", "categoryField": "musicCategory", "apiVersion": "v1"}
+            {{- $apps := list }}
+            {{- if .Values.sonarr.enable }}
+              {{- $apps = append $apps (dict "name" "Sonarr" "baseUrl" (print "http://" $sonarrSvc ":" .Values.sonarr.ports.http.targetPort) "apiKey" .Values.sonarr.apiKey "category" "sonarr" "categoryField" "tvCategory" "apiVersion" "v3") }}
+            {{- end }}
+            {{- if .Values.radarr.enable }}
+              {{- $apps = append $apps (dict "name" "Radarr" "baseUrl" (print "http://" $radarrSvc ":" .Values.radarr.ports.http.targetPort) "apiKey" .Values.radarr.apiKey "category" "radarr" "categoryField" "movieCategory" "apiVersion" "v3") }}
+            {{- end }}
+            {{- if .Values.readarr.enable }}
+              {{- $apps = append $apps (dict "name" "Readarr" "baseUrl" (print "http://" $readarrSvc ":" .Values.readarr.ports.http.targetPort) "apiKey" .Values.readarr.apiKey "category" "readarr" "categoryField" "musicCategory" "apiVersion" "v1") }}
+            {{- end }}
+            {{- range $i, $a := $apps }}
+              {{- if $i }},{{ end }}
+              {{ $a | toJson }}
+            {{- end }}
             ]
         - name: TORRENT_CLIENTS_JSON
           value: |-
@@ -193,6 +211,8 @@ spec:
 
           if not CLIENTS:
               print("No torrent clients enabled — nothing to wire.")
+          if not ARR_APPS:
+              print("No *arr apps enabled — nothing to wire.")
 
           for app in ARR_APPS:
               if not wait_for(app["name"], f"{app['baseUrl']}/api/{app['apiVersion']}/system/status", arr_headers(app["apiKey"])):
