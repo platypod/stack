@@ -1,6 +1,7 @@
+# Implementation tier — core module. Registry fields (enable/label/host) for
+# these services live in values/default/registry.yaml instead.
+
 homepage:
-  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.homepage.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-  label: homepage
   image:
     registry: ghcr.io/
     namespace: gethomepage/

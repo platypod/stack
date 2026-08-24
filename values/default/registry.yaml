@@ -1,0 +1,272 @@
+# Registry tier — per-service identity (enable/label/host), collected here
+# so a Flux HelmRelease can pull the whole registry as one valuesFrom entry
+# instead of one per service. Implementation detail (image/resources/ports/
+# service config) lives in each module's own values/default/<module>.yaml.
+# See stack/docs/flux-migration.md for the tier design.
+
+homepage:
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.homepage.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: homepage
+
+bookstack:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bookstack.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: bookstack
+
+cyberChef:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.cyberChef.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: cyber-chef
+
+dbeaver:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.dbeaver.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: dbeaver
+
+headroom:
+  # Disabled for now: only the terminal `claude` CLI can be pointed at a
+  # custom ANTHROPIC_BASE_URL (via ~/.claude/settings.json, see
+  # bin/set-claude-proxy.sh). Claude Desktop hardcodes ANTHROPIC_BASE_URL to
+  # api.anthropic.com for every embedded `claude` process it spawns — verified
+  # by process tree (ps showed both a resumed and a brand-new Desktop session
+  # launched *after* the env var was set session-wide via `launchctl setenv`,
+  # neither picked it up, and Headroom's own /stats request counter never
+  # moved for either). Neither settings.json nor launchctl session env
+  # reaches it. Re-enable once there's an actual client (CLI-only workflows,
+  # or a future Desktop release that respects a custom endpoint).
+  enable: false
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.headroom.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: headroom
+
+itTools:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.itTools.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: it-tools
+
+outline:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.outline.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: outline
+
+whoami:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.whoami.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: whoami
+
+wikijs:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.wikijs.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: wikijs
+
+deluge:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.deluge.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: deluge
+
+qbittorrent:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.qbittorrent.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: qbittorrent
+
+sabnzbd:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.sabnzbd.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: sabnzbd
+
+transmission:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.transmission.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: transmission
+
+pokeclicker:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.pokeclicker.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: pokeclicker
+
+rommapp:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.rommapp.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: rommapp
+
+unbegotten:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.unbegotten.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: unbegotten
+
+# palworld/valheim/terraria/satisfactory: LAN game servers reached via
+# externalIP/ports, not Traefik host routing — no `host` field to register.
+palworld:
+  enable: false
+  label: palworld
+
+valheim:
+  enable: false
+  label: valheim
+
+terraria:
+  enable: false
+  label: terraria
+
+satisfactory:
+  enable: false
+  label: satisfactory
+
+# observability's sub-services share one top-level key; only the ones with
+# their own `host` (genuinely routed identity) or the module's own `enable`
+# gate are registered here. otelCollector/prometheusJsonExporter/
+# prometheusSnmpExporter/scopeShim/tenantGuard/labelProxy have no host of
+# their own (internal-only) and stay entirely in observability.yaml.
+observability:
+  # Gates the observability stack's homepage tile (Grafana). The module itself is
+  # deployed/withheld via the helmfile selector; set false where it isn't running.
+  enable: true
+  dashboard:
+    label: grafana
+    host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.dashboard.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  logs:
+    label: loki
+    host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  metrics:
+    label: mimir
+    host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  traces:
+    label: tempo
+    host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.traces.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  profiles:
+    label: pyroscope
+    host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.observability.profiles.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+
+uptimeKuma:
+  enable: true
+  label: uptime-kuma
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.uptimeKuma.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+
+adguard:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.adguard.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: adguard
+
+vaultwarden:
+  enable: true
+  label: vaultwarden
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.vaultwarden.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+
+# lldap/authelia: always-on core infra, no enable flag (same as homepage).
+lldap:
+  label: lldap
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.lldap.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+
+authelia:
+  label: authelia
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.authelia.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+
+bazarr:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.bazarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: bazarr
+
+flaresolverr:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.flaresolverr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: flaresolverr
+
+# gpuDevicePlugin: cluster-internal device plugin, no host.
+gpuDevicePlugin:
+  enable: true
+  label: gpu-device-plugin
+
+jellyswarrm:
+  enable: false
+  label: jellyswarrm
+  # Own dedicated hostname — does NOT take over jellyfin.<domain> anymore.
+  # It used to (hardcoded to reuse the "jellyfin" segment) so real users would
+  # see no URL change; reverted after it broke real-user sessions in
+  # production (a jellyswarrm-side bug: session/mapping race when the same
+  # physical user logs in from multiple clients under different username
+  # casing — see stack/docs/media/jellyswarrm.md). Not in the path of real
+  # traffic until that's actually fixed/worked around; reachable here only for
+  # the benchmark comparison itself.
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyswarrm.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+
+suwayomi:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.suwayomi.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: suwayomi
+
+tdarr:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.tdarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: tdarr
+
+audiobookshelf:
+  # New/unproven service — opt in per-env (see values/dev/values.yaml,
+  # values/prd/values.yaml) rather than defaulting on everywhere.
+  enable: false
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.audiobookshelf.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: audiobookshelf
+
+komga:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.komga.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: komga
+
+kavita:
+  # Disabled: Kavita (.NET 9) SIGILLs (exit 132) intermittently on the Apple
+  # Virtualization / Talos ARM guest — no container-level workaround eliminated
+  # it (W^X, HWIntrinsic, ReadyToRun, OpenSSL armcap all only reduced frequency).
+  # The .NET-6 *arrs and JVM Komga are unaffected. Reverted to Komga. Kept
+  # configured (OIDC, local config volume) to revisit after a version bump or a
+  # vfkit CPU-feature fix.
+  enable: false
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.kavita.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: kavita
+
+reclaimerr:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.reclaimerr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: reclaimerr
+
+radarr:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: radarr
+
+readarr:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.readarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: readarr
+
+sonarr:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: sonarr
+
+prowlarr:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.prowlarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: prowlarr
+
+# database: always-on infra, no enable flag (same as homepage/lldap/authelia).
+database:
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.database.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: transverse-db
+
+jellyseerr:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: jellyseerr
+
+jellyfin:
+  enable: true          # whether Jellyfin exists at all (homepage tile, ingress route, metrics)
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: jellyfin
+
+jellyfinK8s:
+  enable: false        # in-cluster benchmark instance, compared against jellyfin(-proxy) via jellyswarrm
+  label: jellyfin-k8s
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyfinK8s.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+
+mediarvester:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.mediarvester.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: mediarvester

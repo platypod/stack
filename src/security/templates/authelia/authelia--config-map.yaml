@@ -47,7 +47,7 @@ data:
         clients:
         {{- if .Values.rommapp.oidc.clientId }}
         - audience:
-          - 'https://{{ tpl .Values.rommapp.host . }}'
+          - 'https://{{ tpl .Values.rommapp.host . }}{{ .Values.k8s.names.urls.port }}'
           authorization_policy: 'one_factor'
           claims_policy: 'platypod'
           client_id: '{{ .Values.rommapp.oidc.clientId }}'
@@ -55,7 +55,7 @@ data:
           client_secret: '{{ .Values.rommapp.oidc.clientSecret.hashed }}'
           public: false
           redirect_uris:
-          - 'https://{{ tpl .Values.rommapp.host . }}/api/oauth/openid'
+          - 'https://{{ tpl .Values.rommapp.host . }}{{ .Values.k8s.names.urls.port }}/api/oauth/openid'
           scopes:
           - 'openid'
           - 'profile'
@@ -65,7 +65,7 @@ data:
         {{- end }}
         {{- if .Values.reclaimerr.oidc.clientId }}
         - audience:
-          - 'https://{{ tpl .Values.reclaimerr.host . }}'
+          - 'https://{{ tpl .Values.reclaimerr.host . }}{{ .Values.k8s.names.urls.port }}'
           authorization_policy: 'one_factor'
           claims_policy: 'platypod'
           client_id: '{{ .Values.reclaimerr.oidc.clientId }}'
@@ -73,7 +73,7 @@ data:
           client_secret: '{{ .Values.reclaimerr.oidc.clientSecret.hashed }}'
           public: false
           redirect_uris:
-          - 'https://{{ tpl .Values.reclaimerr.host . }}/api/auth/oidc/callback'
+          - 'https://{{ tpl .Values.reclaimerr.host . }}{{ .Values.k8s.names.urls.port }}/api/auth/oidc/callback'
           scopes:
           - 'openid'
           - 'profile'
@@ -83,7 +83,7 @@ data:
         {{- end }}
         {{- if .Values.vaultwarden.oidc.clientId }}
         - audience:
-          - 'https://{{ tpl .Values.vaultwarden.host . }}'
+          - 'https://{{ tpl .Values.vaultwarden.host . }}{{ .Values.k8s.names.urls.port }}'
           authorization_policy: 'one_factor'
           claims_policy: 'platypod'
           client_id: '{{ .Values.vaultwarden.oidc.clientId }}'
@@ -91,7 +91,7 @@ data:
           client_secret: '{{ .Values.vaultwarden.oidc.clientSecret.hashed }}'
           public: false
           redirect_uris:
-          - 'https://{{ tpl .Values.vaultwarden.host . }}/identity/connect/oidc-signin'
+          - 'https://{{ tpl .Values.vaultwarden.host . }}{{ .Values.k8s.names.urls.port }}/identity/connect/oidc-signin'
           # explicit response_types so the offline_access scope (refresh tokens)
           # is valid — silences the Authelia deprecation warning that becomes an
           # error in future versions.
@@ -111,7 +111,7 @@ data:
         {{- end }}
         {{- if .Values.kavita.oidc.clientId }}
         - audience:
-          - 'https://{{ tpl .Values.kavita.host . }}'
+          - 'https://{{ tpl .Values.kavita.host . }}{{ .Values.k8s.names.urls.port }}'
           authorization_policy: 'one_factor'
           claims_policy: 'platypod'
           client_id: '{{ .Values.kavita.oidc.clientId }}'
@@ -120,7 +120,7 @@ data:
           public: false
           redirect_uris:
           # ASP.NET Core OIDC default callback path.
-          - 'https://{{ tpl .Values.kavita.host . }}/signin-oidc'
+          - 'https://{{ tpl .Values.kavita.host . }}{{ .Values.k8s.names.urls.port }}/signin-oidc'
           response_types:
           - 'code'
           scopes:
@@ -139,7 +139,7 @@ data:
         {{- end }}
         {{- if .Values.audiobookshelf.oidc.clientId }}
         - audience:
-          - 'https://{{ tpl .Values.audiobookshelf.host . }}'
+          - 'https://{{ tpl .Values.audiobookshelf.host . }}{{ .Values.k8s.names.urls.port }}'
           authorization_policy: 'one_factor'
           claims_policy: 'platypod'
           client_id: '{{ .Values.audiobookshelf.oidc.clientId }}'
@@ -150,8 +150,8 @@ data:
           require_pkce: true
           pkce_challenge_method: 'S256'
           redirect_uris:
-          - 'https://{{ tpl .Values.audiobookshelf.host . }}/auth/openid/callback'
-          - 'https://{{ tpl .Values.audiobookshelf.host . }}/auth/openid/mobile-redirect'
+          - 'https://{{ tpl .Values.audiobookshelf.host . }}{{ .Values.k8s.names.urls.port }}/auth/openid/callback'
+          - 'https://{{ tpl .Values.audiobookshelf.host . }}{{ .Values.k8s.names.urls.port }}/auth/openid/mobile-redirect'
           - 'audiobookshelf://oauth'
           response_types:
           - 'code'
@@ -167,7 +167,7 @@ data:
         {{- end }}
         {{- if and .Values.komga.enable .Values.komga.oidc.clientId }}
         - audience:
-          - 'https://{{ tpl .Values.komga.host . }}'
+          - 'https://{{ tpl .Values.komga.host . }}{{ .Values.k8s.names.urls.port }}'
           authorization_policy: 'one_factor'
           claims_policy: 'platypod'
           client_id: '{{ .Values.komga.oidc.clientId }}'
@@ -177,7 +177,7 @@ data:
           redirect_uris:
           # Spring Security's default OAuth2 callback path for the
           # "authelia" client registration (see the komga deployment).
-          - 'https://{{ tpl .Values.komga.host . }}/login/oauth2/code/authelia'
+          - 'https://{{ tpl .Values.komga.host . }}{{ .Values.k8s.names.urls.port }}/login/oauth2/code/authelia'
           scopes:
           - 'openid'
           - 'profile'
@@ -186,7 +186,7 @@ data:
           userinfo_signed_response_alg: 'none'
         {{- end }}
         - audience:
-          - 'https://{{ tpl .Values.bookstack.host . }}'
+          - 'https://{{ tpl .Values.bookstack.host . }}{{ .Values.k8s.names.urls.port }}'
           authorization_policy: 'one_factor'
           claims_policy: 'platypod'
           client_id: '{{ .Values.bookstack.oidc.clientId }}'
@@ -194,7 +194,7 @@ data:
           client_secret: '{{ .Values.bookstack.oidc.clientSecret.hashed }}'
           public: false
           redirect_uris:
-          - 'https://{{ tpl .Values.bookstack.host . }}/oidc/callback'
+          - 'https://{{ tpl .Values.bookstack.host . }}{{ .Values.k8s.names.urls.port }}/oidc/callback'
           scopes:
           - 'openid'
           - 'profile'
@@ -206,7 +206,7 @@ data:
           # disable signing for userinfo
           userinfo_signed_response_alg: 'none'
         - audience:
-          - 'https://{{ tpl .Values.observability.dashboard.host . }}'
+          - 'https://{{ tpl .Values.observability.dashboard.host . }}{{ .Values.k8s.names.urls.port }}'
           authorization_policy: 'one_factor'
           claims_policy: 'platypod'
           client_id: '{{ .Values.observability.dashboard.oidc.clientId }}'
@@ -214,7 +214,7 @@ data:
           client_secret: '{{ .Values.observability.dashboard.oidc.clientSecret.hashed }}'
           public: false
           redirect_uris:
-          - 'https://{{ tpl .Values.observability.dashboard.host . }}/login/generic_oauth'
+          - 'https://{{ tpl .Values.observability.dashboard.host . }}{{ .Values.k8s.names.urls.port }}/login/generic_oauth'
           scopes:
           - 'openid'
           - 'profile'
@@ -226,7 +226,7 @@ data:
           # disable signing for userinfo
           userinfo_signed_response_alg: 'none'
         - audience:
-          - 'https://{{ tpl .Values.wikijs.host . }}'
+          - 'https://{{ tpl .Values.wikijs.host . }}{{ .Values.k8s.names.urls.port }}'
           authorization_policy: 'one_factor'
           claims_policy: 'platypod'
           client_id: '{{ .Values.wikijs.oidc.clientId }}'
@@ -245,7 +245,7 @@ data:
           token_endpoint_auth_method: 'client_secret_post'
           userinfo_signed_response_alg: 'none'
         - audience:
-          - 'https://{{ tpl .Values.outline.host . }}'
+          - 'https://{{ tpl .Values.outline.host . }}{{ .Values.k8s.names.urls.port }}'
           authorization_policy: 'one_factor'
           claims_policy: 'platypod'
           client_id: '{{ .Values.outline.oidc.clientId }}'
@@ -254,7 +254,7 @@ data:
           consent_mode: implicit
           public: false
           redirect_uris:
-          - 'https://{{ tpl .Values.outline.host . }}/auth/oidc.callback'
+          - 'https://{{ tpl .Values.outline.host . }}{{ .Values.k8s.names.urls.port }}/auth/oidc.callback'
           scopes:
           - 'openid'
           - 'profile'
@@ -397,8 +397,8 @@ data:
         port: {{ .Values.authelia.redis.ports.http.targetPort }}
       cookies:
       - domain: {{ .Values.traefik.domain }}
-        authelia_url: https://{{ tpl .Values.authelia.host . }}
-        default_redirection_url: https://{{ tpl .Values.homepage.host . }}
+        authelia_url: https://{{ tpl .Values.authelia.host . }}{{ .Values.k8s.names.urls.port }}
+        default_redirection_url: https://{{ tpl .Values.homepage.host . }}{{ .Values.k8s.names.urls.port }}
 
     regulation:
       max_retries: 5

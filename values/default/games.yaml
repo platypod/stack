@@ -1,0 +1,408 @@
+# Implementation tier — games module. Registry fields (enable/label/host)
+# for pokeclicker/rommapp/unbegotten/palworld/valheim/terraria/satisfactory
+# live in values/default/registry.yaml instead. `minecraft` (no single
+# enable/label/host — see instances.*.enable) and `games.backupTargets`
+# (not a per-service key) stay here in full.
+
+pokeclicker:
+  image: ghcr.io/platypod/pokeclicker:v0.10.25
+  ports:
+    http:
+      name: http
+      targetPort: 3000
+  replicasNb: 1
+  resources:
+    requests:
+      cpu: 25m
+      memory: 896Mi
+    limits:
+      memory: 1280Mi
+
+rommapp:
+  # OIDC login via Authelia. Empty clientId disables the integration entirely
+  # (Authelia client block and app-side config are both gated on it).
+  # Set real values per-env; hash: authelia crypto hash generate pbkdf2
+  oidc:
+    clientId: ""
+    clientSecret:
+      plain: ""
+      hashed: ""
+  credentials:
+    username: admin
+    password: password
+  database:
+    credentials:
+      username: "{{ .Values.rommapp.credentials.username }}"
+      password: "{{ .Values.rommapp.credentials.password }}"
+      rootPassword: "{{ .Values.rommapp.credentials.password }}Root"
+    image: mariadb:11
+    # Distinct from rommapp.pvc (used by the app's own ROM file storage) so
+    # the two can be repointed independently.
+    pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        memory: 512Mi
+    label: rommapp-db
+    name: rommapp
+    replicasNb: 1
+    ports:
+      http:
+        name: rommapp-db
+        targetPort: 3306
+  igdb:
+    clientId:  # https://docs.romm.app/latest/Getting-Started/Generate-API-Keys/#igdb
+    clientSecret:  # https://docs.romm.app/latest/Getting-Started/Generate-API-Keys/#igdb
+  image: rommapp/romm:4.8.1-slim
+  mobyGamesApiKey: # https://docs.romm.app/latest/Getting-Started/Generate-API-Keys/#mobygames
+  ports:
+    http:
+      name: rommapp-http
+      targetPort: 8080
+  pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  replicasNb: 1
+  retroachievementsApiKey: # https://api-docs.retroachievements.org/#api-access
+  screenscraper:
+    username: # https://docs.romm.app/latest/Getting-Started/Generate-API-Keys/#screenscraper
+    password: # https://docs.romm.app/latest/Getting-Started/Generate-API-Keys/#screenscraper
+  secretKey: a9c0a3a3128b411afdd67f3616f3be159eda33d709f7cdb3ca00c66c72adb3c6
+  steamGridDbApiKey: # https://docs.romm.app/latest/Getting-Started/Generate-API-Keys/#steamgriddb
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+unbegotten:
+  image: ghcr.io/platypod/unbegotten:v0.15.1
+  ports:
+    http:
+      name: http
+      targetPort: 80
+  replicasNb: 1
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+
+palworld:
+  # Address this Service answers on from the LAN when there's no MetalLB (see
+  # traefik.externalIP for the mechanism). Ports 8211/27015 udp don't collide
+  # with Traefik (80/443) or AdGuard (53), so it can share the same address.
+  externalIP: ""
+  loadBalancerIP: ""  # MetalLB path only (dev); ignored when externalIP is set.
+  # Pin to the node that owns externalIP. Required in prod.
+  nodeSelector: {}
+  image: thijsvanloef/palworld-server-docker:v2.7.1
+  ports:
+    game:
+      name: game
+      port: 8211
+      targetPort: 8211
+    query:
+      name: query
+      port: 27015
+      targetPort: 27015
+  server:
+    name: "Platypod Palworld"
+    description: ""
+    password: ""
+    adminPassword: changeme
+    maxPlayers: 16
+    community: false
+    # ENABLE_PERF_THREADING_ARGS replaces the image's deprecated MULTITHREADING
+    # toggle (optionally paired with a WORKER_THREADS_SERVER count via
+    # extraEnv; unset uses the game's own default thread count).
+    perfThreadingArgs: false
+    # Passthrough for any other thijsvanloef/palworld-server-docker env var
+    # (i.e. any PalWorldSettings.ini key in its documented table) without
+    # needing a chart change per setting, e.g.:
+    #   extraEnv:
+    #     DEATH_PENALTY: "None"   # default is "Item"; drops nothing on death
+    extraEnv: {}
+  pvc: "{{ .Values.storage.defaultVolumes.games }}"
+  resources:
+    requests:
+      cpu: 500m
+      memory: 4Gi
+    limits:
+      memory: 8Gi
+
+minecraft:
+  eula: true
+
+  # Shared by every AUTO_CURSEFORGE instance below. Get a free personal key
+  # from console.curseforge.com — CurseForge locked down modpack auto-download
+  # behind it in 2023. Vanilla instances don't need it.
+  curseforge:
+    apiKey: ""
+
+  # The single external entry point for every instance. Shares chuwi-cp1's
+  # externalIP with traefik/adguard/palworld in prod (see traefik.externalIP
+  # for the mechanism) — but unlike palworld, only mc-router's own Service
+  # needs it; instances underneath stay ClusterIP-only.
+  #
+  # Traefik can't do this hop itself: it routes HTTP by Host header or TLS by
+  # SNI, and Minecraft's protocol is neither (plain, unencrypted TCP). The
+  # hostname a player typed only exists a few bytes into Minecraft's own
+  # handshake payload — mc-router is the thing that knows how to read that.
+  #
+  # Runs in --in-kube-cluster mode: it watches this namespace's Services via
+  # the k8s API (not DNS) for the mc-router.itzg.me/externalServerName
+  # annotation, and proxies straight to the matching Service's ClusterIP.
+  # Enable/disable an instance and its route appears/disappears automatically
+  # — nothing here to keep in sync by hand. Rendered only when at least one
+  # instance below is enabled (see the games._helpers.tpl anyEnabled check).
+  mcRouter:
+    externalIP: ""
+    loadBalancerIP: ""  # MetalLB path only (dev); ignored when externalIP is set.
+    nodeSelector: {}
+    image: itzg/mc-router:1.23.0
+    port: 25565
+    resources:
+      requests:
+        cpu: 100m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+
+  # One entry per flavor. More than one `enable: true` at once is exactly the
+  # "several at once" case — nothing here prevents it. Each instance is its
+  # own Deployment + ClusterIP Service; the world/save data subPath is derived
+  # from the instance's own hostname label (see instances--deployment.yaml),
+  # not stored here, so renaming a key doesn't strand old data under the
+  # previous name.
+  instances:
+    vanilla:
+      enable: false
+      hostname: "{{ .Values.k8s.names.urls.prefix }}vanilla{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      image: itzg/minecraft-server:2026.7.2-java25   # MC 26.2 needs Java 25 (LTS)
+      type: VANILLA
+      version: "26.2"
+      jvmHeapSize: 4G
+      # Passthrough for any other itzg/minecraft-server env var (same idea as
+      # palworld.server.extraEnv), e.g.:
+      #   extraEnv:
+      #     PAUSE_WHEN_EMPTY_SECONDS: "0"   # disable auto-pause when idle
+      extraEnv: {}
+      resources:
+        requests:
+          cpu: 500m
+          memory: 4Gi
+        limits:
+          memory: 5Gi        # heap + ~1Gi off-heap/GC/native headroom
+
+    # https://minecraft.fr/bigchadguys-plus-le-modpack-minecraft-qui-fait-rimer-detente-et-cobblemon/
+    bcgplus:
+      enable: false
+      hostname: "{{ .Values.k8s.names.urls.prefix }}bcgplus{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      image: itzg/minecraft-server:2026.7.2-java17   # MC 1.20.1 needs Java 17, NOT java21
+      type: AUTO_CURSEFORGE
+      curseforge:
+        slug: bcg
+        fileId: "7268971"     # BCG+ 2.15.0, MC 1.20.1 (as of 2025-11-27) — verify still current before deploying
+      jvmHeapSize: 8G
+      extraEnv: {}
+      resources:
+        requests:
+          cpu: 1000m
+          memory: 8Gi
+        limits:
+          memory: 10Gi        # heap + ~2Gi headroom, modded packs run hotter GC
+
+    # https://minecraft.fr/cobbleverse-est-un-modpack-qui-recree-une-aventure-pokemon-complete-dans-minecraft-avec-cobblemon/
+    cobbleverse:
+      enable: false
+      hostname: "{{ .Values.k8s.names.urls.prefix }}cobbleverse{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      image: itzg/minecraft-server:2026.7.2-java21   # MC 1.21.1 needs Java 21
+      type: AUTO_CURSEFORGE
+      curseforge:
+        slug: cobbleverse-cobblemon
+        fileId: "8488030"     # v1.7.42, MC 1.21.1 (as of 2026-07-22) — verify still current before deploying
+      jvmHeapSize: 8G
+      extraEnv: {}
+      resources:
+        requests:
+          cpu: 1000m
+          memory: 8Gi
+        limits:
+          memory: 10Gi
+
+    # https://minecraft.fr/mc-eternal-2-modpack-minecraft/
+    mceternal2:
+      enable: false
+      hostname: "{{ .Values.k8s.names.urls.prefix }}mceternal2{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      image: itzg/minecraft-server:2026.7.2-java17   # MC 1.20.1 needs Java 17
+      type: AUTO_CURSEFORGE
+      curseforge:
+        slug: mc-eternal-2
+        fileId: "8400639"     # v1.2.2.1, MC 1.20.1 (as of 2026-07-09) — verify still current before deploying
+      jvmHeapSize: 10G
+      extraEnv: {}
+      resources:
+        requests:
+          cpu: 1500m
+          memory: 10Gi
+        limits:
+          memory: 13Gi        # heap + ~3Gi headroom — kitchen-sink pack, heavier GC than bcgplus/cobbleverse
+
+    # https://minecraft.fr/vanilla-perfected-lessence-de-minecraft-sublimee/
+    vanillaperfected:
+      enable: false
+      hostname: "{{ .Values.k8s.names.urls.prefix }}vanillaperfected{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      image: itzg/minecraft-server:2026.7.2-java21   # MC 1.21 needs Java 21
+      type: AUTO_CURSEFORGE
+      curseforge:
+        slug: vanilla-perfected-curseforge-edition
+        fileId: "6034929"     # v1.0.0, MC 1.21 (as of 2024-12-29) — verify still current before deploying
+      # Lightweight "vanilla plus" pack (QoL/performance/aesthetic mods, not a
+      # heavy mod stack) — sized closer to vanilla than the other modpacks.
+      jvmHeapSize: 6G
+      extraEnv: {}
+      resources:
+        requests:
+          cpu: 750m
+          memory: 6Gi
+        limits:
+          memory: 7Gi        # heap + ~1Gi headroom
+
+  pvc: "{{ .Values.storage.defaultVolumes.games }}"
+
+valheim:
+  # Address this Service answers on from the LAN when there's no MetalLB (see
+  # traefik.externalIP for the mechanism). UDP 2456-2458 don't collide with
+  # Traefik (80/443), AdGuard (53), or Palworld (8211/27015).
+  externalIP: ""
+  loadBalancerIP: ""  # MetalLB path only (dev); ignored when externalIP is set.
+  # Pin to the node that owns externalIP. Required in prod.
+  nodeSelector: {}
+  image: lloesche/valheim-server:sha-732221f4d5b5
+  # The server listens on 3 consecutive UDP ports starting at SERVER_PORT:
+  # game, query, and (only used when CROSSPLAY=true) the crossplay backend.
+  # All three are always published — harmless if crossplay stays off.
+  ports:
+    game:
+      name: game
+      port: 2456
+      targetPort: 2456
+    query:
+      name: query
+      port: 2457
+      targetPort: 2457
+    crossplay:
+      name: crossplay
+      port: 2458
+      targetPort: 2458
+  server:
+    name: "Platypod Valheim"
+    worldName: Dedicated
+    password: changeme
+    public: false
+    # Passthrough for any other lloesche/valheim-server env var, e.g.:
+    #   extraEnv:
+    #     CROSSPLAY: "true"
+    #     BEPINEX: "true"
+    extraEnv: {}
+  pvc: "{{ .Values.storage.defaultVolumes.games }}"
+  resources:
+    requests:
+      cpu: 500m
+      memory: 4Gi
+    limits:
+      memory: 8Gi   # min 4GB / recommended 8GB per upstream docs
+
+terraria:
+  # Address this Service answers on from the LAN when there's no MetalLB (see
+  # traefik.externalIP for the mechanism). UDP 7777 doesn't collide with
+  # Traefik (80/443), AdGuard (53), Palworld (8211/27015), or Valheim
+  # (2456-2458).
+  externalIP: ""
+  loadBalancerIP: ""  # MetalLB path only (dev); ignored when externalIP is set.
+  # Pin to the node that owns externalIP. Required in prod.
+  nodeSelector: {}
+  image: brammys/terraria:1.4.5.6
+  port: 7777
+  server:
+    worldName: Dedicated
+    # 1=small, 2=medium, 3=large — only used the first time a world with this
+    # name is generated; ignored once the .wld file already exists.
+    autocreate: 3
+    password: changeme
+    maxPlayers: 8
+    motd: "Platypod Terraria"
+    # Passthrough for any other brammys/terraria TERRARIA_* env var, e.g.:
+    #   extraEnv:
+    #     TERRARIA_SEED: "for the worthy"
+    #     TERRARIA_NOUPNP: "1"
+    extraEnv: {}
+  pvc: "{{ .Values.storage.defaultVolumes.games }}"
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi   # upstream: ~1-1.5Gi covers small/medium worlds, <=8 players
+
+satisfactory:
+  # Address this Service answers on from the LAN when there's no MetalLB (see
+  # traefik.externalIP for the mechanism). Ports don't collide with Traefik
+  # (80/443), AdGuard (53), Palworld (8211/27015), Valheim (2456-2458), or
+  # Terraria (7777) — Satisfactory's game port also happens to be 7777, but
+  # UDP+TCP on it plus TCP 8888 vs. Terraria's TCP+UDP-only on 7777 means both
+  # can't share one IP; keep them on separate externalIPs if both are ever
+  # enabled at once.
+  externalIP: ""
+  loadBalancerIP: ""  # MetalLB path only (dev); ignored when externalIP is set.
+  # Pin to the node that owns externalIP. Required in prod.
+  nodeSelector: {}
+  image: wolveix/satisfactory-server:v1.9.10
+  ports:
+    game:
+      name: game
+      port: 7777
+      targetPort: 7777
+    messaging:
+      name: messaging
+      port: 8888
+      targetPort: 8888
+  server:
+    maxPlayers: 4
+    # Passthrough for any other wolveix/satisfactory-server env var, e.g.:
+    #   extraEnv:
+    #     DISABLESEASONALEVENTS: "true"
+    #     STEAMBETA: "true"
+    extraEnv: {}
+  pvc: "{{ .Values.storage.defaultVolumes.games }}"
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 8Gi
+    limits:
+      memory: 12Gi   # upstream: 8-16Gi, more headroom needed late-game/4+ players
+
+# Nightly, hardlink-based ("rsnapshot"-style) backups of each enabled game's
+# save-data path — NOT the whole install. Engine/binaries are redownloadable
+# from Steam in minutes (see 2026-08-02's local-storage migration), so backing
+# them up nightly would waste NAS I/O and retention space for no benefit. Only
+# world/save data is irreplaceable and worth protecting.
+#
+# Each night's snapshot is a full, independently-browsable directory tree on
+# the NFS apps share, but unchanged files are hardlinked to the previous
+# night's copy rather than copied — cheap to keep many days of history.
+# Enables point-in-time rollback (e.g. a save corrupted mid-write during an
+# update), not just node-loss recovery. See stack/src/games/README.md.
+games:
+  backupTargets:
+  - name: palworld
+    enable: false
+    savePath: "Pal/Saved/SaveGames"   # relative to the game's subPath root
+    # Staggered 30min after Palworld's own BACKUP_CRON_EXPRESSION (0 3 * * *,
+    # see values/prd/values.yaml palworld.server.extraEnv) so this doesn't
+    # read the save dir mid-write from that internal backup.
+    schedule: "30 3 * * *"
+    retentionDays: 14
