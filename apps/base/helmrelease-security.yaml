@@ -16,6 +16,8 @@ spec:
         kind: GitRepository
         name: flux-system
         namespace: flux-system
+  # Carries ALL 7 per-module ConfigMaps, not just its own — matching
+  # Helmfile's actual behavior. See stack/docs/flux-migration.md gotcha 2.
   valuesFrom:
     - kind: ConfigMap
       name: platypod-substrate
@@ -23,6 +25,24 @@ spec:
     - kind: ConfigMap
       name: platypod-registry
       valuesKey: registry.yaml
+    - kind: ConfigMap
+      name: platypod-core
+      valuesKey: core.yaml
+    - kind: ConfigMap
+      name: platypod-dev-tools
+      valuesKey: dev-tools.yaml
+    - kind: ConfigMap
+      name: platypod-files
+      valuesKey: files.yaml
+    - kind: ConfigMap
+      name: platypod-games
+      valuesKey: games.yaml
+    - kind: ConfigMap
+      name: platypod-media
+      valuesKey: media.yaml
+    - kind: ConfigMap
+      name: platypod-observability
+      valuesKey: observability.yaml
     - kind: ConfigMap
       name: platypod-security
       valuesKey: security.yaml

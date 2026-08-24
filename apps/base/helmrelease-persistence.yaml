@@ -1,5 +1,10 @@
-# persistence has no implementation-tier ConfigMap (values/default/ has no
-# persistence.yaml — its only default file, storage.yaml, is pure substrate).
+# Every HelmRelease carries ALL 7 per-module ConfigMaps, not just its own —
+# matching Helmfile's actual behavior (every release gets all 9 default
+# files uniformly). Found the hard way porting `core`: its Traefik chart
+# reaches directly into `.Values.jellyfin.proxy.enable` (media module) for
+# the Jellyfin reverse-proxy special case — cross-module references are
+# real and not confined to any one chart, so there's no valid way to give
+# a release "only what it needs". See stack/docs/flux-migration.md gotcha 2.
 # releaseName matches the existing Helmfile release exactly, so helm-controller
 # adopts it in place instead of reinstalling (rehearses gotcha 4 on local,
 # ahead of needing it for real on prd in Phase 7).
@@ -37,6 +42,27 @@ spec:
     - kind: ConfigMap
       name: platypod-registry
       valuesKey: registry.yaml
+    - kind: ConfigMap
+      name: platypod-core
+      valuesKey: core.yaml
+    - kind: ConfigMap
+      name: platypod-dev-tools
+      valuesKey: dev-tools.yaml
+    - kind: ConfigMap
+      name: platypod-files
+      valuesKey: files.yaml
+    - kind: ConfigMap
+      name: platypod-games
+      valuesKey: games.yaml
+    - kind: ConfigMap
+      name: platypod-media
+      valuesKey: media.yaml
+    - kind: ConfigMap
+      name: platypod-observability
+      valuesKey: observability.yaml
+    - kind: ConfigMap
+      name: platypod-security
+      valuesKey: security.yaml
     - kind: Secret
       name: platypod-secrets
       valuesKey: platypod-secrets.yaml
