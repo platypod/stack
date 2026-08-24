@@ -1,0 +1,12 @@
+# Source for the csi-driver-nfs chart — same repo `make install-csi` adds
+# imperatively today (Makefile). source-controller fetches this over the
+# network like it already does for the flux-system GitRepository; unlike
+# kustomize-controller (gotcha 1, network disabled), this isn't vendored.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: csi-driver-nfs
+  namespace: flux-system
+spec:
+  interval: 1h0m0s
+  url: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts

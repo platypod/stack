@@ -399,10 +399,22 @@ Flux-managed) releases, so there's no drift *today*, but running an actual
 No guard against this exists yet; avoid running deploys against `local`
 outside Flux going forward. Real Phase 8 cleanup, called out early.
 
-**Phase 5 — CSI, remaining self-management on local.** CRD vendoring and
-Flux self-management landed already in Phase 3. `csi-driver-nfs` as a
-`HelmRelease` is prod-only (local uses hostPath, not NFS) — likely nothing
-left to do here for local specifically; revisit once Phase 4 is underway.
+**Phase 5 — CSI, remaining self-management on local. Status: pre-authored,
+inert.** CRD vendoring and Flux self-management landed already in Phase 3;
+nothing left to do there for local specifically. `csi-driver-nfs` as a
+`HelmRelease` is prod-only (local uses hostPath, not NFS), and prod isn't
+bootstrapped onto Flux until Phase 7 — no cluster exists yet to reconcile
+this against. Authored anyway, ready for that point: `infrastructure/csi/`
+(a `HelmRepository` + `HelmRelease`, mirroring `infrastructure/crds/`'s
+shape — version `4.13.2`, kept in sync with `Makefile`'s
+`CSI_DRIVER_NFS_VERSION` until `make install-csi` retires in Phase 8) and
+`clusters/prd/infrastructure.yaml` (wires it in, alongside the same
+`infra-crds` Kustomization `local` already has). Deliberately does **not**
+include `clusters/prd/flux-system/` — that's `flux bootstrap`-generated,
+not hand-written (same as `clusters/local`'s), so nothing reconciles any of
+this until Phase 7 runs `make flux-bootstrap ENV=prd`; its generated
+Kustomization then picks up the whole `./clusters/prd` path automatically,
+no further changes needed here.
 
 **Phase 6 — retired, merged into Phase 3.** Was "rebuild the laptop cluster
 onto Flux" — folded into Phase 3 once that ran directly on the laptop

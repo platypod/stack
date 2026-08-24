@@ -1,0 +1,33 @@
+# Mirrors clusters/local/infrastructure.yaml's infra-crds Kustomization,
+# plus infra-csi (prod-only — local uses hostPath, not NFS). Pre-authored
+# per stack/docs/flux-migration.md Phase 5: nothing reconciles this yet —
+# clusters/prd/ has no flux-system/ (that's `flux bootstrap`-generated in
+# Phase 7, not hand-written, same as clusters/local's). Once Phase 7 runs
+# `make flux-bootstrap ENV=prd`, its generated flux-system Kustomization
+# reconciles the whole ./clusters/prd path and picks this file up
+# automatically — no changes needed here at that point.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-crds
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  path: ./infrastructure/crds
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-csi
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  path: ./infrastructure/csi
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
