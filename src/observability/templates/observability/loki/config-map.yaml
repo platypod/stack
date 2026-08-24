@@ -1,3 +1,4 @@
+{{- if .Values.observability.logs.enable }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -113,3 +114,4 @@ data:
 
     analytics:
       reporting_enabled: false
+{{- end }}

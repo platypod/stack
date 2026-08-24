@@ -1,3 +1,4 @@
+{{- if .Values.observability.otelCollector.gateway.enable }}
 {{- /*
   OTLP/gRPC ingress for the collector gateway. Terminates TLS at Traefik and
   forwards h2c (cleartext HTTP/2) to the gateway's gRPC receiver on port 4317.
@@ -43,3 +44,4 @@ spec:
   tls:
     certResolver: {{ .Values.traefik.resolverName }}
   {{- end }}
+{{- end }}

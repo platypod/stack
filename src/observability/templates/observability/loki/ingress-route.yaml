@@ -1,3 +1,4 @@
+{{- if .Values.observability.logs.enable }}
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 
@@ -30,3 +31,4 @@ spec:
   tls:
     certResolver: {{ .Values.traefik.resolverName }}
   {{- end }}
+{{- end }}

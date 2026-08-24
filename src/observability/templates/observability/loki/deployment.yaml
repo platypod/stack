@@ -1,3 +1,4 @@
+{{- if .Values.observability.logs.enable }}
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.observability.logs.label .Values.k8s.names.pods.suffix }}
 {{- $appVolume := "app-volume" }}
 
@@ -76,3 +77,4 @@ spec:
       - name: conf
         configMap:
           name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.configMaps.suffix }}
+{{- end }}

@@ -1,3 +1,4 @@
+{{- if .Values.observability.logs.enable }}
 apiVersion: v1
 kind: Service
 
@@ -16,3 +17,4 @@ spec:
     targetPort: {{ .Values.observability.logs.ports.http.targetPort }}
   selector:
     app: {{ .Values.k8s.names.pods.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.pods.suffix }}
+{{- end }}
