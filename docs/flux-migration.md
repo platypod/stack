@@ -404,26 +404,52 @@ smallest piece, and only makes sense once Git is authoritative.
    kustomize-controller runs with network access disabled, so the CRDs had to
    be **vendored** into `infrastructure/crds/` — done, reconciling cleanly via
    the `infra-crds` Kustomization. Side benefit: explicitly pinned now.
-2. **ConfigMap/Secret hash suffixes break `valuesFrom`.** Both
-   `configMapGenerator` (globals/services/per-module tiers) and
-   `secretGenerator` (the Secrets tier, wrapping decrypted content from
-   `platypod-sops`) append a content hash, and Kustomize's nameReference
-   transformer does not know about `HelmRelease.spec.valuesFrom[].name` for
-   either kind. Without a `kustomizeconfig.yaml` teaching it both paths,
-   releases silently reference nonexistent ConfigMaps/Secrets. Verify on dev
-   before trusting it.
+2. **ConfigMap/Secret hash suffixes break `valuesFrom`. Verified + refined in
+   Phase 4.** `configMapGenerator` (substrate/registry/per-module tiers, all
+   built by the *same* `apps/base/` Kustomization as the `HelmRelease`s that
+   reference them) needs `kustomizeconfig.yaml` teaching Kustomize's
+   nameReference transformer about `HelmRelease.spec.valuesFrom[].name` —
+   confirmed via `kubectl kustomize`: the hashed name gets substituted in
+   correctly. But `secretGenerator` (the Secrets tier) is built by a
+   **separate** Kustomization, sourced from the `platypod-sops`
+   `GitRepository` — nameReference only rewrites references *within one
+   kustomize build's own resource graph*, so it can never reach across to a
+   different Kustomization's output. A hashed name there would leave every
+   `HelmRelease` pointing at a Secret name that doesn't exist. Fixed:
+   `disableNameSuffixHash: true` on that one `secretGenerator` — a stable,
+   predictable name instead, referenced directly. Trade-off: no
+   automatic-rollout-on-content-change from the name alone, acceptable since
+   helm-controller re-renders values every reconcile interval regardless.
 3. **Drift correction vs. the setup Jobs — the main operational risk.** The
    post-install/post-upgrade hook Jobs re-run on every Helm upgrade, and
    `torrent-clients-setup` carries the 15-min-per-*arr wait loop. Frequent
    Flux-triggered upgrades would re-run them repeatedly. Start with drift
    correction **disabled**; enable deliberately, later.
-4. **In-place release adoption** (Phase 7) — confirm helm-controller adopts an
-   existing release by `releaseName` + namespace rather than reinstalling, and
-   check whether ownership labels/annotations need patching first.
+4. **In-place release adoption. Verified in Phase 4 (`persistence`).**
+   helm-controller *does* adopt an existing Helmfile-created release by
+   `releaseName` + namespace rather than reinstalling — no ownership
+   labels/annotations needed patching first; it just worked. Confirmed via
+   `helm list`: the release went from revision 1 (Helmfile) straight to
+   revision 3 (helm-controller), no reinstall, no PVC churn.
 5. **PodSecurity.** `prd-platypod` stays `baseline`; confirm `flux-system` is
    satisfied (Flux ships restricted-compatible manifests).
 6. **No `make destroy MODULE=` equivalent.** Deletion becomes "remove from Git +
    `prune: true`". `flux suspend` stops reconciliation but does not uninstall.
+7. **Flux's default Helm `--wait` breaks `WaitForFirstConsumer` PVCs. Found
+   in Phase 4 (`persistence`).** Not in the original gotcha list — discovered
+   live. `persistence`'s PVCs use `WaitForFirstConsumer` binding and are
+   provisioned *ahead* of the pods that will actually consume them
+   (media/games modules, ported later) — sitting `Pending` until then is
+   correct, expected behavior. Helmfile's `sync` never passed `--wait`, so
+   this was invisible before. Flux's `HelmRelease` enables Helm's `--wait`
+   by default, which blocked the whole release on a PVC bind that was never
+   going to happen yet — failed after the 5-minute timeout with "exceeded
+   maximum retries: cannot remediate failed release" before the fix. Fixed:
+   `spec.install.disableWait` / `spec.upgrade.disableWait: true` on
+   `persistence`'s `HelmRelease`, matching Helmfile's actual prior behavior.
+   Any other module whose PVCs are provisioned ahead of their consumers
+   needs the same treatment — check for this specifically when porting
+   `media`/`games`.
 
 ## Open items
 
