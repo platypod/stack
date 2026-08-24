@@ -1,0 +1,178 @@
+# Phase 9 — image update automation. See stack/docs/flux-migration.md for
+# the full design/rationale. local only — prd stays tag-gated and doesn't
+# need these controllers running idle (see stack/Makefile's flux-bootstrap).
+#
+# Separate GitRepository with its OWN read-write deploy key
+# (image-automation-deploy-key Make target) — deliberately not reusing
+# flux-system's primary sync GitRepository/key, which stays read-only.
+# ImageUpdateAutomation pushes through whichever GitRepository it targets,
+# so this is the one and only write path this migration has ever needed.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: stack-image-automation
+  namespace: flux-system
+spec:
+  interval: 5m0s
+  ref:
+    branch: main
+  secretRef:
+    name: stack-image-automation-deploy-key
+  url: ssh://git@github.com/platypod/stack
+---
+# All 5 GHCR images are public — no imagePullSecret needed, confirmed via an
+# anonymous ghcr.io token exchange before writing this.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: cyber-chef
+  namespace: flux-system
+spec:
+  image: ghcr.io/platypod/cyber-chef
+  interval: 1h0m0s
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: mediarvester
+  namespace: flux-system
+spec:
+  image: ghcr.io/platypod/mediarvester
+  interval: 1h0m0s
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: pokeclicker
+  namespace: flux-system
+spec:
+  image: ghcr.io/platypod/pokeclicker
+  interval: 1h0m0s
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: unbegotten
+  namespace: flux-system
+spec:
+  image: ghcr.io/platypod/unbegotten
+  interval: 1h0m0s
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: transmission-exporter
+  namespace: flux-system
+spec:
+  image: ghcr.io/platypod/transmission-exporter
+  interval: 1h0m0s
+---
+# filterTags strips the "v" prefix before semver-parsing — cyber-chef,
+# mediarvester, pokeclicker, unbegotten all tag vX.Y.Z. :latest and any
+# non-semver tag never match the pattern, so the policy silently never
+# selects them — no separate exclusion needed.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: cyber-chef
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: cyber-chef
+  policy:
+    semver:
+      range: ">=0.0.0"
+  filterTags:
+    pattern: '^v(?P<version>.*)$'
+    extract: '$version'
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: mediarvester
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: mediarvester
+  policy:
+    semver:
+      range: ">=0.0.0"
+  filterTags:
+    pattern: '^v(?P<version>.*)$'
+    extract: '$version'
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: pokeclicker
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: pokeclicker
+  policy:
+    semver:
+      range: ">=0.0.0"
+  filterTags:
+    pattern: '^v(?P<version>.*)$'
+    extract: '$version'
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: unbegotten
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: unbegotten
+  policy:
+    semver:
+      range: ">=0.0.0"
+  filterTags:
+    pattern: '^v(?P<version>.*)$'
+    extract: '$version'
+---
+# No filterTags — transmission-exporter's tags are bare X.Y.Z (no "v"
+# prefix, confirmed via `git tag -l` in that repo), already valid semver as-is.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: transmission-exporter
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: transmission-exporter
+  policy:
+    semver:
+      range: ">=0.0.0"
+---
+# Pushes straight to main (no separate branch) — local already tracks main
+# continuously, and prd's tag gate is the real review point, unaffected by
+# anything landing here. Scoped to apps/base/values/ only.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageUpdateAutomation
+metadata:
+  name: flux-system
+  namespace: flux-system
+spec:
+  interval: 30m0s
+  sourceRef:
+    kind: GitRepository
+    name: stack-image-automation
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        email: flux@platypod.ovh
+        name: fluxcdbot
+      messageTemplate: |
+        chore: automated image update
+
+        {{ range .Updated.Images }}- {{println . }}
+        {{ end -}}
+    push:
+      branch: main
+  update:
+    path: ./apps/base/values
+    strategy: Setters

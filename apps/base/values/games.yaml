@@ -5,7 +5,7 @@
 # (not a per-service key) stay here in full.
 
 pokeclicker:
-  image: ghcr.io/platypod/pokeclicker:v0.10.25
+  image: ghcr.io/platypod/pokeclicker:v0.10.25 # {"$imagepolicy": "flux-system:pokeclicker"}
   ports:
     http:
       name: http
@@ -77,7 +77,7 @@ rommapp:
       memory: 512Mi
 
 unbegotten:
-  image: ghcr.io/platypod/unbegotten:v0.15.1
+  image: ghcr.io/platypod/unbegotten:v0.15.1 # {"$imagepolicy": "flux-system:unbegotten"}
   ports:
     http:
       name: http

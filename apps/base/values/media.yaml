@@ -487,7 +487,7 @@ suwayomi:
       memory: 1280Mi
 
 mediarvester:
-  image: ghcr.io/platypod/mediarvester:v1.7.15
+  image: ghcr.io/platypod/mediarvester:v1.7.15 # {"$imagepolicy": "flux-system:mediarvester"}
   ports:
     http:
       name: http

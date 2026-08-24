@@ -49,7 +49,7 @@ bookstack:
       memory: 512Mi
 
 cyberChef:
-  image: ghcr.io/platypod/cyber-chef:v11.0.0
+  image: ghcr.io/platypod/cyber-chef:v11.0.0 # {"$imagepolicy": "flux-system:cyber-chef"}
   ports:
     http:
       name: http
