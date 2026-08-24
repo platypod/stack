@@ -147,6 +147,12 @@ install-crds:  ## Apply the vendored Traefik CRDs to the cluster
 # pushes clusters/$(ENV)/flux-system/* to main if not already present. Needs
 # `gh` authenticated (uses `gh auth token`) — see docs/flux-migration.md
 # Phase 3.
+#
+# image-reflector-controller/image-automation-controller only on local —
+# they're driven by pushing to main, which only local tracks continuously;
+# prd stays tag-gated and doesn't need them running idle. See Phase 9.
+COMPONENTS_EXTRA_local := --components-extra=image-reflector-controller,image-automation-controller
+COMPONENTS_EXTRA_prd   :=
 .PHONY: flux-bootstrap
 flux-bootstrap: ## Bootstrap/reconcile Flux against clusters/$(ENV) (ENV=local)
 	GITHUB_TOKEN="$$(gh auth token)" flux bootstrap github \
@@ -154,7 +160,8 @@ flux-bootstrap: ## Bootstrap/reconcile Flux against clusters/$(ENV) (ENV=local)
 	  --repository=stack \
 	  --path=clusters/$(ENV) \
 	  --branch=main \
-	  --personal
+	  --personal \
+	  $(COMPONENTS_EXTRA_$(ENV))
 
 # Idempotent — safe to re-run. Creates the in-cluster deploy key +
 # decryption secret the platypod-sops GitRepository/Kustomization
@@ -184,6 +191,28 @@ flux-sops-secrets: ## Create in-cluster deploy key + sops-age Secret for platypo
 	else \
 	  kubectl create secret generic sops-age --namespace=flux-system \
 	    --from-file=age.agekey=$(SOPS_AGE_KEY_FILE); \
+	fi
+
+# Idempotent — safe to re-run. Creates a SEPARATE, read-write deploy key on
+# platypod/stack, used only by the stack-image-automation GitRepository
+# (clusters/local/image-automation.yaml) — deliberately not the same
+# credential flux-system's primary sync GitRepository uses, which stays
+# read-only. The first read-write credential this migration has created;
+# see docs/flux-migration.md Phase 9 for why it's scoped this narrowly.
+.PHONY: image-automation-deploy-key
+image-automation-deploy-key: ## Create a read-write deploy key for image-automation-controller's own GitRepository (ENV=local)
+	@if kubectl get secret stack-image-automation-deploy-key -n flux-system >/dev/null 2>&1; then \
+	  echo "stack-image-automation-deploy-key already exists — skipping (delete it first to rotate)."; \
+	else \
+	  flux create secret git stack-image-automation-deploy-key \
+	    --namespace=flux-system \
+	    --url=ssh://git@github.com/platypod/stack \
+	    --export > /tmp/stack-image-automation-deploy-key.yaml && \
+	  kubectl apply -f /tmp/stack-image-automation-deploy-key.yaml && \
+	  yq '.stringData."identity.pub"' /tmp/stack-image-automation-deploy-key.yaml > /tmp/stack-image-automation-deploy-key.pub && \
+	  gh repo deploy-key add /tmp/stack-image-automation-deploy-key.pub \
+	    --repo platypod/stack --title "image-automation ($(ENV))" --allow-write && \
+	  rm /tmp/stack-image-automation-deploy-key.yaml /tmp/stack-image-automation-deploy-key.pub; \
 	fi
 
 # ---------------------------------------------------------------------------
