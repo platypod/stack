@@ -1,7 +1,11 @@
-# Builds apps/base/'s substrate/registry/per-module ConfigMaps and (once
-# added, module by module — see stack/docs/flux-migration.md Phase 4) the 8
+# Builds apps/base/'s substrate/registry/per-module ConfigMaps and the 8
 # HelmReleases. Depends on infra-crds so Traefik's CRDs exist before any
 # chart that defines an IngressRoute tries to render one.
+#
+# apps/base/ is shared across clusters (Phase 7) — targetNamespace fills in
+# every resource's metadata.namespace (ConfigMaps + HelmReleases alike),
+# and postBuild.substitute resolves the ${env} tokens in each HelmRelease's
+# releaseName/targetNamespace. See stack/docs/flux-migration.md Phase 7.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -11,6 +15,10 @@ spec:
   interval: 10m0s
   path: ./apps/base
   prune: true
+  targetNamespace: local-platypod
+  postBuild:
+    substitute:
+      env: local
   sourceRef:
     kind: GitRepository
     name: flux-system

@@ -2,11 +2,10 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: security
-  namespace: local-platypod
 spec:
   interval: 10m0s
-  releaseName: local--platypod--security
-  targetNamespace: local-platypod
+  releaseName: ${env}--platypod--security
+  targetNamespace: ${env}-platypod
   dependsOn:
     - name: core
   chart:

@@ -8,12 +8,11 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: files
-  namespace: local-platypod
 spec:
   interval: 10m0s
   timeout: 50m0s
-  releaseName: local--platypod--files
-  targetNamespace: local-platypod
+  releaseName: ${env}--platypod--files
+  targetNamespace: ${env}-platypod
   dependsOn:
     - name: core
     - name: security

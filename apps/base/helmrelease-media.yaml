@@ -2,11 +2,10 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: media
-  namespace: local-platypod
 spec:
   interval: 10m0s
-  releaseName: local--platypod--media
-  targetNamespace: local-platypod
+  releaseName: ${env}--platypod--media
+  targetNamespace: ${env}-platypod
   dependsOn:
     - name: core
     - name: security

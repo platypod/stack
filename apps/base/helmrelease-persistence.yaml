@@ -12,11 +12,10 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: persistence
-  namespace: local-platypod
 spec:
   interval: 10m0s
-  releaseName: local--platypod--persistence
-  targetNamespace: local-platypod
+  releaseName: ${env}--platypod--persistence
+  targetNamespace: ${env}-platypod
   # This module's PVCs use WaitForFirstConsumer binding (local-storage
   # StorageClass) and are provisioned ahead of the pods that will actually
   # consume them (media/games modules, ported later in Phase 4) — they're
