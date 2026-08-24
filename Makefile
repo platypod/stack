@@ -52,6 +52,27 @@ link-values:   ## Symlink the env values.yaml to the NFS share  (ENV=prd)
 	ln -sfn "$$target" "values/$(ENV)/values.yaml" && \
 	  echo "Linked values/$(ENV)/values.yaml -> $$target"
 
+# SOPS_AGE_KEY_FILE: where `sops` finds the local age private key (see
+# ../platypod-sops, stack/docs/flux-migration.md). Not settable via
+# Makefile.local on purpose — every machine that decrypts uses the same
+# default path (age key is backed up on the NFS share, restored there).
+SOPS_AGE_KEY_FILE ?= $(HOME)/.config/sops/age/keys.txt
+export SOPS_AGE_KEY_FILE
+
+# ../platypod-sops/stack/<env>/secrets.enc.yaml -> tmp/secrets/<env>.yaml.
+# Direct `sops -d`, not helmfile's native `secrets:` stanza — the
+# helm-secrets plugin it shells out to is currently broken on Helm v4 (see
+# helmfile.yaml.gotmpl). No-ops for envs with no secrets.enc.yaml yet (prd,
+# pre-migration).
+.PHONY: decrypt-secrets
+decrypt-secrets:
+	@src="../platypod-sops/stack/$(ENV)/secrets.enc.yaml"; \
+	if [ -f "$$src" ]; then \
+	  mkdir -p tmp/secrets && \
+	  sops -d "$$src" > "tmp/secrets/$(ENV).yaml" && \
+	  echo "Decrypted $$src -> tmp/secrets/$(ENV).yaml"; \
+	fi
+
 # ---------------------------------------------------------------------------
 # Dependencies
 # ---------------------------------------------------------------------------
@@ -113,15 +134,15 @@ install-csi:   ## Install the NFS CSI driver (nfs.csi.k8s.io) — required for N
 status:        ## List deployed releases and their status  (ENV=dev)
 	helm list --namespace $(ENV)-platypod
 
-diff: require-values  ## Dry-run: show what would change  (ENV=dev MODULE=core)
+diff: require-values decrypt-secrets  ## Dry-run: show what would change  (ENV=dev MODULE=core)
 	$(HELMFILE) $(SELECTOR) diff --args="--disable-validation"
 
-deploy-base: require-values  ## Deploy always-on base only: persistence, core, security  (ENV=dev)
+deploy-base: require-values decrypt-secrets  ## Deploy always-on base only: persistence, core, security  (ENV=dev)
 	@helmfile --environment $(ENV) --selector name=$(ENV)--platypod--persistence sync
 	@helmfile --environment $(ENV) --selector name=$(ENV)--platypod--core sync
 	@helmfile --environment $(ENV) --selector name=$(ENV)--platypod--security sync
 
-deploy: require-values  ## Deploy full stack or a single module  (ENV=dev MODULE=core)
+deploy: require-values decrypt-secrets  ## Deploy full stack or a single module  (ENV=dev MODULE=core)
 	$(HELMFILE) $(SELECTOR) sync --args="--timeout 10m0s"
 
 destroy:       ## Destroy full stack or a single module  (ENV=dev MODULE=core)

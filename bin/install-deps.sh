@@ -79,6 +79,44 @@ install_helm_linux() {
 }
 
 # ---------------------------------------------------------------------------
+# Install sops binary directly (Linux fallback)
+# ---------------------------------------------------------------------------
+
+SOPS_VERSION="3.13.3"
+
+install_sops_linux() {
+  local arch
+  arch="$(uname -m)"
+  case "${arch}" in
+    x86_64)  arch="amd64" ;;
+    aarch64) arch="arm64" ;;
+  esac
+  local url="https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux.${arch}"
+  info "Downloading sops v${SOPS_VERSION} for linux/${arch}"
+  curl -fsSL "${url}" -o /usr/local/bin/sops
+  chmod +x /usr/local/bin/sops
+}
+
+# ---------------------------------------------------------------------------
+# Install age binary directly (Linux fallback)
+# ---------------------------------------------------------------------------
+
+AGE_VERSION="1.3.1"
+
+install_age_linux() {
+  local arch
+  arch="$(uname -m)"
+  case "${arch}" in
+    x86_64)  arch="amd64" ;;
+    aarch64) arch="arm64" ;;
+  esac
+  local url="https://github.com/FiloSottile/age/releases/download/v${AGE_VERSION}/age-v${AGE_VERSION}-linux-${arch}.tar.gz"
+  info "Downloading age v${AGE_VERSION} for linux/${arch}"
+  curl -fsSL "${url}" | tar -xz -C /usr/local/bin --strip-components=1 age/age age/age-keygen
+  chmod +x /usr/local/bin/age /usr/local/bin/age-keygen
+}
+
+# ---------------------------------------------------------------------------
 # Install helm-diff plugin
 # ---------------------------------------------------------------------------
 
@@ -121,6 +159,8 @@ check kubectl   "https://kubernetes.io/docs/tasks/tools/"       || ALL_OK=0
 check helm      "https://helm.sh/docs/intro/install/"           || ALL_OK=0
 check helmfile  "https://helmfile.readthedocs.io/en/latest/#installation" || ALL_OK=0
 helm_diff_installed && ok "helm-diff  ($(helm diff version 2>/dev/null))" || { missing "helm-diff  — helm plugin (auto-installed below)"; ALL_OK=0; }
+check sops      "https://github.com/getsops/sops#download"      || ALL_OK=0
+check age       "https://github.com/FiloSottile/age#installation" || ALL_OK=0
 check docker    "https://docs.docker.com/get-docker/ (only needed to build custom images)" || true  # optional
 
 echo ""
@@ -143,6 +183,8 @@ if [ "${OS}" = "Darwin" ]; then
   has kubectl  || brew_install kubectl
   has helm     || brew_install helm
   has helmfile || brew_install helmfile
+  has sops     || brew_install sops
+  has age      || brew_install age
   helm_diff_installed || install_helm_diff
 elif [ "${OS}" = "Linux" ]; then
   if has apt-get; then
@@ -157,6 +199,8 @@ elif [ "${OS}" = "Linux" ]; then
   fi
   has helm     || install_helm_linux
   has helmfile || install_helmfile_linux
+  has sops     || install_sops_linux
+  has age      || install_age_linux
   helm_diff_installed || install_helm_diff
 else
   missing "Unsupported OS: ${OS} — please install tools manually"
@@ -169,4 +213,6 @@ echo ""
 check kubectl  ""
 check helm     ""
 check helmfile ""
+check sops     ""
+check age      ""
 helm_diff_installed && ok "helm-diff  ($(helm diff version 2>/dev/null))" || missing "helm-diff  — install failed"
