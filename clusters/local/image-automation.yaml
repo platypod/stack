@@ -166,11 +166,14 @@ spec:
       author:
         email: flux@platypod.ovh
         name: fluxcdbot
-      messageTemplate: |
-        chore: automated image update
-
-        {{ range .Updated.Images }}- {{println . }}
-        {{ end -}}
+      # The `Updated` template field this used to reference was removed by
+      # Flux (v1 API) — `Changed` replaces it, but its exact struct shape
+      # wasn't worth guessing twice after getting `Updated` wrong the first
+      # time (this field errored the whole automation run, no commit at
+      # all, until fixed). The diff itself already shows exactly what
+      # changed; a static message is simpler and can't go stale again the
+      # same way.
+      messageTemplate: "chore: automated image update"
     push:
       branch: main
   update:
