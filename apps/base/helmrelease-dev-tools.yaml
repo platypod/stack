@@ -13,6 +13,7 @@ spec:
   chart:
     spec:
       chart: ./src/dev-tools
+      reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
         name: flux-system

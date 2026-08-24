@@ -14,6 +14,7 @@ spec:
   chart:
     spec:
       chart: ./src/games
+      reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
         name: flux-system

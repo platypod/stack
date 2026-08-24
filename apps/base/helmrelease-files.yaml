@@ -22,6 +22,7 @@ spec:
   chart:
     spec:
       chart: ./src/files
+      reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
         name: flux-system

@@ -31,6 +31,7 @@ spec:
   chart:
     spec:
       chart: ./src/persistence
+      reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
         name: flux-system

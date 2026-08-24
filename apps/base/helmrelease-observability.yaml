@@ -13,6 +13,7 @@ spec:
   chart:
     spec:
       chart: ./src/observability
+      reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
         name: flux-system
