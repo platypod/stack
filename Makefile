@@ -70,7 +70,7 @@ setup-age-key: ## Restore the SOPS age key from NFS, or generate + back it up (f
 # ---------------------------------------------------------------------------
 
 .PHONY: install-deps check-deps
-install-deps:  ## Install required tools (kubectl, helm, flux, sops, age — also helmfile/helm-diff, unused since Phase 8, not yet cleaned up)
+install-deps:  ## Install required tools (kubectl, helm, flux, sops, age)
 	sh bin/install-deps.sh
 
 check-deps:    ## Check which tools are installed without installing anything
