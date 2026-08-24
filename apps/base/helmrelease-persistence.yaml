@@ -12,6 +12,17 @@ spec:
   interval: 10m0s
   releaseName: local--platypod--persistence
   targetNamespace: local-platypod
+  # This module's PVCs use WaitForFirstConsumer binding (local-storage
+  # StorageClass) and are provisioned ahead of the pods that will actually
+  # consume them (media/games modules, ported later in Phase 4) — they're
+  # *supposed* to sit Pending until then. Helm's default --wait behavior
+  # (which Flux enables unless told otherwise) blocks the whole release on
+  # every PVC reaching Bound, which never happens here yet. Helmfile's
+  # `sync` never waited either — this matches that, not a Flux-only need.
+  install:
+    disableWait: true
+  upgrade:
+    disableWait: true
   chart:
     spec:
       chart: ./src/persistence
