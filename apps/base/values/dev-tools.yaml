@@ -303,7 +303,7 @@ wikijs:
       plain: 318c61c011d3c6e12949167a4c9c81b2acf6dbc5d74654bbccc11e5af8e04c27
       hashed: $argon2id$v=19$m=65536,t=3,p=4$XQL1zU2YSQzNSDCf5rLCeA$OkgBXbLISt8tQLKa6lQNAA905GKKSnpZaTSa6kdX7B8
     # The wikijs-oidc-seed hook Job seeds the OIDC strategy with key='authelia',
-    # and Wiki.js derives the callback as ${host}/login/${key}/callback — so this
+    # and Wiki.js derives the callback as $${host}/login/$${key}/callback — so this
     # redirect URI is deterministic.
     redirectUri: "https://{{ tpl .Values.wikijs.host . }}{{ .Values.k8s.names.urls.port }}/login/authelia/callback"
   ports:
