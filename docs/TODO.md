@@ -5,6 +5,31 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
 
 ## Soon
 
+- **`mediarvester` still tries to send telemetry to observability endpoints
+  that are now off on `local`.** Its `Deployment`
+  (`src/media/templates/mediarvester/mediarvester--deployment.yaml:90,96`)
+  hardcodes `OTEL_EXPORTER_OTLP_ENDPOINT`-style env vars pointing at
+  `otelCollector.gateway` (OTLP/gRPC) and `observability.profiles`
+  (Pyroscope continuous profiling — see `mediarvester/src/services/telemetry.py`),
+  neither gated behind the receiving service's own `enable` flag the way the
+  receiving side now is (2026-08-24, whole observability stack disabled on
+  `local`). Found auditing what points at observability from outside the
+  module while turning it off there — not the only such sender necessarily,
+  just the only one this specific audit surfaced (grep for
+  `OTEL_EXPORTER\|OTLP\|otelCollector.gateway` across `src/` outside
+  `src/observability/` to re-check if more show up later).
+  **Confirmed, not just assumed**: checked `mediarvester`'s live pod logs
+  (2026-08-24) — continuous `opentelemetry.exporter.otlp.proto.grpc.exporter`
+  WARNING/ERROR noise every ~1-4s (`Domain name not found` for
+  `opentelemetry-collector-gateway:4317`, metrics and traces both), but
+  **0 container restarts** — the OTel SDK's exporter is fire-and-forget as
+  expected, tolerates the endpoint being gone indefinitely without crashing
+  the app. Safe to leave disabled. Still worth cleaning up eventually: no
+  env-var toggle exists today to suppress the attempt (and the log spam)
+  cleanly — add one gated on `otelCollector.gateway.enable`/
+  `observability.profiles.enable` rather than leaving it retrying forever
+  into a void.
+
 - **Per-theme Mimir tenants (e.g. `k8s` / `ai` / `services`).** Right now Mimir is
   single-tenant (`multitenancy_enabled: false`) — *every* metric family (cluster
   infra: kubeletstats/traefik/k8s_cluster, `ai_tx_*` transcript telemetry,
