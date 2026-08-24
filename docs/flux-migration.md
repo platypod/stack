@@ -466,12 +466,14 @@ fixed now-broken command references in `docs/TODO.md`,
 `src/dev-tools/README.md`, `bin/README.md`, `bin/setup-local-dns.sh`,
 `stack/README.md`, `stack/CLAUDE.md`, and the top-level `platypod/README.md`.
 `install-deps`, `build`, `setup-*-dns`, and `proxy-*` targets survive
-untouched, as planned — though `install-deps.sh`'s own helmfile/helm-diff
-installation is now dead code, not yet removed (flagged as a follow-up, not
-blocking). `setup-local`'s bootstrap chain changed shape (Flux now brings up
-all 8 modules at once instead of a manual "base only" stage) but hasn't been
-exercised end-to-end since — the one real rebuild this migration did
-(Phase 3) predates the change.
+untouched, as planned. `install-deps.sh`'s dead helmfile/helm-diff install
+logic was removed in a later pass (see below). `setup-local`'s bootstrap
+chain changed shape (Flux now brings up all 8 modules at once instead of a
+manual "base only" stage) — verified live (2026-08-24, see
+docs/operations.md) by re-running the whole chain against the already-
+bootstrapped `local` cluster; every step idempotent and clean.
+`setup-local-tls.sh` had its own separate rot found in the same pass — see
+docs/operations.md for details, fixed alongside.
 
 **Phase 9 — image automation. Status: done.** `image-reflector-controller` +
 `image-automation-controller`, installed on `local` only (`prd` stays

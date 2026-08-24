@@ -45,11 +45,17 @@ make setup-local     # one-time per machine — see below
    internally. When the cluster is suspended, internet DNS falls through to
    `1.1.1.1`; `*.platypod.local` simply won't resolve.
 
-> This sequence hasn't been exercised end-to-end since Phase 8 retired the
-> Helmfile-driven `deploy-base` step it used to lean on — the one real
-> rebuild this migration did (Phase 3) predates it. If it needs fixing,
-> check each step's `flux get`/`kubectl get` output in order rather than
-> assuming the chain completed silently.
+> Verified 2026-08-24 by re-running every step live against the already-
+> bootstrapped `local` cluster (each one is idempotent, so this is a real
+> test even without a from-scratch rebuild): age key, TLS, CRDs, Flux
+> bootstrap, `flux-sops-secrets`, and the `apps` reconcile all completed
+> cleanly, all 8 `HelmRelease`s stayed healthy throughout. **Not** verified
+> from a genuinely empty cluster (destroy + apply) — the one real rebuild
+> this migration did (Phase 3) predates Phase 8's chain changes. `setup-
+> local-dns`'s interactive `sudo` prompt also still hasn't actually been run
+> on this machine (confirmed via `scutil --dns` — DNS is still on the
+> router default, not AdGuard) — a real, standing gap since Phase 3, not
+> new. Run it yourself: `make setup-local-dns`.
 
 Local's worker node can't run every service at once — most services outside
 `persistence`/`core`/`security` (the always-on base) are `enable: false` by
