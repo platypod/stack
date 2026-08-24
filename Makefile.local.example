@@ -11,7 +11,8 @@
 STATE_MOUNT := $(HOME)/nfs/platypod
 
 # Guard prod deploys/diffs against an unmounted share (the stack env token is
-# `prd`, not `prod`). dev keeps its in-repo values/dev/values.yaml.
+# `prd`, not `prod`). local's secrets come from platypod-sops, not this share
+# (see setup-age-key — STATE_MOUNT also backs up the SOPS age key).
 ifeq ($(ENV),prd)
   REQUIRE_VALUES := 1
 endif

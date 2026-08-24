@@ -59,6 +59,37 @@ link-values:   ## Symlink the env values.yaml to the NFS share  (ENV=prd)
 SOPS_AGE_KEY_FILE ?= $(HOME)/.config/sops/age/keys.txt
 export SOPS_AGE_KEY_FILE
 
+# Restores the age key from the NFS backup (STATE_MOUNT/sops-age-key.txt, set
+# in Makefile.local — see Makefile.local.example) if present; otherwise
+# generates a fresh one and prints the backup step, so a rebuilt/new machine
+# never has to be told this by hand. Safe to re-run: no-ops if the key file
+# already exists.
+.PHONY: setup-age-key
+setup-age-key: ## Restore the SOPS age key from NFS, or generate + back it up (first-ever setup only)
+	@if [ -f "$(SOPS_AGE_KEY_FILE)" ]; then \
+	  echo "Age key already present at $(SOPS_AGE_KEY_FILE) — nothing to do."; \
+	elif [ -n "$(STATE_MOUNT)" ] && [ -f "$(STATE_MOUNT)/sops-age-key.txt" ]; then \
+	  mkdir -p "$(dir $(SOPS_AGE_KEY_FILE))" && \
+	  cp "$(STATE_MOUNT)/sops-age-key.txt" "$(SOPS_AGE_KEY_FILE)" && \
+	  chmod 600 "$(SOPS_AGE_KEY_FILE)" && \
+	  echo "Restored age key from $(STATE_MOUNT)/sops-age-key.txt -> $(SOPS_AGE_KEY_FILE)"; \
+	elif [ -z "$(STATE_MOUNT)" ]; then \
+	  echo "ERROR: STATE_MOUNT not set — configure Makefile.local first (see Makefile.local.example)."; \
+	  echo "  Needed to check for an existing age key backup before generating a new"; \
+	  echo "  one — a new key can't decrypt anything already in platypod-sops."; \
+	  exit 1; \
+	else \
+	  echo "No backup found at $(STATE_MOUNT)/sops-age-key.txt — generating a NEW key"; \
+	  echo "(first-ever setup only; if platypod-sops already has encrypted secrets," ; \
+	  echo " STOP and find the real backup instead, or every secret must be re-encrypted)."; \
+	  mkdir -p "$(dir $(SOPS_AGE_KEY_FILE))" && \
+	  age-keygen -o "$(SOPS_AGE_KEY_FILE)" && \
+	  chmod 600 "$(SOPS_AGE_KEY_FILE)" && \
+	  cp "$(SOPS_AGE_KEY_FILE)" "$(STATE_MOUNT)/sops-age-key.txt" && \
+	  chmod 600 "$(STATE_MOUNT)/sops-age-key.txt" && \
+	  echo "Generated + backed up to $(STATE_MOUNT)/sops-age-key.txt"; \
+	fi
+
 # ../platypod-sops/stack/<env>/secrets.enc.yaml -> tmp/secrets/<env>.yaml.
 # Direct `sops -d`, not helmfile's native `secrets:` stanza — the
 # helm-secrets plugin it shells out to is currently broken on Helm v4 (see
@@ -103,9 +134,10 @@ setup-local-dns:  ## Set system DNS to Adguard (primary) + 1.1.1.1 (fallback); c
 setup-prod-dns:  ## Set system DNS to Adguard (prod) + 1.1.1.1 (fallback)
 	@KUBECONFIG=$(KUBECONFIG_prd) ENV=prd sh bin/setup-local-dns.sh
 
-setup-local: setup-local-tls install-crds  ## Full local bootstrap: TLS, CRDs, base deploy, DNS
+setup-local: setup-age-key setup-local-tls install-crds  ## Full local bootstrap: age key, TLS, CRDs, base deploy, DNS, Flux
 	@$(MAKE) --no-print-directory deploy-base
 	@$(MAKE) --no-print-directory setup-local-dns
+	@$(MAKE) --no-print-directory flux-bootstrap ENV=local
 
 # ---------------------------------------------------------------------------
 # Cluster bootstrap
@@ -114,16 +146,41 @@ setup-local: setup-local-tls install-crds  ## Full local bootstrap: TLS, CRDs, b
 TRAEFIK_VERSION ?= v3.5
 CSI_DRIVER_NFS_VERSION ?= 4.13.2
 
-.PHONY: install-crds install-csi
-install-crds:  ## Install Traefik CRDs on the cluster (TRAEFIK_VERSION=v3.5)
-	kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/$(TRAEFIK_VERSION)/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml
-	kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/$(TRAEFIK_VERSION)/docs/content/reference/dynamic-configuration/kubernetes-crd-rbac.yml
+# Traefik CRDs are vendored into infrastructure/crds/ (Flux's kustomize-
+# controller has no network access, so it can't fetch these live — see
+# docs/flux-migration.md gotcha 1). vendor-crds refreshes the vendored copy
+# from upstream (re-run when bumping TRAEFIK_VERSION); install-crds applies
+# that same vendored copy imperatively — one source of truth for both the
+# imperative and Flux-managed paths, and cluster bootstrap no longer depends
+# on raw.githubusercontent.com being reachable.
+.PHONY: vendor-crds install-crds install-csi
+vendor-crds:   ## Re-fetch the vendored Traefik CRDs from upstream (TRAEFIK_VERSION=v3.5)
+	curl -fsSL https://raw.githubusercontent.com/traefik/traefik/$(TRAEFIK_VERSION)/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml -o infrastructure/crds/traefik-crds.yaml
+	curl -fsSL https://raw.githubusercontent.com/traefik/traefik/$(TRAEFIK_VERSION)/docs/content/reference/dynamic-configuration/kubernetes-crd-rbac.yml -o infrastructure/crds/traefik-rbac.yaml
+	@echo "Vendored Traefik $(TRAEFIK_VERSION) CRDs -> infrastructure/crds/. Review the diff and commit."
+
+install-crds:  ## Apply the vendored Traefik CRDs to the cluster
+	kubectl apply -k infrastructure/crds/
 
 install-csi:   ## Install the NFS CSI driver (nfs.csi.k8s.io) — required for NFS-backed prod storage
 	helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
 	helm repo update csi-driver-nfs
 	helm upgrade --install csi-driver-nfs csi-driver-nfs/csi-driver-nfs \
 	  --namespace kube-system --version $(CSI_DRIVER_NFS_VERSION) --wait
+
+# Idempotent — safe to re-run (e.g. after rotating the deploy key, or to pick
+# up a new flux version). Adds a read-only deploy key to platypod/stack and
+# pushes clusters/$(ENV)/flux-system/* to main if not already present. Needs
+# `gh` authenticated (uses `gh auth token`) — see docs/flux-migration.md
+# Phase 3.
+.PHONY: flux-bootstrap
+flux-bootstrap: ## Bootstrap/reconcile Flux against clusters/$(ENV) (ENV=local)
+	GITHUB_TOKEN="$$(gh auth token)" flux bootstrap github \
+	  --owner=platypod \
+	  --repository=stack \
+	  --path=clusters/$(ENV) \
+	  --branch=main \
+	  --personal
 
 # ---------------------------------------------------------------------------
 # Deployment
