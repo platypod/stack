@@ -1,0 +1,31 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: core
+  namespace: local-platypod
+spec:
+  interval: 10m0s
+  releaseName: local--platypod--core
+  targetNamespace: local-platypod
+  dependsOn:
+    - name: persistence
+  chart:
+    spec:
+      chart: ./src/core
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+        namespace: flux-system
+  valuesFrom:
+    - kind: ConfigMap
+      name: platypod-substrate
+      valuesKey: substrate.yaml
+    - kind: ConfigMap
+      name: platypod-registry
+      valuesKey: registry.yaml
+    - kind: ConfigMap
+      name: platypod-core
+      valuesKey: core.yaml
+    - kind: Secret
+      name: platypod-secrets
+      valuesKey: platypod-secrets.yaml

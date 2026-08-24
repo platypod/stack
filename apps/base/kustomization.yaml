@@ -45,3 +45,5 @@ generatorOptions:
 
 resources:
   - helmrelease-persistence.yaml
+  - helmrelease-core.yaml
+  - helmrelease-security.yaml
