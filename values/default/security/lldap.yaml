@@ -6,15 +6,23 @@ lldap:
   baseDn: dc=platypod,dc=home
   # LLDAP always exposes its bind user as uid=admin,ou=people,<baseDn>.
   adminUser: admin
-  adminPassword: password
-  jwtSecret: eeaec9bbe54597b5e9cb767a0db1f72ca146be3ec83fde39905444773adbd1e6
+  # Placeholder — real value comes from values/<env>/values.yaml (gitignored)
+  # or the SOPS-encrypted secrets repo. Guarded at render time in
+  # src/security/templates/lldap/lldap--deployment.yaml.
+  adminPassword: verySecretMuchSecureNeverGonnaBeGuessedAdminPassword
+  # Placeholder — real value comes from values/<env>/values.yaml (gitignored)
+  # or the SOPS-encrypted secrets repo. Guarded at render time in
+  # src/security/templates/lldap/lldap--deployment.yaml.
+  jwtSecret: verySecretMuchSecureNeverGonnaBeGuessedJwtSecret
   database:
     image: postgres:17
     name: "{{ .Values.lldap.label }}"
     label: "{{ .Values.lldap.label }}-db"
     credentials:
       username: admin
-      password: password
+      # Internal-only Postgres sidecar, not network-exposed — placeholder,
+      # real value comes from values/<env>/values.yaml (gitignored).
+      password: verySecretMuchSecureNeverGonnaBeGuessedLldapDbPassword
     ports:
       http:
         name: pgsql
@@ -64,14 +72,16 @@ lldap:
       - id: dave
         email: dave.thedev@gmail.com
         displayName: dave
-        password: davethedev
+        # Placeholder — dev/local fixture user, real value per env if used.
+        password: verySecretMuchSecureNeverGonnaBeGuessedDavePassword
         groups:
           - dev_user
           - otel_writer   # may ship his own telemetry (tenant claude-dave)
       - id: guest
         email: gues@ty.pod
         displayName: guesto
-        password: guest-password
+        # Placeholder — dev/local fixture user, real value per env if used.
+        password: verySecretMuchSecureNeverGonnaBeGuessedGuestPassword
         groups: []
       # Non-interactive service account for OTLP/gRPC telemetry ingestion
       # (native Claude Code telemetry / non-human shippers). Member of
@@ -83,7 +93,8 @@ lldap:
       - id: otel-telemetry
         email: otel-telemetry@platypod.local
         displayName: OTEL Telemetry
-        password: otel-telemetry-secret
+        # Placeholder — real value comes from values/<env>/values.yaml (gitignored).
+        password: verySecretMuchSecureNeverGonnaBeGuessedOtelTelemetryPassword
         groups:
           - otel_writer
       # Read-only service account for the Grafana datasource scope shim: looks up
@@ -93,7 +104,9 @@ lldap:
       - id: grafana-authz
         email: grafana-authz@platypod.local
         displayName: Grafana Authz
-        password: grafana-authz-secret
+        # Placeholder — must match values/default/observability/scope-shim.yaml
+        # lldap.password. Real value comes from values/<env>/values.yaml.
+        password: verySecretMuchSecureNeverGonnaBeGuessedGrafanaAuthzPassword
         groups:
           - lldap_strict_readonly
       # Read-only bind account for the Jellyfin LDAP-Auth plugin. Same
@@ -102,7 +115,9 @@ lldap:
       - id: jellyfin-ldap
         email: jellyfin-ldap@platypod.local
         displayName: Jellyfin LDAP
-        password: jellyfin-ldap-secret
+        # Placeholder — must match values/default/media/jellyfin.yaml
+        # ldap.bindPassword. Real value comes from values/<env>/values.yaml.
+        password: verySecretMuchSecureNeverGonnaBeGuessedJellyfinLdapPassword
         groups:
           - lldap_strict_readonly
   replicasNb: 1

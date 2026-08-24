@@ -7,7 +7,9 @@ authelia:
     logQueries: false
     credentials:
       username: admin
-      password: password
+      # Internal-only Postgres sidecar, not network-exposed — placeholder,
+      # real value comes from values/<env>/values.yaml (gitignored).
+      password: verySecretMuchSecureNeverGonnaBeGuessedAutheliaDbPassword
     # Distinct from authelia.storage.pvc (used by redis) so the two can be
     # repointed independently — on prod this goes to a dedicated local volume,
     # redis stays on the shared apps volume.

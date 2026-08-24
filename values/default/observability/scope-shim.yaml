@@ -30,7 +30,10 @@ observability:
       # Must match the grafana-authz seed account in security/lldap.yaml
       # (member of lldap_strict_readonly: read-all, no write).
       user: grafana-authz
-      password: grafana-authz-secret
+      # Placeholder — must match the grafana-authz seed user's password in
+      # values/default/security/lldap.yaml. Real value comes from
+      # values/<env>/values.yaml (gitignored).
+      password: verySecretMuchSecureNeverGonnaBeGuessedGrafanaAuthzPassword
     # Shared secret Grafana sends as a custom datasource header; the shim rejects
     # requests without it. CNI-independent lockdown (flannel doesn't enforce
     # NetworkPolicy). Override per-env if desired.

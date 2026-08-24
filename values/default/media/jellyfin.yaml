@@ -40,7 +40,10 @@ jellyfin:
     # Bind account: must match the jellyfin-ldap seed account in
     # security/lldap.yaml (member of lldap_strict_readonly: read-all, no write).
     bindUser: jellyfin-ldap
-    bindPassword: jellyfin-ldap-secret
+    # Placeholder — must match the jellyfin-ldap seed user's password in
+    # values/default/security/lldap.yaml. Real value comes from
+    # values/<env>/values.yaml (gitignored).
+    bindPassword: verySecretMuchSecureNeverGonnaBeGuessedJellyfinLdapPassword
     # LLDAP groups whose members may log into Jellyfin at all (OR'd into one
     # LDAP filter by jellyfin-plugins-setup) — granular + category composite +
     # the global superuser, per values/default/security/access-groups.yaml.

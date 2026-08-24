@@ -1,4 +1,10 @@
 {{- $pod := print .Values.k8s.names.pods.prefix .Values.lldap.label .Values.k8s.names.pods.suffix }}
+{{- if eq .Values.lldap.jwtSecret "verySecretMuchSecureNeverGonnaBeGuessedJwtSecret" }}
+{{- fail "lldap.jwtSecret is still the placeholder — set a real value in values/<env>/values.yaml" }}
+{{- end }}
+{{- if eq .Values.lldap.adminPassword "verySecretMuchSecureNeverGonnaBeGuessedAdminPassword" }}
+{{- fail "lldap.adminPassword is still the placeholder — set a real value in values/<env>/values.yaml" }}
+{{- end }}
 
 apiVersion: apps/v1
 kind: Deployment
