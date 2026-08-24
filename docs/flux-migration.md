@@ -501,9 +501,44 @@ actually renders (`helm template` + `kubectl kustomize` both checked
 clean) before trusting it. All 5 `ImagePolicy` objects resolved correctly
 to the exact versions already pinned (nothing was actually behind), and
 `ImageUpdateAutomation`'s first run reported "repository up-to-date" with
-no commit pushed — confirms the read path end-to-end; the actual
-bump-and-redeploy path is unverified until a real new tag appears (nothing
-to test it against yet).
+no commit pushed — confirmed the read path end-to-end at the time.
+
+**Bump-and-redeploy path verified for real, 2026-08-24**, using
+`unbegotten` (3 genuine unreleased commits already pushed, tagged
+`v0.15.2` specifically to test this): GHCR build completed → next
+`ImageRepository` scan found the tag → `ImagePolicy` resolved it as latest
+→ `ImageUpdateAutomation` committed and pushed `f611b173` to `main` →
+`games`'s `HelmRelease` picked it up and upgraded cleanly (revision
+`f611b173ffe9`, `Helm upgrade succeeded`) → the live release's own values
+confirm `image: ghcr.io/platypod/unbegotten:v0.15.2` deployed. (`unbegotten`
+itself is `enable: false` on `local` — pre-existing, unrelated to this
+test — so no pod actually runs it there; the chart-level pin and Helm
+release update are what this test targets, and both are confirmed.)
+
+Two real bugs found running this for the first time:
+- **`ImageUpdateAutomation.spec.git.commit.messageTemplate` referenced
+  `.Updated.Images` — a field Flux's `v1` image API removed** in favor of
+  `.Changed`. This isn't a soft deprecation: the template error failed the
+  **entire automation run**, silently, with no commit at all — not even a
+  degraded one without the intended message. `flux get image update`
+  surfaced it clearly once actually looked at
+  (`template uses removed '.Updated' field`), but nothing about the first
+  "repository up-to-date" result had hinted anything was wrong — that
+  message is also what a genuinely-nothing-to-do run reports, so a broken
+  template and a quiet cluster look identical until something is actually
+  behind. Fixed with a static `messageTemplate` (no field access) rather
+  than guessing `.Changed`'s exact struct shape after getting `.Updated`
+  wrong once already — the commit's diff already shows what changed.
+- **The `Setters` strategy re-serializes the WHOLE target file, not just
+  the matched line.** The automated commit correctly bumped
+  `unbegotten`'s pin, but also reformatted unrelated parts of
+  `apps/base/values/games.yaml` in the same commit — stripped blank lines
+  between top-level keys, normalized `#` comment spacing (`""  #`  →
+  `"" #`). Cosmetic, not a functional break (YAML is still valid, Helm
+  parses it identically), but real, visible diff noise on every future
+  automated commit, touching lines nowhere near the actual bump. Worth
+  knowing before being surprised by a "why did this commit touch 40
+  unrelated lines" moment later.
 
 ## Gotchas requiring empirical verification
 
