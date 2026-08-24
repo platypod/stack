@@ -4,7 +4,7 @@ kind: IngressRoute
 metadata:
   name: {{ .Values.k8s.names.ingresses.prefix }}{{ .Values.observability.dashboard.label }}{{ .Values.k8s.names.ingresses.suffix }}
   labels:
-    chartVersion: {{ .Chart.Version }}
+    chartVersion: {{ .Chart.Version | replace "+" "_" }}
     env: {{ .Values.project.env }}
 
 spec:

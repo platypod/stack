@@ -25,7 +25,7 @@ kind: PriorityClass
 metadata:
   name: {{ .name }}
   labels:
-    chartVersion: {{ $.Chart.Version }}
+    chartVersion: {{ $.Chart.Version | replace "+" "_" }}
     env: {{ $.Values.project.env }}
 # `| int` is mandatory: Helm parses YAML numbers as float64, so interpolating
 # the raw value renders 1000000 as "1e+06" and the API server rejects it —

@@ -11,7 +11,7 @@ kind: IngressRoute
 metadata:
   name: {{ .Values.k8s.names.ingresses.prefix }}{{ tpl .Values.observability.otelCollector.gateway.label . }}-grpc{{ .Values.k8s.names.ingresses.suffix }}
   labels:
-    chartVersion: {{ .Chart.Version }}
+    chartVersion: {{ .Chart.Version | replace "+" "_" }}
     env: {{ .Values.project.env }}
 
 spec:

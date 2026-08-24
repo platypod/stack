@@ -67,7 +67,7 @@ spec:
           - --providers.kubernetescrd=true
           # provider: kubernetes
           - --providers.kubernetesingress.allowEmptyServices=true
-          - --providers.kubernetesingress.labelselector=chartVersion={{ .Chart.Version }},env={{ .Values.project.env }}
+          - --providers.kubernetesingress.labelselector=chartVersion={{ .Chart.Version | replace "+" "_" }},env={{ .Values.project.env }}
           - --providers.kubernetesingress.namespaces={{ .Values.k8s.namespace }}
           # dashboard
           - --api.insecure=true
