@@ -1,0 +1,8 @@
+# Local-only override of the cyber-chef image pin — same pattern as
+# media-image.yaml, layered onto HelmRelease/dev-tools. Written by the
+# `apps-local-overlay` ImageUpdateAutomation
+# (clusters/local/image-automation.yaml), whose `cyber-chef-local`
+# ImagePolicy admits prereleases; apps/base's own pin (managed separately,
+# by prod's own automation) never does.
+cyberChef:
+  image: ghcr.io/platypod/cyber-chef:v11.0.0 # {"$imagepolicy": "flux-system:cyber-chef-local"}

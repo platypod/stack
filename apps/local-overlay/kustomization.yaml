@@ -1,8 +1,11 @@
 # Overlay on top of ../base, local-cluster-only: layers a second ConfigMap
-# on the `media` HelmRelease that overrides just the mediarvester image pin,
-# so local can track ahead of apps/base/values/media.yaml (including
+# on each affected HelmRelease that overrides just that module's image
+# pin(s), so local can track ahead of apps/base/values/*.yaml (including
 # prerelease/-dev builds) without touching what prod reads directly out of
-# apps/base. Referenced by clusters/local/apps.yaml's spec.path.
+# apps/base. Referenced by clusters/local/apps.yaml's spec.path. One
+# override file + patch per module that has an automated image: media
+# (mediarvester), games (pokeclicker, unbegotten), dev-tools (cyber-chef),
+# files (transmission-exporter).
 #
 # Lives here (apps/local-overlay), a sibling of apps/base, NOT nested inside
 # clusters/local/ — clusters/local/ has no kustomization.yaml of its own, so
@@ -31,6 +34,15 @@ configMapGenerator:
   - name: platypod-media-local-override
     files:
       - media-image.yaml=media-image.yaml
+  - name: platypod-games-local-override
+    files:
+      - games-image.yaml=games-image.yaml
+  - name: platypod-dev-tools-local-override
+    files:
+      - dev-tools-image.yaml=dev-tools-image.yaml
+  - name: platypod-files-local-override
+    files:
+      - files-image.yaml=files-image.yaml
 
 generatorOptions:
   disableNameSuffixHash: false
@@ -40,3 +52,15 @@ patches:
       kind: HelmRelease
       name: media
     path: media-valuesfrom-patch.yaml
+  - target:
+      kind: HelmRelease
+      name: games
+    path: games-valuesfrom-patch.yaml
+  - target:
+      kind: HelmRelease
+      name: dev-tools
+    path: dev-tools-valuesfrom-patch.yaml
+  - target:
+      kind: HelmRelease
+      name: files
+    path: files-valuesfrom-patch.yaml

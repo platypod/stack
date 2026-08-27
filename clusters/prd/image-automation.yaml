@@ -1,28 +1,28 @@
-# Prod's own image update automation, mediarvester only for now — mirrors
-# clusters/local/image-automation.yaml's shape, but final releases only
-# (no "-0" prerelease opt-in on the ImagePolicy range below), and writes
-# straight into apps/base/values/media.yaml (the SAME file local's own
-# `mediarvester` ImagePolicy/marker there already targets, and local's
+# Prod's own image update automation, all 5 images — mirrors
+# clusters/local/image-automation.yaml's ImageRepository set, but final
+# releases only (no "-0" prerelease opt-in on any ImagePolicy range below),
+# and writes straight into apps/base/values/*.yaml (the SAME files local's
+# own plain ImagePolicy/markers there already target, and local's
 # ImageUpdateAutomation for ./apps/base/values also already covers) — no
 # conflict, because both clusters computing the same final-release value
 # converge on an identical write; the two only diverge once local layers
 # its own apps/local-overlay override on top for its own deployment, which
 # prod never reads. See apps/local-overlay/kustomization.yaml and
-# clusters/local/image-automation.yaml's `mediarvester-local` objects for
-# the local side of this split.
+# clusters/local/image-automation.yaml's `<image>-local` objects for the
+# local side of this split.
 #
-# update.path below (./apps/base/values) also contains the OTHER 4 images'
-# $imagepolicy markers (cyber-chef/pokeclicker/unbegotten/transmission-exporter),
-# and this cluster has no matching ImagePolicy objects for those yet (only
-# mediarvester, until that's generalized). Per Flux's documented multi-owner
-# marker model, a Setters run is expected to silently skip any marker whose
-# referenced ImagePolicy doesn't resolve rather than fail the whole run —
-# but CONFIRM this empirically against this ImageUpdateAutomation's own
-# status/conditions and the image-automation-controller's logs the first
-# time this reconciles for real, rather than trusting that unverified.
+# Started mediarvester-only, generalized to all 5 once that path was
+# verified live end-to-end (2026-08-27): update.path below
+# (./apps/base/values) covers every image's marker now, matching local's
+# own ImageUpdateAutomation's scope for that same directory. Confirmed
+# empirically during the mediarvester-only period that a Setters run
+# silently skips (doesn't fail on) a marker whose ImagePolicy isn't
+# resolvable in-cluster — this ImageUpdateAutomation reported
+# "repository up-to-date" the whole time only mediarvester's ImagePolicy
+# existed here, never an error for the other 4.
 #
 # Needs its own read-write deploy key, same Make target used for local:
-# `make image-automation-deploy-key ENV=prd`.
+# `make image-automation-deploy-key ENV=prd` (already run once; idempotent).
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
 metadata:
@@ -39,15 +39,66 @@ spec:
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageRepository
 metadata:
+  name: cyber-chef
+  namespace: flux-system
+spec:
+  image: ghcr.io/platypod/cyber-chef
+  interval: 1h0m0s
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
   name: mediarvester
   namespace: flux-system
 spec:
   image: ghcr.io/platypod/mediarvester
   interval: 1h0m0s
 ---
-# No "-0" suffix on the range — a plain semver range never matches a
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: pokeclicker
+  namespace: flux-system
+spec:
+  image: ghcr.io/platypod/pokeclicker
+  interval: 1h0m0s
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: unbegotten
+  namespace: flux-system
+spec:
+  image: ghcr.io/platypod/unbegotten
+  interval: 1h0m0s
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: transmission-exporter
+  namespace: flux-system
+spec:
+  image: ghcr.io/platypod/transmission-exporter
+  interval: 1h0m0s
+---
+# No "-0" suffix on any range below — a plain semver range never matches a
 # prerelease version (Masterminds/Flux semantics), so this naturally
 # excludes any `-dev.N`-suffixed tag. Final releases only, by construction.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: cyber-chef
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: cyber-chef
+  policy:
+    semver:
+      range: ">=0.0.0"
+  filterTags:
+    pattern: '^v(?P<version>.*)$'
+    extract: '$version'
+---
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImagePolicy
 metadata:
@@ -62,6 +113,50 @@ spec:
   filterTags:
     pattern: '^v(?P<version>.*)$'
     extract: '$version'
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: pokeclicker
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: pokeclicker
+  policy:
+    semver:
+      range: ">=0.0.0"
+  filterTags:
+    pattern: '^v(?P<version>.*)$'
+    extract: '$version'
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: unbegotten
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: unbegotten
+  policy:
+    semver:
+      range: ">=0.0.0"
+  filterTags:
+    pattern: '^v(?P<version>.*)$'
+    extract: '$version'
+---
+# No filterTags — transmission-exporter's tags are bare X.Y.Z (no "v"
+# prefix), already valid semver as-is.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: transmission-exporter
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: transmission-exporter
+  policy:
+    semver:
+      range: ">=0.0.0"
 ---
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageUpdateAutomation

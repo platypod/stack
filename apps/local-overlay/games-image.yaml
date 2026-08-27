@@ -1,0 +1,10 @@
+# Local-only override of the pokeclicker/unbegotten image pins — same
+# pattern as media-image.yaml, layered onto HelmRelease/games. Written by
+# the `apps-local-overlay` ImageUpdateAutomation
+# (clusters/local/image-automation.yaml), whose `pokeclicker-local`/
+# `unbegotten-local` ImagePolicies admit prereleases; apps/base's own pins
+# (managed separately, by prod's own automation) never do.
+pokeclicker:
+  image: ghcr.io/platypod/pokeclicker:v0.10.25 # {"$imagepolicy": "flux-system:pokeclicker-local"}
+unbegotten:
+  image: ghcr.io/platypod/unbegotten:v0.15.2 # {"$imagepolicy": "flux-system:unbegotten-local"}

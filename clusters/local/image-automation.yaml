@@ -1,9 +1,11 @@
 # Phase 9 — image update automation. See stack/docs/flux-migration.md for
 # the full design/rationale. prd now runs its own separate instance of this
-# too (clusters/prd/image-automation.yaml) — mediarvester only so far, with
-# a final-releases-only ImagePolicy. This file stays local's: everything
-# here tracks ahead, including prereleases, via the extra
-# `mediarvester-local` ImagePolicy/ImageUpdateAutomation pair below.
+# too (clusters/prd/image-automation.yaml), one ImageRepository/ImagePolicy
+# per image, final-releases-only. This file stays local's: everything here
+# tracks ahead, including prereleases, via the 5 extra `<image>-local`
+# ImagePolicy objects below feeding the single `apps-local-overlay`
+# ImageUpdateAutomation (all 5 images generalized from the mediarvester-only
+# pattern proven first).
 #
 # Separate GitRepository with its OWN read-write deploy key
 # (image-automation-deploy-key Make target) — deliberately not reusing
@@ -148,15 +150,16 @@ spec:
     semver:
       range: ">=0.0.0"
 ---
-# Local-only, mediarvester-specific: same ImageRepository as the plain
-# `mediarvester` policy above, but this range ends in "-0" — the
-# Masterminds/Flux idiom for "also match prereleases" (a range with no
-# prerelease component silently never matches a `-dev.N` tag, which is why
-# the plain policy above never picks one up). Feeds
-# clusters/local/apps-overlay/media-image.yaml's own marker, distinct from
-# apps/base/values/media.yaml's (prod-authoritative) one, so local can move
-# ahead to a prerelease while prod stays on the last final release. See
-# clusters/prd/image-automation.yaml for the prod side.
+# The 5 "-local" policies below all reuse the SAME ImageRepository objects
+# above — only the range differs, ending in "-0" (Masterminds/Flux idiom
+# for "also match prereleases": a range with no prerelease component
+# silently never matches a `-dev.N` tag, which is why the plain policies
+# above never pick one up). Each feeds its own marker under
+# apps/local-overlay/, distinct from apps/base/values/*.yaml's
+# (prod-authoritative) ones, so local can move ahead to a prerelease while
+# prod stays on the last final release. See clusters/prd/image-automation.yaml
+# for the prod side (one plain, final-only ImagePolicy per image, no "-local"
+# counterpart needed there).
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImagePolicy
 metadata:
@@ -171,6 +174,63 @@ spec:
   filterTags:
     pattern: '^v(?P<version>.*)$'
     extract: '$version'
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: cyber-chef-local
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: cyber-chef
+  policy:
+    semver:
+      range: ">=0.0.0-0"
+  filterTags:
+    pattern: '^v(?P<version>.*)$'
+    extract: '$version'
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: pokeclicker-local
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: pokeclicker
+  policy:
+    semver:
+      range: ">=0.0.0-0"
+  filterTags:
+    pattern: '^v(?P<version>.*)$'
+    extract: '$version'
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: unbegotten-local
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: unbegotten
+  policy:
+    semver:
+      range: ">=0.0.0-0"
+  filterTags:
+    pattern: '^v(?P<version>.*)$'
+    extract: '$version'
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: transmission-exporter-local
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: transmission-exporter
+  policy:
+    semver:
+      range: ">=0.0.0-0"
 ---
 # Pushes straight to main (no separate branch) — local already tracks main
 # continuously, and prd's tag gate is the real review point, unaffected by
@@ -209,16 +269,19 @@ spec:
 ---
 # Second, separate ImageUpdateAutomation — deliberately NOT a change to the
 # one above. That one's update.path (./apps/base/values) has to keep
-# covering cyber-chef/pokeclicker/unbegotten/transmission-exporter; pointing
-# it at the new overlay instead (rather than adding this second object)
-# would silently stop auto-updating those 4. This one only ever touches
-# apps/local-overlay/media-image.yaml, so it can never race with prod's own
-# automation writing into apps/base/values/media.yaml — the two
-# update.paths don't overlap.
+# covering the prod-authoritative pins; pointing it at the new overlay
+# instead (rather than adding this second object) would silently stop
+# auto-updating those. This one covers ALL FIVE images' local-only override
+# markers under apps/local-overlay/ (one file per module: media-image.yaml,
+# games-image.yaml, dev-tools-image.yaml, files-image.yaml) — Setters
+# strategy scans the whole directory, so adding a new marker file there
+# needs no change to this object, only a new ImagePolicy above + a new
+# override file + patch. Can never race with prod's own automation writing
+# into apps/base/values/*.yaml — the two update.paths don't overlap.
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageUpdateAutomation
 metadata:
-  name: mediarvester-local
+  name: apps-local-overlay
   namespace: flux-system
 spec:
   interval: 30m0s
@@ -233,7 +296,7 @@ spec:
       author:
         email: flux@platypod.ovh
         name: fluxcdbot
-      messageTemplate: "chore: automated local mediarvester image update"
+      messageTemplate: "chore: automated local image update"
     push:
       branch: main
   update:

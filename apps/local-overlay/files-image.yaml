@@ -1,0 +1,10 @@
+# Local-only override of the transmission-exporter image pin — same
+# pattern as media-image.yaml, layered onto HelmRelease/files. Written by
+# the `apps-local-overlay` ImageUpdateAutomation
+# (clusters/local/image-automation.yaml), whose `transmission-exporter-local`
+# ImagePolicy admits prereleases; apps/base's own pin (managed separately,
+# by prod's own automation) never does. Nested under transmission.exporter,
+# matching apps/base/values/files.yaml's own key path exactly.
+transmission:
+  exporter:
+    image: ghcr.io/platypod/transmission-exporter:0.3.0 # {"$imagepolicy": "flux-system:transmission-exporter-local"}
