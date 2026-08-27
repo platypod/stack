@@ -1,0 +1,89 @@
+# Prod's own image update automation, mediarvester only for now — mirrors
+# clusters/local/image-automation.yaml's shape, but final releases only
+# (no "-0" prerelease opt-in on the ImagePolicy range below), and writes
+# straight into apps/base/values/media.yaml (the SAME file local's own
+# `mediarvester` ImagePolicy/marker there already targets, and local's
+# ImageUpdateAutomation for ./apps/base/values also already covers) — no
+# conflict, because both clusters computing the same final-release value
+# converge on an identical write; the two only diverge once local layers
+# its own apps/local-overlay override on top for its own deployment, which
+# prod never reads. See apps/local-overlay/kustomization.yaml and
+# clusters/local/image-automation.yaml's `mediarvester-local` objects for
+# the local side of this split.
+#
+# update.path below (./apps/base/values) also contains the OTHER 4 images'
+# $imagepolicy markers (cyber-chef/pokeclicker/unbegotten/transmission-exporter),
+# and this cluster has no matching ImagePolicy objects for those yet (only
+# mediarvester, until that's generalized). Per Flux's documented multi-owner
+# marker model, a Setters run is expected to silently skip any marker whose
+# referenced ImagePolicy doesn't resolve rather than fail the whole run —
+# but CONFIRM this empirically against this ImageUpdateAutomation's own
+# status/conditions and the image-automation-controller's logs the first
+# time this reconciles for real, rather than trusting that unverified.
+#
+# Needs its own read-write deploy key, same Make target used for local:
+# `make image-automation-deploy-key ENV=prd`.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: stack-image-automation
+  namespace: flux-system
+spec:
+  interval: 5m0s
+  ref:
+    branch: main
+  secretRef:
+    name: stack-image-automation-deploy-key
+  url: ssh://git@github.com/platypod/stack
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: mediarvester
+  namespace: flux-system
+spec:
+  image: ghcr.io/platypod/mediarvester
+  interval: 1h0m0s
+---
+# No "-0" suffix on the range — a plain semver range never matches a
+# prerelease version (Masterminds/Flux semantics), so this naturally
+# excludes any `-dev.N`-suffixed tag. Final releases only, by construction.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: mediarvester
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: mediarvester
+  policy:
+    semver:
+      range: ">=0.0.0"
+  filterTags:
+    pattern: '^v(?P<version>.*)$'
+    extract: '$version'
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageUpdateAutomation
+metadata:
+  name: flux-system
+  namespace: flux-system
+spec:
+  interval: 30m0s
+  sourceRef:
+    kind: GitRepository
+    name: stack-image-automation
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        email: flux@platypod.ovh
+        name: fluxcdbot
+      messageTemplate: "chore: automated image update"
+    push:
+      branch: main
+  update:
+    path: ./apps/base/values
+    strategy: Setters

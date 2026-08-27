@@ -148,11 +148,14 @@ install-crds:  ## Apply the vendored Traefik CRDs to the cluster
 # `gh` authenticated (uses `gh auth token`) — see docs/flux-migration.md
 # Phase 3.
 #
-# image-reflector-controller/image-automation-controller only on local —
-# they're driven by pushing to main, which only local tracks continuously;
-# prd stays tag-gated and doesn't need them running idle. See Phase 9.
+# image-reflector-controller/image-automation-controller now on both —
+# prd runs its own separate instance (clusters/prd/image-automation.yaml),
+# mediarvester only so far, final releases only. prd's top-level
+# flux-system GitRepository moved from a semver-tag ref to branch:main to
+# see the commits its own automation makes (see gotk-sync.yaml comment) —
+# the old "prd stays tag-gated" design is retired.
 COMPONENTS_EXTRA_local := --components-extra=image-reflector-controller,image-automation-controller
-COMPONENTS_EXTRA_prd   :=
+COMPONENTS_EXTRA_prd   := --components-extra=image-reflector-controller,image-automation-controller
 .PHONY: flux-bootstrap
 flux-bootstrap: ## Bootstrap/reconcile Flux against clusters/$(ENV) (ENV=local)
 	GITHUB_TOKEN="$$(gh auth token)" flux bootstrap github \

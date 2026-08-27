@@ -1,0 +1,10 @@
+# Local-only override of the mediarvester image pin — layered on top of
+# ../base/values/media.yaml's own (prod-authoritative) pin via
+# kustomization.yaml's valuesFrom patch, which appends this last so it wins
+# the merge for local's HelmRelease only. Written by the
+# `mediarvester-local` ImageUpdateAutomation (clusters/local/image-automation.yaml),
+# whose ImagePolicy admits prereleases — this can move ahead to a `-dev`
+# build; apps/base's own pin (managed separately, by prod's own automation)
+# never does.
+mediarvester:
+  image: ghcr.io/platypod/mediarvester:v1.8.0 # {"$imagepolicy": "flux-system:mediarvester-local"}

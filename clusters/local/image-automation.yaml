@@ -1,6 +1,9 @@
 # Phase 9 — image update automation. See stack/docs/flux-migration.md for
-# the full design/rationale. local only — prd stays tag-gated and doesn't
-# need these controllers running idle (see stack/Makefile's flux-bootstrap).
+# the full design/rationale. prd now runs its own separate instance of this
+# too (clusters/prd/image-automation.yaml) — mediarvester only so far, with
+# a final-releases-only ImagePolicy. This file stays local's: everything
+# here tracks ahead, including prereleases, via the extra
+# `mediarvester-local` ImagePolicy/ImageUpdateAutomation pair below.
 #
 # Separate GitRepository with its OWN read-write deploy key
 # (image-automation-deploy-key Make target) — deliberately not reusing
@@ -145,6 +148,30 @@ spec:
     semver:
       range: ">=0.0.0"
 ---
+# Local-only, mediarvester-specific: same ImageRepository as the plain
+# `mediarvester` policy above, but this range ends in "-0" — the
+# Masterminds/Flux idiom for "also match prereleases" (a range with no
+# prerelease component silently never matches a `-dev.N` tag, which is why
+# the plain policy above never picks one up). Feeds
+# clusters/local/apps-overlay/media-image.yaml's own marker, distinct from
+# apps/base/values/media.yaml's (prod-authoritative) one, so local can move
+# ahead to a prerelease while prod stays on the last final release. See
+# clusters/prd/image-automation.yaml for the prod side.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: mediarvester-local
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: mediarvester
+  policy:
+    semver:
+      range: ">=0.0.0-0"
+  filterTags:
+    pattern: '^v(?P<version>.*)$'
+    extract: '$version'
+---
 # Pushes straight to main (no separate branch) — local already tracks main
 # continuously, and prd's tag gate is the real review point, unaffected by
 # anything landing here. Scoped to apps/base/values/ only.
@@ -178,4 +205,37 @@ spec:
       branch: main
   update:
     path: ./apps/base/values
+    strategy: Setters
+---
+# Second, separate ImageUpdateAutomation — deliberately NOT a change to the
+# one above. That one's update.path (./apps/base/values) has to keep
+# covering cyber-chef/pokeclicker/unbegotten/transmission-exporter; pointing
+# it at the new overlay instead (rather than adding this second object)
+# would silently stop auto-updating those 4. This one only ever touches
+# apps/local-overlay/media-image.yaml, so it can never race with prod's own
+# automation writing into apps/base/values/media.yaml — the two
+# update.paths don't overlap.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageUpdateAutomation
+metadata:
+  name: mediarvester-local
+  namespace: flux-system
+spec:
+  interval: 30m0s
+  sourceRef:
+    kind: GitRepository
+    name: stack-image-automation
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        email: flux@platypod.ovh
+        name: fluxcdbot
+      messageTemplate: "chore: automated local mediarvester image update"
+    push:
+      branch: main
+  update:
+    path: ./apps/local-overlay
     strategy: Setters

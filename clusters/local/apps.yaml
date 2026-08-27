@@ -6,6 +6,14 @@
 # every resource's metadata.namespace (ConfigMaps + HelmReleases alike),
 # and postBuild.substitute resolves the ${env} tokens in each HelmRelease's
 # releaseName/targetNamespace. See stack/docs/flux-migration.md Phase 7.
+#
+# path is ./apps/local-overlay, not ./apps/base directly — that overlay
+# wraps apps/base and layers local's own mediarvester image override on top
+# (see apps/local-overlay/kustomization.yaml). apps/base/values/media.yaml
+# itself is prod-authoritative now; local always tracks ahead of it via the
+# overlay. The overlay deliberately lives under apps/, not nested inside
+# clusters/local/ — see apps/local-overlay/kustomization.yaml's own comment
+# for why that would break this cluster's own top-level Kustomization.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -13,7 +21,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 10m0s
-  path: ./apps/base
+  path: ./apps/local-overlay
   prune: true
   targetNamespace: local-platypod
   postBuild:

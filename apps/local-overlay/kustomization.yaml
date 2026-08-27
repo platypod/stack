@@ -1,0 +1,42 @@
+# Overlay on top of ../base, local-cluster-only: layers a second ConfigMap
+# on the `media` HelmRelease that overrides just the mediarvester image pin,
+# so local can track ahead of apps/base/values/media.yaml (including
+# prerelease/-dev builds) without touching what prod reads directly out of
+# apps/base. Referenced by clusters/local/apps.yaml's spec.path.
+#
+# Lives here (apps/local-overlay), a sibling of apps/base, NOT nested inside
+# clusters/local/ — clusters/local/ has no kustomization.yaml of its own, so
+# Flux's kustomize-controller auto-generates one for it that recursively
+# globs every YAML file under that path as a flat, standalone manifest. A
+# kustomization.yaml (and this dir's plain values files, which have no
+# apiVersion/kind at all) nested in there would get swept into that same
+# flat apply and fail — verified this the hard way by initially nesting it
+# under clusters/local/ and re-deriving why it had to move.
+#
+# No `configurations:` override here — Kustomize applies apps/base's own
+# kustomizeconfig.yaml (its nameReference teaching, see that file's comment)
+# across the whole aggregated build automatically, including to the patch
+# below; redeclaring it here would also fail Kustomize's load-restrictor
+# security check (can't reference a file outside this kustomization's own
+# root). Verified empirically: `kubectl kustomize` on this directory
+# resolves the appended valuesFrom entry to the ConfigMap's actual
+# hash-suffixed name, not the bare unhashed one.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../base
+
+configMapGenerator:
+  - name: platypod-media-local-override
+    files:
+      - media-image.yaml=media-image.yaml
+
+generatorOptions:
+  disableNameSuffixHash: false
+
+patches:
+  - target:
+      kind: HelmRelease
+      name: media
+    path: media-valuesfrom-patch.yaml
