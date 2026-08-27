@@ -13,7 +13,6 @@ media:
       ongoing: "{{ .Values.media.system.data.path }}/ongoing"
       finished: "{{ .Values.media.system.data.path }}/finished"
       torrents: "{{ .Values.media.system.data.path }}/torrents"
-
 database:
   # Superuser — used only by the init job; never shared with services.
   credentials:
@@ -61,7 +60,6 @@ database:
       memory: 256Mi
     limits:
       memory: 512Mi
-
 bazarr:
   apiKey: "55555555555555555555555555555555"
   image: linuxserver/bazarr:v1.6.0-ls356
@@ -83,7 +81,6 @@ bazarr:
     # (26 restarts/17d in prod). Bumped to 1.5Gi.
     limits:
       memory: 1536Mi
-
 flaresolverr:
   captchaSolver: none
   image: flaresolverr/flaresolverr:v3.5.0
@@ -105,14 +102,13 @@ flaresolverr:
       memory: 256Mi
     limits:
       memory: 512Mi
-
 jellyfin:
-  inCluster: true       # run the in-cluster Jellyfin pod; false = proxy to an external instance (see proxy.enable)
-  apiKey: ""            # set per-env after first deploy (generate in Jellyfin admin → API Keys)
-  credentials:          # admin account created by the jellyfin setup Job; consumed by jellyseerr setup too
+  inCluster: true # run the in-cluster Jellyfin pod; false = proxy to an external instance (see proxy.enable)
+  apiKey: "" # set per-env after first deploy (generate in Jellyfin admin → API Keys)
+  credentials: # admin account created by the jellyfin setup Job; consumed by jellyseerr setup too
     username: admin
     password: password
-  baseUrl: ""           # URL base path if Jellyfin is served under a subpath (usually empty)
+  baseUrl: "" # URL base path if Jellyfin is served under a subpath (usually empty)
   image: jellyfin/jellyfin:10.11.11
   replicasNb: 1
   ports:
@@ -120,7 +116,7 @@ jellyfin:
       name: jellyfin
       targetPort: 8096
   proxy:
-    enable: false         # set true to proxy to an out-of-cluster Jellyfin instead
+    enable: false # set true to proxy to an out-of-cluster Jellyfin instead
     host: host.docker.internal
     port: 8096
   pvc:
@@ -178,7 +174,6 @@ jellyfin:
       memory: 512Mi
     limits:
       memory: 1Gi
-
 jellyfinK8s:
   image: jellyfin/jellyfin:10.11.11
   credentials:
@@ -199,7 +194,6 @@ jellyfinK8s:
       memory: 512Mi
     limits:
       memory: 1Gi
-
 jellyswarrm:
   image: ghcr.io/llukas22/jellyswarrm:0.3.0
   credentials:
@@ -225,7 +219,6 @@ jellyswarrm:
       memory: 64Mi
     limits:
       memory: 192Mi
-
 jellyseerr:
   apiKey: MTczNjUwNTY0MTMwNmRmY2EzNWZhLWNjNzYtNDA1ZC05MDE4LTVkYTc1NWNjN2E0Yg==
   image: ghcr.io/seerr-team/seerr:v3.4.1
@@ -250,7 +243,6 @@ jellyseerr:
       memory: 256Mi
     limits:
       memory: 512Mi
-
 prowlarr:
   apiKey: "11111111111111111111111111111111"
   image: linuxserver/prowlarr:2.5.2.5491-ls155
@@ -272,7 +264,6 @@ prowlarr:
       memory: 384Mi
     limits:
       memory: 512Mi
-
 radarr:
   apiKey: "33333333333333333333333333333333"
   image: linuxserver/radarr:6.3.0.10514-ls312
@@ -290,7 +281,6 @@ radarr:
       memory: 384Mi
     limits:
       memory: 512Mi
-
 readarr:
   apiKey: "44444444444444444444444444444444"
   image: ghcr.io/pennydreadful/bookshelf:hardcover-v0.4.20.129
@@ -308,7 +298,6 @@ readarr:
       memory: 256Mi
     limits:
       memory: 512Mi
-
 sonarr:
   apiKey: "22222222222222222222222222222222"
   image: linuxserver/sonarr:4.0.19.2979-ls320
@@ -326,7 +315,6 @@ sonarr:
       memory: 256Mi
     limits:
       memory: 512Mi
-
 komga:
   # OIDC login via Authelia. Empty clientId disables the integration (the
   # Authelia client block and Komga's oauth2 config are both gated on it).
@@ -352,10 +340,10 @@ komga:
   # library's scan settings.
   convertToCbz: true
   libraries:
-  - name: bd
-    root: "{{ .Values.media.system.data.path }}/manga/bd"
-  - name: manga
-    root: "{{ .Values.media.system.data.path }}/manga/mangas"
+    - name: bd
+      root: "{{ .Values.media.system.data.path }}/manga/bd"
+    - name: manga
+      root: "{{ .Values.media.system.data.path }}/manga/mangas"
   ports:
     http:
       name: komga-http
@@ -387,7 +375,6 @@ komga:
       memory: 512Mi
     limits:
       memory: 3Gi
-
 kavita:
   image: jvmilazz0/kavita:0.9.0.2
   # First-boot admin auto-created by the kavita-setup Job (Kavita has no fixed
@@ -420,7 +407,6 @@ kavita:
       memory: 256Mi
     limits:
       memory: 768Mi
-
 audiobookshelf:
   image: ghcr.io/advplyr/audiobookshelf:2.35.1
   # First-boot admin, created by the audiobookshelf-setup Job via POST /init
@@ -454,7 +440,6 @@ audiobookshelf:
       memory: 256Mi
     limits:
       memory: 768Mi
-
 suwayomi:
   # Suwayomi-Server (Tachidesk) — *arr-style manga downloader. Downloads into the
   # media share's `manga` folder, which Kavita serves as a library. No native
@@ -467,7 +452,7 @@ suwayomi:
   # (Suwayomi ships none since the original Tachiyomi repo was taken down). The
   # WebUI equivalent is Settings → Browse → Extension Repositories.
   extensionRepos:
-  - https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json
+    - https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json
   ports:
     http:
       name: suwayomi-http
@@ -485,9 +470,8 @@ suwayomi:
     # (20 restarts/32d in prod, exit 134). Bumped to 1.25Gi.
     limits:
       memory: 1280Mi
-
 mediarvester:
-  image: ghcr.io/platypod/mediarvester:v1.7.15 # {"$imagepolicy": "flux-system:mediarvester"}
+  image: ghcr.io/platypod/mediarvester:v1.8.0 # {"$imagepolicy": "flux-system:mediarvester"}
   ports:
     http:
       name: http
@@ -547,7 +531,6 @@ mediarvester:
         memory: 64Mi
       limits:
         memory: 128Mi
-
 # squat/generic-device-plugin: exposes an arbitrary host device path as a
 # schedulable Kubernetes resource. Chosen over AMD's own ROCm k8s-device-plugin
 # because ROCm targets Instinct-class compute cards and doesn't recognize
@@ -585,7 +568,6 @@ gpuDevicePlugin:
     limits:
       cpu: 50m
       memory: 20Mi
-
 tdarr:
   image:
     server: ghcr.io/haveagitgat/tdarr:2.85.01
@@ -712,7 +694,6 @@ tdarr:
         memory: 512Mi
       limits:
         memory: 1Gi
-
 reclaimerr:
   # OIDC login via Authelia. Empty clientId disables the integration entirely
   # (Authelia client block and app-side config are both gated on it).
@@ -736,21 +717,21 @@ reclaimerr:
   # reclaimerr supports radarr, sonarr, jellyfin, emby, plex, seerr, tautulli —
   # NOTE: NOT readarr. baseUrl/apiKey are tpl'd, so they can reference other svcs.
   services:
-  - serviceType: radarr
-    baseUrl: "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.radarr.ports.http.targetPort }}"
-    apiKey: "{{ .Values.radarr.apiKey }}"
-  - serviceType: sonarr
-    baseUrl: "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.sonarr.ports.http.targetPort }}"
-    apiKey: "{{ .Values.sonarr.apiKey }}"
-  - serviceType: seerr
-    baseUrl: "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.jellyseerr.ports.http.targetPort }}"
-    apiKey: "{{ .Values.jellyseerr.apiKey }}"
-  - serviceType: jellyfin
-    baseUrl: "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.jellyfin.ports.http.targetPort }}"
-    apiKey: "{{ .Values.jellyfin.apiKey }}"
-    # Media servers (jellyfin/emby/plex) need exactly one "main" — the watch-state
-    # source reclaimerr reclaims against.
-    isMain: true
+    - serviceType: radarr
+      baseUrl: "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.radarr.ports.http.targetPort }}"
+      apiKey: "{{ .Values.radarr.apiKey }}"
+    - serviceType: sonarr
+      baseUrl: "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.sonarr.ports.http.targetPort }}"
+      apiKey: "{{ .Values.sonarr.apiKey }}"
+    - serviceType: seerr
+      baseUrl: "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.jellyseerr.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.jellyseerr.ports.http.targetPort }}"
+      apiKey: "{{ .Values.jellyseerr.apiKey }}"
+    - serviceType: jellyfin
+      baseUrl: "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.jellyfin.ports.http.targetPort }}"
+      apiKey: "{{ .Values.jellyfin.apiKey }}"
+      # Media servers (jellyfin/emby/plex) need exactly one "main" — the watch-state
+      # source reclaimerr reclaims against.
+      isMain: true
   ports:
     http:
       name: http
