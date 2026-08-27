@@ -528,9 +528,15 @@ mediarvester:
     resources:
       requests:
         cpu: 10m
-        memory: 64Mi
-      limits:
+        # Was 64Mi/128Mi -- Mimir showed working-set memory riding at
+        # 100-128Mi (essentially pinned at the limit) for the entire
+        # ~3.75-day lifetime of a real pod, with 4 OOM restarts over that
+        # window (2026-08-27). Steady climb-then-kill, not a crash loop --
+        # doubled both to give real headroom, same ratio as the main
+        # container's own earlier OOM fix above.
         memory: 128Mi
+      limits:
+        memory: 256Mi
 # squat/generic-device-plugin: exposes an arbitrary host device path as a
 # schedulable Kubernetes resource. Chosen over AMD's own ROCm k8s-device-plugin
 # because ROCm targets Instinct-class compute cards and doesn't recognize
