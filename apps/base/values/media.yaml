@@ -493,16 +493,14 @@ mediarvester:
   umask: "000"
   storage:
     mediaPvc: "{{ .Values.storage.defaultVolumes.media }}"
-    # Was "replays" -- a stray value nothing else on the shared media volume
-    # referenced (every sibling app uses its own name: downloads/transmission,
-    # downloads/sabnzbd, manga for suwayomi, etc.). Since it pointed at a
-    # never-before-used subPath, kubelet auto-created it root-owned on first
-    # mount, and mediarvester -- unlike the linuxserver-based apps sharing
-    # this volume -- has no in-image privilege-drop step to self-heal that,
-    # so every download failed with EACCES creating the uploader folder
-    # underneath it. Fixed alongside the init-permissions container above,
-    # which now also chowns this path.
-    mediaSubPath: downloads/mediarvester
+    # Legitimate, intentional value -- mediarvester downloads replays from
+    # media platforms and, unlike the rest of the *arr stack, does its own
+    # pick/rename into the library path rather than handing that off to a
+    # separate tool. NOT a stray/copy-paste value (was wrongly suspected and
+    # briefly renamed to "downloads/mediarvester" -- reverted). The real bug
+    # was that this subPath had never been chowned for mediarvester's uid/gid
+    # -- see the init-permissions container above, which now covers it.
+    mediaSubPath: replays
     appsPvc: "{{ .Values.storage.defaultVolumes.apps }}"
     cookiesSubPath: mediarvester/cookies
   replicasNb: 1
