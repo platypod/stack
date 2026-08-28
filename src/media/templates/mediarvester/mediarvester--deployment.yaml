@@ -30,16 +30,24 @@ spec:
         runAsUser: {{ .Values.media.system.userId }}
         runAsGroup: {{ .Values.media.system.groupId }}
       initContainers:
-      # The /app/cookies subPath dir is created root-owned; chown ONLY that dir
-      # (same pattern as jellyseerr/komga — never the whole media volume).
+      # The /app/cookies and /app/downloads subPath dirs are created
+      # root-owned the first time a fresh subPath is referenced; chown ONLY
+      # those two dirs (same pattern as jellyseerr/komga — never the whole
+      # media volume, and never a recursive chown across the shared media
+      # PV). mediarvester has no in-image PUID/PGID drop-privilege step
+      # (see the pod securityContext comment above), so unlike the
+      # linuxserver-based apps sharing this volume, it can't self-heal
+      # ownership at runtime — this has to happen here, once, as root.
       - name: init-permissions
         image: busybox:1.37.0
         securityContext:
           runAsUser: 0
-        command: ['sh', '-c', 'mkdir -p /data/{{ .Values.mediarvester.storage.cookiesSubPath }} && chown -R {{ .Values.media.system.userId }}:{{ .Values.media.system.groupId }} /data/{{ .Values.mediarvester.storage.cookiesSubPath }}']
+        command: ['sh', '-c', 'mkdir -p /data/{{ .Values.mediarvester.storage.cookiesSubPath }} /media/{{ .Values.mediarvester.storage.mediaSubPath }} && chown -R {{ .Values.media.system.userId }}:{{ .Values.media.system.groupId }} /data/{{ .Values.mediarvester.storage.cookiesSubPath }} /media/{{ .Values.mediarvester.storage.mediaSubPath }}']
         volumeMounts:
         - name: {{ $appVolume }}
           mountPath: /data
+        - name: {{ $mediaVolume }}
+          mountPath: /media
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.mediarvester.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.mediarvester.image }}
