@@ -141,7 +141,12 @@ lldap:
         displayName: guesto
         # Placeholder — dev/local fixture user, real value per env if used.
         password: verySecretMuchSecureNeverGonnaBeGuessedGuestPassword
-        groups: []
+        groups:
+          # Needed for anything gated by the "media" category (mediarvester,
+          # jellyfin, etc.) -- guest previously had no groups at all, so it
+          # was denied by Authelia's access_control before ever reaching
+          # any media-category tool.
+          - media_user
       # Non-interactive service account for OTLP/gRPC telemetry ingestion
       # (native Claude Code telemetry / non-human shippers). Member of
       # otel_writer so it keeps working through the ingest rule. It writes no
