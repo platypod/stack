@@ -43,7 +43,7 @@ metadata:
   namespace: flux-system
 spec:
   image: ghcr.io/platypod/cyber-chef
-  interval: 1h0m0s
+  interval: 5m0s
 ---
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageRepository
@@ -52,7 +52,7 @@ metadata:
   namespace: flux-system
 spec:
   image: ghcr.io/platypod/mediarvester
-  interval: 1h0m0s
+  interval: 5m0s
 ---
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageRepository
@@ -61,7 +61,7 @@ metadata:
   namespace: flux-system
 spec:
   image: ghcr.io/platypod/pokeclicker
-  interval: 1h0m0s
+  interval: 5m0s
 ---
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageRepository
@@ -70,7 +70,7 @@ metadata:
   namespace: flux-system
 spec:
   image: ghcr.io/platypod/unbegotten
-  interval: 1h0m0s
+  interval: 5m0s
 ---
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageRepository
@@ -79,7 +79,7 @@ metadata:
   namespace: flux-system
 spec:
   image: ghcr.io/platypod/transmission-exporter
-  interval: 1h0m0s
+  interval: 5m0s
 ---
 # No "-0" suffix on any range below — a plain semver range never matches a
 # prerelease version (Masterminds/Flux semantics), so this naturally
@@ -164,7 +164,7 @@ metadata:
   name: flux-system
   namespace: flux-system
 spec:
-  interval: 30m0s
+  interval: 5m0s
   sourceRef:
     kind: GitRepository
     name: stack-image-automation

@@ -34,7 +34,7 @@ metadata:
   namespace: flux-system
 spec:
   image: ghcr.io/platypod/cyber-chef
-  interval: 1h0m0s
+  interval: 5m0s
 ---
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageRepository
@@ -43,7 +43,7 @@ metadata:
   namespace: flux-system
 spec:
   image: ghcr.io/platypod/mediarvester
-  interval: 1h0m0s
+  interval: 5m0s
 ---
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageRepository
@@ -52,7 +52,7 @@ metadata:
   namespace: flux-system
 spec:
   image: ghcr.io/platypod/pokeclicker
-  interval: 1h0m0s
+  interval: 5m0s
 ---
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageRepository
@@ -61,7 +61,7 @@ metadata:
   namespace: flux-system
 spec:
   image: ghcr.io/platypod/unbegotten
-  interval: 1h0m0s
+  interval: 5m0s
 ---
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageRepository
@@ -70,7 +70,7 @@ metadata:
   namespace: flux-system
 spec:
   image: ghcr.io/platypod/transmission-exporter
-  interval: 1h0m0s
+  interval: 5m0s
 ---
 # filterTags strips the "v" prefix before semver-parsing — cyber-chef,
 # mediarvester, pokeclicker, unbegotten all tag vX.Y.Z. :latest and any
@@ -233,15 +233,17 @@ spec:
       range: ">=0.0.0-0"
 ---
 # Pushes straight to main (no separate branch) — local already tracks main
-# continuously, and prd's tag gate is the real review point, unaffected by
-# anything landing here. Scoped to apps/base/values/ only.
+# continuously. prd runs its OWN separate instance of this now
+# (clusters/prd/image-automation.yaml, final-releases-only ImagePolicy) --
+# the old "prd stays tag-gated" design is retired. Scoped to
+# apps/base/values/ only.
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageUpdateAutomation
 metadata:
   name: flux-system
   namespace: flux-system
 spec:
-  interval: 30m0s
+  interval: 5m0s
   sourceRef:
     kind: GitRepository
     name: stack-image-automation
@@ -284,7 +286,7 @@ metadata:
   name: apps-local-overlay
   namespace: flux-system
 spec:
-  interval: 30m0s
+  interval: 5m0s
   sourceRef:
     kind: GitRepository
     name: stack-image-automation
