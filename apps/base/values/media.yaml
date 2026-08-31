@@ -507,15 +507,16 @@ mediarvester:
   resources:
     requests:
       cpu: 100m
-      memory: 768Mi
+      memory: 1Gi
     limits:
-      # Was 1Gi; the pod was OOMKilling every ~1-3h under normal poller +
-      # download load (confirmed via Mimir: RSS climbs steadily and pins at
-      # the limit before each kill, even between active downloads). 2Gi
-      # buys headroom while MALLOC_ARENA_MAX=2 (mediarvester--deployment.yaml)
-      # addresses the likely root cause -- see mediarvester's
+      # Was 1Gi, then 2Gi (2026-08-20 incident, see below) -- bumped again to
+      # 3Gi on 2026-09-01 after the pod OOMKilled at ~3.4 days uptime while
+      # investigating a missed-download report. MALLOC_ARENA_MAX=2 was meant
+      # to address the underlying climb but was never proven (see the
+      # incident doc); this is still headroom, not a fix. Request raised to
+      # 1Gi to match the observed post-restart baseline more closely.
       # docs/incidents/2026-08-20-youtube-403-and-oom.md.
-      memory: 2Gi
+      memory: 3Gi
   potProvider:
     # Sidecar for yt-dlp's PO Token requirement -- see bgutil-ytdlp-pot-provider
     # in requirements.txt for why. The plugin auto-discovers it at the default
@@ -540,10 +541,12 @@ mediarvester:
         # ~3.75-day lifetime of a real pod, with 4 OOM restarts over that
         # window (2026-08-27). Steady climb-then-kill, not a crash loop --
         # doubled both to give real headroom, same ratio as the main
-        # container's own earlier OOM fix above.
-        memory: 128Mi
+        # container's own earlier OOM fix above. Bumped again 2026-09-01:
+        # observed at 184Mi (72% of the 256Mi limit) within minutes of a
+        # fresh restart, so the same climb-then-pin pattern was still live.
+        memory: 192Mi
       limits:
-        memory: 256Mi
+        memory: 512Mi
 # squat/generic-device-plugin: exposes an arbitrary host device path as a
 # schedulable Kubernetes resource. Chosen over AMD's own ROCm k8s-device-plugin
 # because ROCm targets Instinct-class compute cards and doesn't recognize
