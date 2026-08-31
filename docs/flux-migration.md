@@ -186,6 +186,21 @@ prior tag), at the cost of needing a tag even for a pure secret rotation.
 `semver: ">=1.0.0"` constraint. Worth a small `make release VERSION=vX.Y.Z`
 wrapper later that tags+pushes both as one operation — not built yet.
 
+> **Superseded 2026-08-27 for `stack` (commit `91cf21d`).** The stack half of
+> this lockstep is gone: prod's `flux-system` `GitRepository` now tracks
+> `branch: main`, not a semver tag. Prod runs its own
+> image-automation-controller (`clusters/prd/image-automation.yaml`), and an
+> `ImageUpdateAutomation` can only ever push to a *branch*, never a tag — so a
+> tag-gated prod would never see its own image bumps. **Any commit to stack's
+> `main` now reaches prod within ~1 minute.** See "Phase 7 cutover" below.
+>
+> `platypod-sops` was *not* changed and is still `semver: ">=1.0.0"`, so the
+> two repos are now asymmetric: stack deploys from a branch, secrets from a
+> tag. `clusters/prd/secrets.yaml`'s comment still describes the old lockstep
+> and is stale in the same way this paragraph was. Whether sops should follow
+> stack onto `main`, or the asymmetry is the point (secrets deserve a human
+> gate where image bumps don't), is an open decision — not an oversight.
+
 Rejected: **single-repo SOPS** (the original sketch — encrypt in place inside
 `platypod/stack`) — works, but mixes a public repo's casual-clone audience
 with secret material even encrypted, and blocks ever making `stack` fully
@@ -448,6 +463,26 @@ points at content already proven healthy, never an unverified guess.
 Flux version bump) regenerates `gotk-sync.yaml` and silently reverts
 `spec.ref` back to `branch: main` — re-apply the semver edit after any
 future re-bootstrap.
+
+> **No longer true as of 2026-08-27 (`91cf21d`): do NOT re-apply that edit.**
+> `branch: main` is now prod's intended steady state — see the superseding
+> note under "Prod promotion stays lockstep" above. A re-bootstrap
+> regenerating this file to `branch: main` is correct, not drift.
+>
+> Re-arming the semver gate today would do two concrete kinds of damage.
+> It would sever prod's image automation, since `ImageUpdateAutomation`
+> pushes image-pin bumps to `main` and a tag-pinned prod would never see
+> them. And because the newest `stack` tag is still `v1.0.1`, flipping the
+> ref without first pushing a newer tag would resolve prod straight back to
+> `v1.0.1` — dozens of commits of rollback, in one reconcile.
+>
+> This trap was walked into on 2026-09-01: `91cf21d` carried its full
+> rationale in a comment block, but the very next `flux bootstrap` run
+> (`060562b`, seven minutes later) regenerated the file under its "DO NOT
+> EDIT" banner and stripped the comment. The decision survived; the reason
+> did not — leaving a bare `branch: main` that this section then actively
+> mislabelled as drift to be reverted. Hence recording it here, in a file
+> Flux does not overwrite.
 
 Three new things found doing this for real (beyond what Phase 4 already
 covered) — see gotchas 12-14 below.
