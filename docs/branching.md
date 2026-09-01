@@ -13,15 +13,19 @@ Adopted 2026-09-01, replacing "every push to `main` reaches prod in ~1 minute".
 | Object | local cluster | prod cluster |
 |---|---|---|
 | `flux-system` GitRepository (stack) | `branch: dev` | `branch: main` |
-| `platypod-sops` GitRepository | `branch: dev` | `semver: ">=1.0.0"` — **not yet migrated**, see below |
+| `platypod-sops` GitRepository | `branch: dev` | `branch: main` |
 | `stack-image-automation` GitRepository | `branch: dev` | `branch: dev` |
 | `ImageUpdateAutomation` checkout + push | `dev` | **`dev`** |
 | Kustomization path | `./clusters/local`, `./apps/local-overlay` | `./clusters/prd`, base values |
 
-The symmetry is deliberate: `platypod-sops` being pinned to a tag while `stack`
-tracked a branch was a standing source of confusion. Three of the four rows are
-migrated; prod's `platypod-sops` is the exception, held back on purpose — see
-"Remaining step".
+Both repos use the identical split — that symmetry is deliberate. `platypod-sops`
+used to be pinned to `semver: ">=1.0.0"` while `stack` tracked a branch, and that
+mismatch was a standing source of confusion.
+
+A semver ref resolves to the **highest** matching tag, not the pinned floor. When
+prod's sops ref was moved to `main` it was verified a no-op on exactly that basis
+(`>=1.0.0` was sitting on `v1.0.1`, identical to `main`). Check it the same way if
+it ever moves again: `git diff v<highest>..main -- clusters/prd/`.
 
 ## Day to day
 
@@ -93,35 +97,6 @@ rolled prod back dozens of commits.
 
 Hence this file. It is the authoritative record precisely because Flux never
 rewrites it. Trust it over any comment inside a `gotk-sync.yaml`.
-
-## Remaining step: prod's `platypod-sops` ref
-
-Prod's secrets source is still `semver: ">=1.0.0"`, resolving to tag `v1.0.0`.
-Finishing the split means one line in `clusters/prd/secrets.yaml`:
-
-```yaml
-  ref:
-    branch: main        # replaces  semver: ">=1.0.0"
-```
-
-It was left undone on 2026-09-01 because it is not the no-op it appears to be.
-Prod is pinned at `v1.0.0` while sops `main` has moved on, so the flip applies
-every intervening prod secret change *at once* — at the time of writing that
-means `fd98a01` "Enable shelfmark, retire readarr", 53 changed lines of
-`clusters/prd/secrets.enc.yaml`, landing in the shared `platypod-secrets` that
-many releases consume, under a Kustomization with `prune: true`.
-
-Prod already runs `shelfmark` (the stack half reached prod via `main`); only
-the matching secrets are outstanding. So the flip is probably *wanted* — but it
-should be done deliberately, when that change is complete, and watched. Not
-folded into an unrelated refactor.
-
-Before flipping, check what would actually land:
-
-```sh
-cd platypod-sops
-git diff --stat v1.0.0..main -- clusters/prd/     # empty = genuinely a no-op
-```
 
 ## Transition ordering (if this is ever redone)
 
