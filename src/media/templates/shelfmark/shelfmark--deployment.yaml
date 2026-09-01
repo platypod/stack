@@ -37,6 +37,11 @@ spec:
           value: "{{ .Values.media.system.groupId }}"
         - name: FLASK_PORT
           value: "{{ .Values.shelfmark.ports.http.targetPort }}"
+        # Everything below is env-driven config, so the first-run onboarding
+        # wizard has nothing left to do — skip it (shelfmark/core/onboarding.py:
+        # `if not ONBOARDING: return True` treats setup as already complete).
+        - name: ONBOARDING
+          value: "false"
         - name: HARDCOVER_ENABLED
           value: "{{ .Values.shelfmark.hardcover.enabled }}"
         - name: HARDCOVER_API_KEY
@@ -80,6 +85,18 @@ spec:
           value: "{{ .Values.deluge.credentials.password }}"
         - name: DELUGE_DOWNLOAD_DIR
           value: "{{ tpl .Values.deluge.download.finished . }}"
+        {{- end }}
+        # Usenet: Prowlarr searches althub.co.za (a Newznab indexer wired into
+        # Prowlarr itself, not here — see prowlarr.indexers.althub in
+        # media.yaml and stack/docs/TODO.md) and hands NZB results to SABnzbd
+        # to actually download.
+        {{- if .Values.sabnzbd.enable }}
+        - name: PROWLARR_USENET_CLIENT
+          value: "sabnzbd"
+        - name: SABNZBD_URL
+          value: "http://{{ .Values.sabnzbd.label }}:{{ .Values.sabnzbd.ports.http.targetPort }}"
+        - name: SABNZBD_API_KEY
+          value: "{{ .Values.sabnzbd.apiKey }}"
         {{- end }}
         volumeMounts:
         - mountPath: /config

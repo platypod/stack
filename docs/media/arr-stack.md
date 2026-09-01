@@ -43,8 +43,21 @@ by default in `registry.yaml`, opted in per-env via `platypod-sops`
     Transmission > qBittorrent > Deluge (whichever is enabled).
   - `TRANSMISSION_*` / `QBITTORRENT_*` / `DELUGE_*` connection + credential
     env vars, each behind its own service's `.enable` flag.
-  - Not wired: Newznab/SABnzbd release sources (`shelfmark` supports them —
-    see `docs/environment-variables.md` in its repo — just not done yet).
+  - `ONBOARDING=false` — everything above is env-driven config, so
+    Shelfmark's first-run setup wizard has nothing left to do. Confirmed
+    against its own source (`shelfmark/core/onboarding.py`): unset,
+    `is_onboarding_complete()` reads a flag from `settings.json`; set to
+    `false`, it short-circuits to "already done" instead.
+  - **Usenet**: `PROWLARR_USENET_CLIENT=sabnzbd` + `SABNZBD_URL`/`SABNZBD_API_KEY`,
+    gated on `sabnzbd.enable`. Shelfmark doesn't need its own Newznab
+    connection for this — it searches through Prowlarr's indexers directly,
+    and althub.co.za (the Newznab indexer already in this stack) is wired
+    into **Prowlarr itself** by the existing `sabnzbd-setup` Job
+    (`prowlarr.indexers.althub.apiKey` in `media.yaml`/`platypod-sops`), not
+    Shelfmark. On `local` that key is unset (althub inactive there) and
+    SABnzbd has no usenet provider configured either — both pre-existing
+    gaps, same "needs the user's own account" shape as the Hardcover token,
+    unrelated to Shelfmark's own wiring. `prd` already has both.
 - **Auth:** all are on the Authelia **`bypass`** list — they expose their own API/auth
   and forward-auth would break inter-app API calls (Prowlarr→*arr, Bazarr→*arr,
   Jellyseerr→*arr). See [authelia](../security/authelia.md).
