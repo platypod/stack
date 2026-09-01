@@ -59,6 +59,11 @@ spec:
           mkdir -p "{{ tpl .Values.shelfmark.organize.audiobooks.destination . }}"
           chown {{ .Values.media.system.userId }}:{{ .Values.media.system.groupId }} \
             "{{ tpl .Values.shelfmark.organize.audiobooks.destination . }}"
+          # 2775: group-writable + setgid, matching the rest of the media
+          # share (e.g. media/books) — plain chown alone left it
+          # owner-only-writable, which blocked direct access from outside
+          # the pod (found live, fixed by hand, then here for good).
+          chmod 2775 "{{ tpl .Values.shelfmark.organize.audiobooks.destination . }}"
         volumeMounts:
         - mountPath: {{ .Values.media.system.data.path }}
           name: {{ $mediaVolume }}
