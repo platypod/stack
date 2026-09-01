@@ -310,6 +310,38 @@ shelfmark:
     # placeholder only. Get your own at hardcover.app/account/api (free
     # account; starts with hc_pat_).
     apiKey: "hc_pat_CHANGE_ME_00000000000000"
+  # Free public API, no key needed — see OPENLIBRARY_ENABLED comment in the
+  # deployment template for why this is on even with Hardcover as primary.
+  openLibrary:
+    enabled: true
+  # Anna's Archive: no account/key needed, but its domains rotate under legal
+  # pressure — annas-archive.org and .se are DNS-blocked (AdGuard) as of
+  # 2026-09, .li is a parked/for-sale domain. These three were verified live
+  # and serving the real site on 2026-09-01; if search starts failing with
+  # connection errors, check https://en.wikipedia.org/wiki/Anna's_Archive for
+  # the current domain list and update here.
+  directDownload:
+    enabled: true
+    mirrors:
+      - https://annas-archive.gl
+      - https://annas-archive.pk
+      - https://annas-archive.gd
+  # File organization — both ebooks and audiobooks get an Author/Series/...
+  # folder structure instead of dumping flat into one directory. Audiobooks
+  # get their own destination (audiobookshelf's library root, same
+  # /data/audiobooks convention as the audiobookshelf module's own comment)
+  # instead of falling back to the ebook folder — found live: an audiobook
+  # torrent import landed as 28 untitled "Chapitre N.mp3" files flat in
+  # media/books before this was set.
+  organize:
+    books:
+      # {Series/} and {SeriesPosition - } collapse to nothing when the book
+      # has no series metadata (Shelfmark template syntax) — so a standalone
+      # novel still gets a sane Author/Title (Year) path.
+      template: "{Author}/{Series/}{SeriesPosition - }{Title} ({Year})"
+    audiobooks:
+      destination: "{{ .Values.media.system.data.path }}/audiobooks"
+      template: "{Author}/{Series/}{SeriesPosition - }{Title}/{Title}"
   image: ghcr.io/calibrain/shelfmark:v1.3.13
   ports:
     http:
