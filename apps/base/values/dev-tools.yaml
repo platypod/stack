@@ -197,7 +197,17 @@ outline:
       - docs
     - name: stack
       url: https://github.com/platypod/stack.git
-      branch: dev
+      # `main` = what is actually deployed to prod, matching every other repo
+      # here. This said `dev` until 2026-09-01, left over from the retired dev
+      # *cluster* branch; when that branch was deleted (2026-08-24, the
+      # dev -> local rename) this clone started failing, and because the init
+      # container clones all repos sequentially and aborts on the first
+      # failure, it took the whole Outline sync down with it -- all 9 repos,
+      # for 9 days, with nothing surfacing it. Note `dev` exists again since
+      # 2026-09-01, but it now means local's deploy branch (docs/branching.md)
+      # -- pointing the wiki at it would publish docs for changes not yet
+      # promoted to prod.
+      branch: main
       collection: "git: stack"
       paths:
       - README.md
