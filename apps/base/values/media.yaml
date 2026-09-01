@@ -298,6 +298,33 @@ readarr:
       memory: 256Mi
     limits:
       memory: 512Mi
+shelfmark:
+  # Book search/request tool, replaces readarr's role. Own login (no apiKey
+  # concept the way the *arrs have one) — configured entirely via env vars,
+  # no seeded config file needed. Metadata comes from Hardcover's own API
+  # using a personal token, not the shared/flaky rreading-glasses proxy the
+  # *arrs depend on (stack/docs/media/arr-stack.md).
+  hardcover:
+    enabled: true
+    # Real value lives in platypod-sops per-env secrets.enc.yaml — this is a
+    # placeholder only. Get your own at hardcover.app/account/api (free
+    # account; starts with hc_pat_).
+    apiKey: "hc_pat_CHANGE_ME_00000000000000"
+  image: ghcr.io/calibrain/shelfmark:v1.3.13
+  ports:
+    http:
+      name: shelfmark-http
+      targetPort: 8084
+  pvc:
+    app: "{{ .Values.storage.defaultVolumes.apps }}"
+    media: "{{ .Values.storage.defaultVolumes.media }}"
+  replicasNb: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 2Gi
 sonarr:
   apiKey: "22222222222222222222222222222222"
   image: linuxserver/sonarr:4.0.19.2979-ls320

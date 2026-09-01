@@ -240,7 +240,7 @@ data:
           description: 3D maze wrapped onto the inside of a sphere.
 {{- end }}
 {{- end }}
-{{- if or .Values.prowlarr.enable .Values.transmission.enable .Values.suwayomi.enable .Values.radarr.enable .Values.sonarr.enable .Values.readarr.enable .Values.bazarr.enable .Values.flaresolverr.enable .Values.reclaimerr.enable .Values.sabnzbd.enable .Values.tdarr.enable }}
+{{- if or .Values.prowlarr.enable .Values.transmission.enable .Values.suwayomi.enable .Values.radarr.enable .Values.sonarr.enable .Values.readarr.enable .Values.shelfmark.enable .Values.bazarr.enable .Values.flaresolverr.enable .Values.reclaimerr.enable .Values.sabnzbd.enable .Values.tdarr.enable }}
     - Media-Maintainer:
 {{- if .Values.prowlarr.enable }}
       - Prowlarr:
@@ -309,6 +309,12 @@ data:
             type: readarr
             url: http://{{ .Values.readarr.label }}:{{ .Values.readarr.ports.http.targetPort }}
             key: "{{ .Values.readarr.apiKey }}"
+{{- end }}
+{{- if .Values.shelfmark.enable }}
+      - Shelfmark:
+          icon: shelfmark.png
+          href: https://{{ tpl .Values.shelfmark.host . }}
+          description: Book/audiobook search and request tool (Readarr replacement).
 {{- end }}
 {{- if .Values.bazarr.enable }}
       - Bazarr:

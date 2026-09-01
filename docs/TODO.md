@@ -5,6 +5,16 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
 
 ## Soon
 
+- **Validate Shelfmark in `local`, then re-tag `prd` to actually deploy it there.**
+  Wired to Hardcover + Prowlarr + Transmission (qBittorrent/Deluge scaffolded,
+  inactive) and enabled on both `local` and `prd` in `platypod-sops`, readarr
+  retired (`registry.yaml` default `false`) — see
+  [docs/media/arr-stack.md](media/arr-stack.md). But `prd` is
+  `semver: ">=1.0.0"`-pinned, so none of this reaches it until the next
+  `vX.Y.Z` tag; only `local` (branch-tracking) picks it up on push. Still
+  open: Newznab/SABnzbd release sources in Shelfmark, and actually adding
+  indexers in Prowlarr's own UI (nothing auto-wires those for Shelfmark the
+  way `sabnzbd-setup` does for the *arrs).
 - **`mediarvester` still tries to send telemetry to observability endpoints
   that are now off on `local`.** Its `Deployment`
   (`src/media/templates/mediarvester/mediarvester--deployment.yaml:90,96`)

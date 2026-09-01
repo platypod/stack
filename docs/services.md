@@ -38,6 +38,7 @@ refers to the model described in [authentication.md](authentication.md).
 | jellyfin-k8s | In-cluster Jellyfin, benchmark-only (prod only) | not exposed — internal, jellyswarrm backend only |
 | Jellyseerr | Request manager | own auth (bypass ingress) |
 | Radarr / Sonarr / Readarr | *arr automation | own auth (`media_user`) |
+| Shelfmark | Book/audiobook search & request tool, replacing Readarr's role | own auth (bypass ingress) — see [arr-stack.md](media/arr-stack.md) |
 | Prowlarr | Indexer manager | own auth (`media_user`) |
 | Bazarr | Subtitles | own auth (`media_user`) |
 | Mediarvester | Media tooling | `mediarvester_user`; `mediarvester_admin`/`media_admin`/`admins` grants in-app admin |

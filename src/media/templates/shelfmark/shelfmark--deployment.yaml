@@ -1,0 +1,100 @@
+{{- if .Values.shelfmark.enable }}
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.shelfmark.label .Values.k8s.names.pods.suffix }}
+{{- $appVolume := "app-volume" }}
+{{- $mediaVolume := "media-volume" }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.shelfmark.replicasNb }}
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.shelfmark.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.shelfmark.image }}
+        resources:
+          {{- toYaml .Values.shelfmark.resources | nindent 10 }}
+        ports:
+        - name: {{ .Values.shelfmark.ports.http.name }}
+          containerPort: {{ .Values.shelfmark.ports.http.targetPort }}
+        {{- include "media.netProbes" .Values.shelfmark.ports.http.targetPort | nindent 8 }}
+        env:
+        - name: PUID
+          value: "{{ .Values.media.system.userId }}"
+        - name: PGID
+          value: "{{ .Values.media.system.groupId }}"
+        - name: FLASK_PORT
+          value: "{{ .Values.shelfmark.ports.http.targetPort }}"
+        - name: HARDCOVER_ENABLED
+          value: "{{ .Values.shelfmark.hardcover.enabled }}"
+        - name: HARDCOVER_API_KEY
+          value: "{{ .Values.shelfmark.hardcover.apiKey }}"
+        {{- if .Values.prowlarr.enable }}
+        - name: PROWLARR_ENABLED
+          value: "true"
+        - name: PROWLARR_URL
+          value: "http://{{ .Values.prowlarr.label }}:{{ .Values.prowlarr.ports.http.targetPort }}"
+        - name: PROWLARR_API_KEY
+          value: "{{ .Values.prowlarr.apiKey }}"
+        {{- end }}
+        - name: PROWLARR_TORRENT_CLIENT
+          value: {{ if .Values.transmission.enable }}"transmission"{{ else if .Values.qbittorrent.enable }}"qbittorrent"{{ else if .Values.deluge.enable }}"deluge"{{ else }}""{{ end }}
+        {{- if .Values.transmission.enable }}
+        - name: TRANSMISSION_URL
+          value: "http://{{ .Values.transmission.label }}:{{ .Values.transmission.ports.http.targetPort }}"
+        - name: TRANSMISSION_USERNAME
+          value: "{{ .Values.transmission.credentials.username }}"
+        - name: TRANSMISSION_PASSWORD
+          value: "{{ .Values.transmission.credentials.password }}"
+        - name: TRANSMISSION_DOWNLOAD_DIR
+          value: "{{ tpl .Values.transmission.download.finished . }}"
+        {{- end }}
+        {{- if .Values.qbittorrent.enable }}
+        - name: QBITTORRENT_URL
+          value: "http://{{ .Values.qbittorrent.label }}:{{ .Values.qbittorrent.ports.http.targetPort }}"
+        - name: QBITTORRENT_USERNAME
+          value: "{{ .Values.qbittorrent.credentials.username }}"
+        - name: QBITTORRENT_PASSWORD
+          value: "{{ .Values.qbittorrent.credentials.password }}"
+        - name: QBITTORRENT_DOWNLOAD_DIR
+          value: "{{ tpl .Values.qbittorrent.download.finished . }}"
+        {{- end }}
+        {{- if .Values.deluge.enable }}
+        - name: DELUGE_HOST
+          value: "{{ .Values.deluge.label }}"
+        - name: DELUGE_PORT
+          value: "{{ .Values.deluge.ports.http.targetPort }}"
+        - name: DELUGE_PASSWORD
+          value: "{{ .Values.deluge.credentials.password }}"
+        - name: DELUGE_DOWNLOAD_DIR
+          value: "{{ tpl .Values.deluge.download.finished . }}"
+        {{- end }}
+        volumeMounts:
+        - mountPath: /config
+          name: {{ $appVolume }}
+          subPath: shelfmark/config
+        - mountPath: /books
+          name: {{ $mediaVolume }}
+          subPath: books
+        - mountPath: {{ .Values.media.system.data.path }}
+          name: {{ $mediaVolume }}
+      volumes:
+      - name: {{ $mediaVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.shelfmark.pvc.media . }}
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.shelfmark.pvc.app . }}
+{{- end }}

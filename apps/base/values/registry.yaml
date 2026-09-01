@@ -238,10 +238,17 @@ radarr:
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   label: radarr
 
+# retired 2026-09 in favour of shelfmark (stack/docs/media/arr-stack.md) — kept
+# enable-able for a quick rollback comparison, default off.
 readarr:
-  enable: true
+  enable: false
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.readarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   label: readarr
+
+shelfmark:
+  enable: false
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.shelfmark.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: shelfmark
 
 sonarr:
   enable: true

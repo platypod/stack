@@ -294,6 +294,7 @@ authelia:
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.radarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.prowlarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.readarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+      - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.shelfmark.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.sonarr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       - "{{ .Values.k8s.names.urls.prefix }}{{ .Values.reclaimerr.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
       networks:
@@ -481,6 +482,7 @@ security:
     radarr:        { roles: [user], categories: [media] }
     prowlarr:      { roles: [user], categories: [media] }
     readarr:       { roles: [user], categories: [media] }
+    shelfmark:     { roles: [user], categories: [media] }
     sonarr:        { roles: [user], categories: [media] }
     reclaimerr:    { roles: [user], categories: [media] }
     suwayomi:      { roles: [user], categories: [media] }   # AUTH_MODE=none, no user system at all
