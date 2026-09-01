@@ -46,6 +46,12 @@ spec:
           value: "{{ .Values.shelfmark.hardcover.enabled }}"
         - name: HARDCOVER_API_KEY
           value: "{{ .Values.shelfmark.hardcover.apiKey }}"
+        # Free public API, no key needed. The frontend can fall back to this
+        # provider (e.g. no explicit selection stored yet) even though
+        # Hardcover is the primary source — without it, that fallback path
+        # 400s with "openlibrary is not enabled" (seen live on prod's search).
+        - name: OPENLIBRARY_ENABLED
+          value: "true"
         {{- if .Values.prowlarr.enable }}
         - name: PROWLARR_ENABLED
           value: "true"
