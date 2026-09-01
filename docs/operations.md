@@ -5,11 +5,12 @@ Running the stack day to day. For chart structure and conventions see
 [make-targets.md](make-targets.md); for how the Git+Flux model itself works
 see [flux-migration.md](flux-migration.md).
 
-**Deployment is Git-driven.** Every push to `main` reconciles onto `local`
-within its poll interval (or immediately via `flux reconcile`); `prd` only
-moves when a new `vX.Y.Z` tag is pushed (lockstep in `stack` and
-`platypod-sops`). There is no `make deploy` — see the day-to-day section
-below for the `flux`/`kubectl` equivalents.
+**Deployment is Git-driven.** Every push to `dev` reconciles onto `local`
+within its poll interval (or immediately via `flux reconcile`); `prd` moves
+when `dev` is merged into `main`. That merge is the entire promotion — no tag
+is involved. See [branching.md](branching.md) for the full model. There is no
+`make deploy` — see the day-to-day section below for the `flux`/`kubectl`
+equivalents.
 
 ## Local lifecycle (first time)
 
@@ -103,24 +104,27 @@ talosctl -n 192.168.122.102 cp   ./<file> /var/local/platypod/volumes/apps/<file
 
 ## Prod lifecycle
 
-Prod is fully cut over onto Flux (Phase 7) — `clusters/prd/`'s
-`GitRepository`s track `semver: ">=1.0.0"` in both `stack` and
-`platypod-sops`, not `branch: main`. A prod deploy is:
+Prod is fully cut over onto Flux. `clusters/prd/`'s `GitRepository`s track
+`branch: main` in both `stack` and `platypod-sops`; local tracks `dev`. A prod
+deploy is a fast-forward merge:
 
 ```sh
-git tag vX.Y.Z && git push --tags   # in stack, and in platypod-sops if it also changed
+git switch main && git merge --ff-only dev && git push origin main
 ```
 
-Both repos, lockstep, even for a change that only touches one — see
-[flux-migration.md](flux-migration.md)'s "prod pinned to a tag" decision.
-Rollback is re-tagging a previous good commit at a new, higher version (Flux
-resolves the *highest* matching tag — you can't "go back" to an old tag
-without a new one, since `>=1.0.0` always prefers the latest that satisfies
-it).
+That is the whole promotion — no tag, and nothing else moves prod. The
+`--ff-only` is a guard, not a formality: it can only fail if something
+committed to `main` outside a promotion (a re-bootstrap, or a hand-written
+hotfix), in which case merge `main` back into `dev` first. See
+[branching.md](branching.md).
+
+Rollback is ordinary git: revert the merge commit, or reset `main` to the last
+good commit and force-push. The old tag gate's "you can't go back to an older
+tag, only forward to a higher one" trap no longer applies.
 
 ```sh
 flux get helmreleases -n prd-platypod     # per-release health
-flux get sources git -n flux-system       # confirm both repos resolved the tag, not main
+flux get sources git -n flux-system       # confirm prod resolved main, local resolved dev
 ```
 
 Prod stores PV data on the **Synology NFS** (`192.168.1.30:/volume1/kubernetes`).
@@ -166,4 +170,4 @@ same as `local`'s.
 | Storage | local hostPath (`/var/local/platypod/volumes/`) | Synology NFS (`192.168.1.30`) |
 | PV node affinity | label `platypod.io/local-storage=true` | n/a (NFS is cluster-wide) |
 | DNS | AdGuard + system resolver | public DNS |
-| `GitRepository.spec.ref` | `branch: main` (reconciles HEAD) | `semver: ">=1.0.0"` (tag-gated) |
+| `GitRepository.spec.ref` | `branch: dev` (reconciles HEAD) | `branch: main` (promoted by merge) |

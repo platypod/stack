@@ -20,7 +20,7 @@ metadata:
 spec:
   interval: 5m0s
   ref:
-    branch: main
+    branch: dev
   secretRef:
     name: stack-image-automation-deploy-key
   url: ssh://git@github.com/platypod/stack
@@ -232,11 +232,12 @@ spec:
     semver:
       range: ">=0.0.0-0"
 ---
-# Pushes straight to main (no separate branch) — local already tracks main
-# continuously. prd runs its OWN separate instance of this now
-# (clusters/prd/image-automation.yaml, final-releases-only ImagePolicy) --
-# the old "prd stays tag-gated" design is retired. Scoped to
-# apps/base/values/ only.
+# Pushes to `dev`, which local tracks continuously. These pins are
+# prod-authoritative (apps/base/values/), but they now reach prod only when
+# `dev` is merged into `main` -- that merge IS the prod promotion. prd runs
+# its own instance of this too (clusters/prd/image-automation.yaml), which
+# also writes to `dev`; both compute the same final-release value and
+# converge on an identical write. Scoped to apps/base/values/ only.
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageUpdateAutomation
 metadata:
@@ -250,7 +251,7 @@ spec:
   git:
     checkout:
       ref:
-        branch: main
+        branch: dev
     commit:
       author:
         email: flux@platypod.ovh
@@ -264,7 +265,7 @@ spec:
       # same way.
       messageTemplate: "chore: automated image update"
     push:
-      branch: main
+      branch: dev
   update:
     path: ./apps/base/values
     strategy: Setters
@@ -293,14 +294,14 @@ spec:
   git:
     checkout:
       ref:
-        branch: main
+        branch: dev
     commit:
       author:
         email: flux@platypod.ovh
         name: fluxcdbot
       messageTemplate: "chore: automated local image update"
     push:
-      branch: main
+      branch: dev
   update:
     path: ./apps/local-overlay
     strategy: Setters

@@ -10,6 +10,12 @@
 > across three clusters. Conventions live in [conventions.md](conventions.md);
 > day-to-day operations in [operations.md](operations.md); other stack
 > decisions in [decisions.md](decisions.md).
+>
+> **Branch refs here are historical.** Which branch deploys which cluster is
+> now owned by [branching.md](branching.md): `dev` deploys local, `main`
+> deploys prod, and merging `dev` into `main` is the promotion. Every mention
+> below of a semver tag gate, "prod pinned to a tag", or lockstep `vX.Y.Z`
+> tagging describes a retired design — read it as history, not instruction.
 
 ## What changes, and why
 
@@ -42,6 +48,16 @@ beside the existing Helmfile flow) — solves auto-deploy but none of the drift,
 secrets, or source-of-truth problems, and would have to be redone later anyway.
 
 ### One branch, directory per cluster, prod pinned to a tag
+
+> **Superseded 2026-09-01 — and the rejected alternative was partly adopted.**
+> local now tracks `dev`, prd tracks `main`; there is no `dev` *cluster*. The
+> "branch per cluster" option rejected below came back in a narrower form: two
+> branches, not three. Its fatal flaw there was the three-way backport matrix
+> where a prod-only hotfix gets silently reverted by the next forward-merge —
+> that cannot arise here, because **nothing commits to `main` except a `dev`
+> merge** (all image automation, prod's included, writes to `dev`). `main` is
+> therefore always an ancestor of `dev`, every promotion is a fast-forward, and
+> there is no backport direction to get wrong. See [branching.md](branching.md).
 
 A single `main` branch. Each cluster runs its own Flux with its own
 `GitRepository` ref and its own path:

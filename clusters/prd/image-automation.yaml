@@ -1,3 +1,9 @@
+# NOTE (dev/main split): this automation checks out and pushes to `dev`, NOT
+# `main`. Prod deploys from `main`, so a bump staged here reaches prod only
+# when dev is merged into main. Leaving it on `main` would auto-deploy every
+# image release straight to prod and defeat the promotion gate entirely.
+# See docs/branching.md.
+#
 # Prod's own image update automation, all 5 images — mirrors
 # clusters/local/image-automation.yaml's ImageRepository set, but final
 # releases only (no "-0" prerelease opt-in on any ImagePolicy range below),
@@ -31,7 +37,7 @@ metadata:
 spec:
   interval: 5m0s
   ref:
-    branch: main
+    branch: dev
   secretRef:
     name: stack-image-automation-deploy-key
   url: ssh://git@github.com/platypod/stack
@@ -171,14 +177,14 @@ spec:
   git:
     checkout:
       ref:
-        branch: main
+        branch: dev
     commit:
       author:
         email: flux@platypod.ovh
         name: fluxcdbot
       messageTemplate: "chore: automated image update"
     push:
-      branch: main
+      branch: dev
   update:
     path: ./apps/base/values
     strategy: Setters
