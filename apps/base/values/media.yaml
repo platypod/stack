@@ -328,11 +328,14 @@ shelfmark:
       - https://annas-archive.gd
   # File organization — both ebooks and audiobooks get an Author/Series/...
   # folder structure instead of dumping flat into one directory. Audiobooks
-  # get their own destination (audiobookshelf's library root, same
-  # /data/audiobooks convention as the audiobookshelf module's own comment)
-  # instead of falling back to the ebook folder — found live: an audiobook
-  # torrent import landed as 28 untitled "Chapitre N.mp3" files flat in
-  # media/books before this was set.
+  # get their own destination (audiobookshelf's actual library root — see
+  # docs/media/audiobookshelf.md, "/data/audio-books", hyphenated) instead of
+  # falling back to the ebook folder — found live: an audiobook torrent
+  # import landed as 28 untitled "Chapitre N.mp3" files flat in media/books
+  # before this was set. A first pass at this value used "/data/audiobooks"
+  # (no hyphen, copying a typo in audiobookshelf--deployment.yaml's own
+  # comment) and briefly created a second, empty duplicate folder before
+  # being caught and merged into the real one.
   organize:
     books:
       # {Series/} and {SeriesPosition - } collapse to nothing when the book
@@ -340,7 +343,7 @@ shelfmark:
       # novel still gets a sane Author/Title (Year) path.
       template: "{Author}/{Series/}{SeriesPosition - }{Title} ({Year})"
     audiobooks:
-      destination: "{{ .Values.media.system.data.path }}/audiobooks"
+      destination: "{{ .Values.media.system.data.path }}/audio-books"
       template: "{Author}/{Series/}{SeriesPosition - }{Title}/{Title}"
   image: ghcr.io/calibrain/shelfmark:v1.3.13
   ports:

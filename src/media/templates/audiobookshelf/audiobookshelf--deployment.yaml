@@ -71,7 +71,10 @@ spec:
           name: {{ $appVolume }}
           subPath: audiobookshelf/metadata
         # Whole media share mounted; add a library in the UI pointing at the
-        # desired sub-folder ({{ .Values.media.system.data.path }}/audiobooks …), same as Kavita/Komga.
+        # desired sub-folder ({{ .Values.media.system.data.path }}/audio-books …), same as Kavita/Komga.
+        # (Hyphenated — a stray unhyphenated copy of this comment in an
+        # unrelated module briefly caused a real duplicate folder on disk;
+        # see the "audiobooks" key comment in media.yaml.)
         - mountPath: {{ .Values.media.system.data.path }}
           name: {{ $mediaVolume }}
       volumes:
