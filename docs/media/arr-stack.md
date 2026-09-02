@@ -68,3 +68,45 @@ by default in `registry.yaml`, opted in per-env via `platypod-sops`
 
 **Maintenance note:** these `:latest` tags are the main deviation from the
 pin-everything convention.
+
+## althub rate limiting (2026-09-02/03)
+
+`althub` went into an escalating "Indexer is disabled till..." cycle in
+Prowlarr for over a day, initially misdiagnosed as a Cloudflare bot-fingerprint
+block (a real `403 error 1010` was seen on one raw request) needing a
+FlareSolverr fix. That fix (routing `althub` through FlareSolverr by tag —
+already registered as a Prowlarr indexer proxy, see
+`flaresolverr--deployment.yaml`) is real and worth keeping, but turned out not
+to be the actual cause: the failing requests were plain `429 Too Many
+Requests` from althub's own server, not a Cloudflare JS-challenge (the only
+thing FlareSolverr can solve) — confirmed by Prowlarr's logs never mentioning
+FlareSolverr for those requests at all.
+
+The real cause, found by reading althub's own published policy
+(`help.althub.co.za/using-althub/abusing-the-api`): they rate-limit and
+IP-ban based on **request frequency**, and ask clients to self-limit to
+roughly **one request per 10 minutes, minimum**. Repeated rapid manual testing
+while diagnosing the (wrong) Cloudflare theory violated that badly and is the
+far more likely actual cause of the escalating ban — Prowlarr's own failure
+timestamps for this indexer predate any of this session's testing, so it
+wasn't purely self-inflicted, but the testing made it measurably worse each
+time (confirmed live: one clean attempt after manually clearing Prowlarr's
+`IndexerStatus` row in Postgres immediately re-triggered a fresh ban).
+
+Prowlarr has no per-request spacing throttle — only a per-period **count**
+cap (`baseSettings.queryLimit` + `baseSettings.limitsUnit`, in its indexer
+schema, unset/unlimited by default). `prowlarr.indexers.althub.queryLimit`
+(default `6`, unit fixed to Hour in the Job) is the closest real enforcement
+available of althub's stated policy — not a perfect match for "10 minutes
+apart" but a hard ceiling on burst volume. Set via `platypod-sops` per-env
+like the API key; the `sabnzbd-setup` Job applies it with `forceSave=true`
+(a normal save re-validates the connection first, which is exactly the
+request that gets rate-limited — without `forceSave`, an upsert attempted
+during one of althub's bad spells fails outright and neither this nor the
+FlareSolverr tag ever gets applied).
+
+**If this happens again:** don't repeatedly retest by hand. Clearing
+Prowlarr's `IndexerStatus` row (`DELETE FROM "IndexerStatus" WHERE
+"ProviderId" = <id>;` in the `prowlarrMain` schema on the shared `transverse-db`
+Postgres instance) resets the backoff for exactly one clean attempt — useful
+for a single deliberate test, not for repeated probing.

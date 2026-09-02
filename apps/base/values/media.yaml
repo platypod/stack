@@ -257,6 +257,16 @@ prowlarr:
     althub:
       baseUrl: "https://www.althub.co.za"
       apiKey: ""
+      # althub's own published policy (help.althub.co.za/using-althub/
+      # abusing-the-api) asks clients to self-limit to roughly one request
+      # per 10 minutes or risk an IP ban. Prowlarr has no per-request
+      # spacing throttle, only a per-period count cap (baseSettings.
+      # queryLimit/limitsUnit — set to Hour here, see sabnzbd--setup-job.yaml),
+      # so 6/hour is the closest real enforcement of that policy available.
+      # Found the hard way 2026-09-02/03: enough rapid manual testing while
+      # diagnosing an unrelated issue put the IP into an escalating ban cycle
+      # that outlasted a day.
+      queryLimit: 6
   replicasNb: 1
   resources:
     requests:

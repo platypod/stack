@@ -29,7 +29,17 @@
        indexers added to Prowlarr auto-sync to all three (no manual "sync to
        app" step).
     6. If .Values.prowlarr.indexers.althub.apiKey is set: upsert althub as a
-       generic Newznab indexer in Prowlarr.
+       generic Newznab indexer in Prowlarr, tagged to route through
+       FlareSolverr (registered as a Prowlarr indexer proxy — see
+       flaresolverr--deployment.yaml) and capped at
+       .Values.prowlarr.indexers.althub.queryLimit queries/hour. althub's own
+       published policy (help.althub.co.za/using-althub/abusing-the-api)
+       requires clients self-limit to roughly one request per 10 minutes or
+       risk an IP ban — Prowlarr has no per-request spacing throttle, only a
+       per-period count cap, so the query limit is the closest real
+       enforcement available. Found live 2026-09-02/03 the hard way: enough
+       rapid manual testing while diagnosing an unrelated issue got the IP
+       into an escalating ban cycle that outlasted a day.
     7. If .Values.sabnzbd.provider.host is set: upsert the Usenet block-account
        NNTP server into SABnzbd itself via its own config API. Skipped until a
        provider is chosen — see stack/docs/TODO.md.
@@ -81,6 +91,8 @@ spec:
           value: "{{ .Values.prowlarr.indexers.althub.baseUrl }}"
         - name: ALTHUB_API_KEY
           value: "{{ .Values.prowlarr.indexers.althub.apiKey }}"
+        - name: ALTHUB_QUERY_LIMIT
+          value: "{{ .Values.prowlarr.indexers.althub.queryLimit }}"
         - name: PROVIDER_HOST
           value: "{{ .Values.sabnzbd.provider.host }}"
         - name: PROVIDER_PORT
@@ -126,6 +138,7 @@ spec:
           PROWLARR_KEY  = os.environ["PROWLARR_API_KEY"]
           ALTHUB_URL    = os.environ.get("ALTHUB_BASE_URL", "").strip()
           ALTHUB_KEY    = os.environ.get("ALTHUB_API_KEY", "").strip()
+          ALTHUB_QUERY_LIMIT = os.environ.get("ALTHUB_QUERY_LIMIT", "").strip()
           PROVIDER_HOST = os.environ.get("PROVIDER_HOST", "").strip()
           ARR_APPS      = json.loads(os.environ["ARR_APPS_JSON"])
           PROWLARR_ENABLED = os.environ.get("PROWLARR_ENABLED", "").strip().lower() == "true"
@@ -289,6 +302,13 @@ spec:
               payload["enable"] = True
               payload["appProfileId"] = profiles[0]["id"]
               field_values = {"baseUrl": ALTHUB_URL, "apiKey": ALTHUB_KEY}
+              # baseSettings.limitsUnit: 0 = Day, 1 = Hour (Prowlarr's own
+              # enum). Hour gives the closer approximation of althub's
+              # documented "no more than ~1 request per 10 min" policy — see
+              # the FlareSolverr/query-limit comment above.
+              if ALTHUB_QUERY_LIMIT:
+                  field_values["baseSettings.queryLimit"] = int(ALTHUB_QUERY_LIMIT)
+                  field_values["baseSettings.limitsUnit"] = 1
               for f in payload.get("fields", []):
                   if f["name"] in field_values:
                       f["value"] = field_values[f["name"]]
