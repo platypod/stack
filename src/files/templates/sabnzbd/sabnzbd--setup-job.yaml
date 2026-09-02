@@ -293,13 +293,35 @@ spec:
                   if f["name"] in field_values:
                       f["value"] = field_values[f["name"]]
 
+              # Route through FlareSolverr (already registered as an indexer
+              # proxy — see flaresolverr--deployment.yaml) by tag, same as
+              # Prowlarr's own UI does it. Without this, althub.co.za's
+              # Cloudflare WAF outright blocks real search requests (403
+              # "error code: 1010", a bot-fingerprint block, not a soft rate
+              # limit) even though a plain connection test can still pass —
+              # found live 2026-09-02 chasing a "why does this keep failing"
+              # report. Looked up by label, not hardcoded id: ids are
+              # per-install, and this indexer's own tags would otherwise
+              # silently revert to none on every redeploy.
+              s, tags = call("GET", f"{PROWLARR_URL}/api/v1/tag", headers=arr_headers(PROWLARR_KEY))
+              flaresolverr_tag = next((t["id"] for t in tags if t.get("label") == "flaresolverr"), None) if s == 200 else None
+              if flaresolverr_tag is not None:
+                  payload["tags"] = [flaresolverr_tag]
+              else:
+                  print(f"  WARN: no 'flaresolverr' tag found in Prowlarr ({s}) — althub will bypass it")
+
+              # forceSave: a normal save re-validates the connection first,
+              # and that validation is exactly the request Cloudflare blocks
+              # — without this, an upsert during one of althub's frequent
+              # bad spells fails outright and this Job never applies the fix
+              # (tag, apiKey, or otherwise) until a lucky redeploy.
               s, existing = call("GET", f"{PROWLARR_URL}/api/v1/indexer", headers=arr_headers(PROWLARR_KEY))
               match = next((i for i in existing if i.get("name") == "althub"), None) if s == 200 else None
               if match:
                   payload["id"] = match["id"]
-                  s, b = call("PUT", f"{PROWLARR_URL}/api/v1/indexer/{match['id']}", payload, arr_headers(PROWLARR_KEY))
+                  s, b = call("PUT", f"{PROWLARR_URL}/api/v1/indexer/{match['id']}?forceSave=true", payload, arr_headers(PROWLARR_KEY))
               else:
-                  s, b = call("POST", f"{PROWLARR_URL}/api/v1/indexer", payload, arr_headers(PROWLARR_KEY))
+                  s, b = call("POST", f"{PROWLARR_URL}/api/v1/indexer?forceSave=true", payload, arr_headers(PROWLARR_KEY))
               print(f"althub indexer upsert -> {s}" if ok(s)
                     else f"WARN: althub indexer upsert failed [{s}]: {str(b)[:160]}")
 
