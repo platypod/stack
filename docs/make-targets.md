@@ -14,6 +14,7 @@ builds. `make help` prints this list live. Default goal is `help`.
 | `TRAEFIK_VERSION` | `v3.5` | Traefik CRD version for `vendor-crds`/`install-crds` |
 | `CSI_DRIVER_NFS_VERSION` | `4.13.2` | NFS CSI driver chart version — informational only; the driver itself is Flux-managed (`infrastructure/csi/`), this just keeps the two in sync when bumping |
 | `IMAGE`, `VERSION` | — | For `build` (custom image name + tag) |
+| `ARGS` | — | For `ship-transcripts` — passed straight through to `prompt-meter`'s own `ship` target |
 
 > `ENV` uses `local`/`prd`, but the infra writes kubeconfigs under `local`/`prod` —
 > the Makefile maps `prd` to `.../prod/kubeconfig` automatically. Prod's control
@@ -44,6 +45,17 @@ builds. `make help` prints this list live. Default goal is `help`.
 | `make install-crds` | Apply the vendored Traefik CRDs (IngressRoute, Middleware, …) imperatively — Flux applies the same vendored copy on its own via `infra-crds` |
 | `make flux-bootstrap` | Bootstrap/reconcile Flux against `clusters/$(ENV)` — idempotent, safe to re-run (`ENV=local`\|`prd`) |
 | `make flux-sops-secrets` | Create the in-cluster deploy key + `sops-age` Secret the `platypod-sops` `GitRepository` needs — idempotent, one-time per cluster (`ENV=local`\|`prd`) |
+| `make image-automation-deploy-key` | Create the **read-write** deploy key on `platypod/stack` that `image-automation-controller`'s own `stack-image-automation` `GitRepository` pushes image pins with — idempotent, one-time per cluster (`ENV=local`\|`prd`) |
+
+> `image-automation-deploy-key` is deliberately a **second, separate**
+> credential: `flux-bootstrap`'s key stays read-only, and only this one can
+> write. It is the only read-write credential in the stack — see
+> [flux-migration.md](flux-migration.md) Phase 9 for why it is scoped this
+> narrowly. Re-running it is a no-op once the Secret exists; **to rotate, delete
+> the `stack-image-automation-deploy-key` Secret in `flux-system` first**, then
+> re-run. It shells out to `gh`, so GitHub CLI must be authenticated with rights
+> to add a deploy key to `platypod/stack`. What it writes to, and why prod's
+> automation also targets `dev`, is [branching.md](branching.md).
 
 `csi-driver-nfs` (NFS CSI driver, prod-only) is Flux-managed —
 `infrastructure/csi/`, wired in via `clusters/prd/infrastructure.yaml`. No
@@ -64,6 +76,16 @@ See [operations.md](operations.md#day-to-day) for the common ones.
 | Target | What it does |
 |--------|--------------|
 | `make build IMAGE=<name> VERSION=<tag>` | Build and push a custom image to `ghcr.io/platypod/<name>:<tag>` |
+
+## Utilities
+
+| Target | What it does |
+|--------|--------------|
+| `make ship-transcripts` | **Retired here** — ships AI usage telemetry (`ai_tx_*` + transcripts). Installs and delegates to the `../prompt-meter` submodule; `ARGS=` is passed through to its `ship` target |
+
+The implementation moved out of this repo to `prompt-meter` along with the
+`ai_tx_*` schema; the target is kept only so the old invocation keeps working.
+Run it there directly if you want its own flags and help.
 
 ## Headroom proxy (dev-tools module) — **disabled**
 
