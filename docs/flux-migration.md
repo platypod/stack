@@ -19,10 +19,14 @@
 
 ## What changes, and why
 
-Today the stack is deployed **imperatively**: `make deploy [MODULE=] [ENV=]` runs
-`helmfile sync` from a laptop holding the kubeconfig. Nothing detects drift, and
-the env values (including all prod secrets) live **outside Git** — gitignored,
-with `values/prd/values.yaml` a symlink to the Synology share
+*(Written before the migration; "today" throughout this section means the
+pre-Flux state. None of these commands exist any more.)*
+
+Before this migration the stack was deployed **imperatively**: `make deploy
+[MODULE=] [ENV=]` ran `helmfile sync` from a laptop holding the kubeconfig.
+Nothing detected drift, and the env values (including all prod secrets) lived
+**outside Git** — gitignored, with `values/prd/values.yaml` a symlink to the
+Synology share
 ([../../infra/docs/secrets-on-nfs.md](../../infra/docs/secrets-on-nfs.md)).
 
 Flux inverts this: controllers *inside* each cluster reconcile from Git. The

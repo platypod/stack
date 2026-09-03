@@ -1,7 +1,7 @@
-# Source for the csi-driver-nfs chart — same repo `make install-csi` adds
-# imperatively today (Makefile). source-controller fetches this over the
-# network like it already does for the flux-system GitRepository; unlike
-# kustomize-controller (gotcha 1, network disabled), this isn't vendored.
+# Source for the csi-driver-nfs chart — the same upstream repo the retired
+# `make install-csi` target used to add imperatively. source-controller fetches
+# this over the network like it already does for the flux-system GitRepository;
+# unlike kustomize-controller (gotcha 1, network disabled), this isn't vendored.
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:

@@ -3,11 +3,12 @@
   SABnzbd first-boot / every-deploy wiring Job.
 
   Hook-weight 40 (> jellyfin 10, jellyseerr 20, reclaimerr 30) — runs last, and
-  the `files` release itself now `needs:` the `media` release (see
-  helmfile.yaml.gotmpl) so Sonarr/Radarr/Readarr/Prowlarr Services already
-  exist by the time this Job starts. `helm upgrade` isn't run with `--wait`,
-  so those pods may still be starting — every step below polls until ready
-  rather than assuming so.
+  the `files` release itself depends on the `media` release (HelmRelease
+  `spec.dependsOn` in apps/base/helmrelease-files.yaml — this was helmfile's
+  `needs:` before the Flux migration) so Sonarr/Radarr/Readarr/Prowlarr
+  Services already exist by the time this Job starts. `helm upgrade` isn't run
+  with `--wait`, so those pods may still be starting — every step below polls
+  until ready rather than assuming so.
 
   Flow (idempotent — safe on every deploy, mirrors reclaimerr-setup):
     1. Wait for SABnzbd's API (note: SABnzbd's API root is /api, not /sabnzbd/api).

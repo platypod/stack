@@ -5,8 +5,9 @@
   Hook-weight 35 (< sabnzbd-setup's 40, > reclaimerr's 30) — runs before
   sabnzbd-setup, no ordering dependency between them, just kept sequential
   rather than racing two Jobs that both PUT/POST each *arr's downloadclient
-  list. Same `files` -> `media` release dependency as sabnzbd-setup (see
-  helmfile.yaml.gotmpl) so Sonarr/Radarr/Readarr Services already exist.
+  list. Same `files` -> `media` release dependency as sabnzbd-setup (HelmRelease
+  `spec.dependsOn` in apps/base/helmrelease-files.yaml) so Sonarr/Radarr/Readarr
+  Services already exist.
 
   Field names were NOT guessed — verified live against each app's
   /downloadclient/schema before writing this (see the sabnzbd-setup saga:

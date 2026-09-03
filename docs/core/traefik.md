@@ -43,5 +43,6 @@ exposes metrics + a dashboard. Reached via a MetalLB `LoadBalancer`.
   hostname per hour" limit (5/h) — recoverable (hourly), but avoidable. Sequence:
   wire reachability (or use DNS-01, which needs none), test on LE **staging**
   first, then flip to production ACME in one controlled move. Also re-check
-  `git status`/working-tree diff before any `make deploy` touching Traefik so an
-  unrelated staged change doesn't ship alongside it.
+  `git status`/working-tree diff before pushing any commit that touches Traefik
+  — the push *is* the deploy now, so an unrelated staged change ships alongside
+  it with nothing in between to catch it.

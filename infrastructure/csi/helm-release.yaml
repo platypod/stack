@@ -1,10 +1,9 @@
 # Prod-only — local uses hostPath storage, not NFS (stack/docs/conventions.md).
-# Version pinned to match the imperative `make install-csi` target
-# (CSI_DRIVER_NFS_VERSION in Makefile) — keep both in sync until that
-# target retires (Phase 8). Pre-authored per stack/docs/flux-migration.md
-# Phase 5: inert until prod is bootstrapped onto Flux (Phase 7) — this
-# HelmRelease isn't reconciled by anything yet, since clusters/prd/ has no
-# flux-system/ (that's `flux bootstrap`-generated, not hand-written).
+# This is the only thing that installs the driver: the imperative
+# `make install-csi` target was retired in Phase 8, and re-running one by hand
+# would fight this release for ownership (stack/docs/flux-migration.md gotcha
+# 14). The Makefile keeps CSI_DRIVER_NFS_VERSION as a documentation-only
+# mirror of the version below — bump both together, but nothing reads it.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
