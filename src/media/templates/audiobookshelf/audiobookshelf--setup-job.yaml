@@ -21,7 +21,7 @@
     4. If oidc.clientId: PATCH /api/auth-settings with the OIDC provider
        config (merge — untouched keys keep their server-side value). Requires
        audiobookshelf.credentials to keep matching whatever the root user's
-       actual password is (see values/default/media/audiobookshelf.yaml) —
+       actual password is (see audiobookshelf in apps/base/values/media.yaml) —
        Audiobookshelf caches users in memory, so an out-of-band password reset
        needs a pod restart to take effect, same as the DB-write case above.
 */ -}}

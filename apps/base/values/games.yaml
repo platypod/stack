@@ -1,6 +1,6 @@
 # Implementation tier — games module. Registry fields (enable/label/host)
 # for pokeclicker/rommapp/unbegotten/palworld/valheim/terraria/satisfactory
-# live in values/default/registry.yaml instead. `minecraft` (no single
+# live in apps/base/values/registry.yaml instead. `minecraft` (no single
 # enable/label/host — see instances.*.enable) and `games.backupTargets`
 # (not a per-service key) stay here in full.
 
@@ -386,7 +386,7 @@ games:
     enable: false
     savePath: "Pal/Saved/SaveGames" # relative to the game's subPath root
     # Staggered 30min after Palworld's own BACKUP_CRON_EXPRESSION (0 3 * * *,
-    # see values/prd/values.yaml palworld.server.extraEnv) so this doesn't
+    # see palworld.server.extraEnv in platypod-sops' clusters/prd/secrets.enc.yaml) so this doesn't
     # read the save dir mid-write from that internal backup.
     schedule: "30 3 * * *"
     retentionDays: 14

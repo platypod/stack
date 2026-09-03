@@ -34,7 +34,7 @@ routing without touching a real app.
 
 [headroomlabs-ai/headroom](https://github.com/headroomlabs-ai/headroom), an LLM
 context-compression proxy. Chart is in place
-(`values/default/dev-tools/headroom.yaml`, `headroom.enable: false`) but not
+(`headroom` in `apps/base/values/dev-tools.yaml`, `headroom.enable: false`) but not
 deployed. Runs in **proxy mode only** (`headroom proxy`, the image's default
 entrypoint) — no qdrant/neo4j (those back the cross-agent memory feature) and
 no persistent volume for `~/.headroom`, so its savings/memory stats would reset

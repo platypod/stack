@@ -5,7 +5,7 @@ Federation reverse-proxy in front of multiple Jellyfin backends
 compare the host-native `jellyfin-proxy` instance against the in-cluster
 `jellyfin-k8s` instance for performance.
 
-- **Enabled:** prod only (`values/prd/values.yaml` → `jellyswarrm.enable`).
+- **Enabled:** prod only (`platypod-sops`'s `clusters/prd/secrets.enc.yaml` → `jellyswarrm.enable`).
 - **Image:** `ghcr.io/llukas22/jellyswarrm:latest`, port 3000.
 - **Hostname:** its own, label-derived (`jellyswarrm.<domain>`) — **not**
   `jellyfin.<domain>`. It briefly hardcoded a hijack of the `jellyfin.<domain>`

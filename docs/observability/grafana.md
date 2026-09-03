@@ -21,8 +21,8 @@ Dashboards + Explore. Login via Authelia **OIDC** (`generic_oauth`).
   title via `${var:text}`). See [src/observability/README.md](../../src/observability/README.md).
 - Data links use `/d/<uid>?${__url_time_range}&${__all_variables}&var-X=${value}` for
   click-to-filter / cross-dashboard drill-downs.
-- **On dev, `traefik.tls.selfSigned` drives both the browser TLS cert AND Grafana's
-  OIDC login.** If `values/dev/values.yaml` is missing the `traefik.tls` block it
+- **On local, `traefik.tls.selfSigned` drives both the browser TLS cert AND Grafana's
+  OIDC login.** If `platypod-sops`'s `clusters/local/secrets.enc.yaml` is missing the `traefik.tls` block it
   defaults to `false`: no TLSStore gets created (browser shows the untrusted
   Traefik default cert on every host) and Grafana's OIDC back-channel fails TLS
   verification against the mkcert cert. Fix is one flag —

@@ -1,6 +1,6 @@
 {{/*
 All three helpers below are generated off the single source of truth at
-values/default/security/access-groups.yaml (`security.accessGroups` +
+apps/base/values/security.yaml (`security.accessGroups` +
 `security.categories`) — see that file's header for the full field reference.
 A new tool/role/category only needs an entry there; nothing here should need
 to change to pick it up.

@@ -1,6 +1,6 @@
 # Implementation tier — security module. Registry fields (enable/label/host,
 # where present) for adguard/vaultwarden/lldap/authelia live in
-# values/default/registry.yaml instead. `security.accessGroups` (below) has
+# apps/base/values/registry.yaml instead. `security.accessGroups` (below) has
 # no per-service enable/label/host shape of its own and stays here in full.
 
 adguard:
@@ -119,7 +119,7 @@ lldap:
     image: python:3-alpine
     # Group list itself is generated (see security.allGroupNames in
     # stack/src/security/templates/_helpers.tpl) off the single source of
-    # truth at values/default/security.yaml's accessGroups — not hand-listed
+    # truth at this file's own security.accessGroups — not hand-listed
     # here. Only per-user group MEMBERSHIP is declared below.
     users:
       - id: admin
@@ -168,7 +168,7 @@ lldap:
       - id: grafana-authz
         email: grafana-authz@platypod.local
         displayName: Grafana Authz
-        # Placeholder — must match values/default/observability.yaml's
+        # Placeholder — must match apps/base/values/observability.yaml's
         # scopeShim.lldap.password. Real value comes from values/<env>/values.yaml.
         password: verySecretMuchSecureNeverGonnaBeGuessedGrafanaAuthzPassword
         groups:
@@ -179,7 +179,7 @@ lldap:
       - id: jellyfin-ldap
         email: jellyfin-ldap@platypod.local
         displayName: Jellyfin LDAP
-        # Placeholder — must match values/default/media.yaml's jellyfin.ldap.bindPassword.
+        # Placeholder — must match apps/base/values/media.yaml's jellyfin.ldap.bindPassword.
         # Real value comes from values/<env>/values.yaml.
         password: verySecretMuchSecureNeverGonnaBeGuessedJellyfinLdapPassword
         groups:

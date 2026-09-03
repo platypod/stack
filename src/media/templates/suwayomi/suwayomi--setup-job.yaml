@@ -11,7 +11,7 @@
   Idempotent — setSettings just overwrites the list with the desired value.
 
   NOTE: requires Suwayomi >= v1.0.0 (the extensionRepos setting did not exist in
-  v0.7.x). See values/default/media/suwayomi.yaml for the pinned image.
+  v0.7.x). See suwayomi in apps/base/values/media.yaml for the pinned image.
 */ -}}
 {{- $svc := print .Values.k8s.names.services.prefix .Values.suwayomi.label .Values.k8s.names.services.suffix }}
 apiVersion: batch/v1

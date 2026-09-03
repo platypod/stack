@@ -2,7 +2,7 @@
 {{- /*
   LDAPS for clients outside the cluster (prod's host-native Jellyfin — see
   docs/media/jellyfin-ldap.md). Traefik terminates TLS on its "ldaps" TCP
-  entrypoint (traefik.ports.ldaps, see values/default/core/traefik.yaml) using
+  entrypoint (traefik.ports.ldaps, see apps/base/values/substrate.yaml) using
   the same trusted wildcard cert as every other host, then forwards PLAINTEXT
   to this Service inside the cluster — LLDAP itself needs no TLS config.
 

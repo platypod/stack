@@ -23,7 +23,7 @@ data:
     INSTANCE = os.environ.get("INSTANCE_NAME", "")
     # Comma-separated -- any one of these forwarded/looked-up groups grants
     # admin scope. Lets the stack point this at grafana_admin/dev_admin/admins
-    # (see values/default/security/access-groups.yaml) without this script
+    # (see security.accessGroups in apps/base/values/security.yaml) without this script
     # knowing those names are related; it just checks for overlap.
     ADMIN_GROUPS = {g.strip() for g in os.environ.get("ADMIN_GROUPS", "admins").split(",") if g.strip()}
     HEADER  = os.environ.get("USER_HEADER", "X-Grafana-User").lower()

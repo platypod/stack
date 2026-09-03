@@ -241,7 +241,7 @@ observability:
       # (member of lldap_strict_readonly: read-all, no write).
       user: grafana-authz
       # Placeholder — must match the grafana-authz seed user's password in
-      # values/default/security/lldap.yaml. Real value comes from
+      # apps/base/values/security.yaml's lldap.seed. Real value comes from
       # values/<env>/values.yaml (gitignored).
       password: verySecretMuchSecureNeverGonnaBeGuessedGrafanaAuthzPassword
     # Shared secret Grafana sends as a custom datasource header; the shim rejects
@@ -251,7 +251,7 @@ observability:
     secretHeader: "X-Shim-Auth"
     # Admin-granting groups are generated (observability.grafanaAdminGroups in
     # src/observability/templates/_helpers.tpl) off
-    # values/default/security/access-groups.yaml — no adminGroup value needed here.
+    # security.accessGroups in apps/base/values/security.yaml — no adminGroup value needed here.
     # Header Grafana sends when [dataproxy] send_user_header = true.
     userHeader: X-Grafana-User
     # Owner label value stamped on all non-personal (shared/infra) metrics, so

@@ -1,7 +1,7 @@
 {{- /*
   Nightly, hardlink-based ("rsnapshot"-style) backup of each enabled game's
   save-data path to the NFS apps share. See games.backupTargets in
-  values/default/games/backups.yaml for why this only covers save data, not
+  games.backupTargets in apps/base/values/games.yaml for why this only covers save data, not
   the whole install.
 
   Each run creates a new dated directory. If a previous snapshot exists,

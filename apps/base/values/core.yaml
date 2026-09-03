@@ -1,5 +1,5 @@
 # Implementation tier — core module. Registry fields (enable/label/host) for
-# these services live in values/default/registry.yaml instead.
+# these services live in apps/base/values/registry.yaml instead.
 
 homepage:
   image:

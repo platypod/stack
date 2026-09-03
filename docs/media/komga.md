@@ -10,6 +10,6 @@ Comics/manga server (JVM-based).
 - **Libraries:** each library's root must contain one subfolder per Series —
   books sitting directly in the root all collapse into a single series named
   after the root folder. `komga.libraries` in
-  [komga.yaml](../../values/default/media/komga.yaml) declares the roots
+  [`komga` in media.yaml](../../apps/base/values/media.yaml) declares the roots
   (`bd`, `manga`); the **komga-setup** Job creates any that don't exist yet.
 - **Setup:** [komga-setup](komga-setup-job.md).

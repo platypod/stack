@@ -4,7 +4,7 @@ In-cluster Jellyfin, deployed **only to compare against the host-native
 `jellyfin-proxy` instance via [jellyswarrm](jellyswarrm.md)**. Not a permanent
 media path — no ingress, no Jellyseerr/Homepage wiring.
 
-- **Enabled:** prod only (`values/prd/values.yaml` → `jellyfinK8s.enable`).
+- **Enabled:** prod only (`platypod-sops`'s `clusters/prd/secrets.enc.yaml` → `jellyfinK8s.enable`).
 - **Image:** `jellyfin/jellyfin:latest` (same as `jellyfin`).
 - **Storage:** same NFS `media` PVC as `jellyfin-proxy`, mounted **read-only**
   at `/media` — same content is required for the comparison to mean anything.

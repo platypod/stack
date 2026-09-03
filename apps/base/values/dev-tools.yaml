@@ -1,5 +1,5 @@
 # Implementation tier — dev-tools module. Registry fields (enable/label/host)
-# for these services live in values/default/registry.yaml instead.
+# for these services live in apps/base/values/registry.yaml instead.
 
 bookstack:
   appKey: base64:gJJbTsv2CTPeHrCOmu0crY65zypAC747jgMHvYEUlto=

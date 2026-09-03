@@ -1,5 +1,5 @@
 # Implementation tier — media module. Registry fields (enable/label/host,
-# where present) live in values/default/registry.yaml instead. `media.system`
+# where present) live in apps/base/values/registry.yaml instead. `media.system`
 # (module-wide paths, not a per-service key) stays here in full.
 
 media:
@@ -139,15 +139,15 @@ jellyfin:
   ldap:
     enable: true
     # Bind account: must match the jellyfin-ldap seed account in
-    # values/default/security.yaml (member of lldap_strict_readonly: read-all, no write).
+    # apps/base/values/security.yaml (member of lldap_strict_readonly: read-all, no write).
     bindUser: jellyfin-ldap
     # Placeholder — must match the jellyfin-ldap seed user's password in
-    # values/default/security.yaml. Real value comes from
-    # values/<env>/values.yaml (gitignored).
+    # apps/base/values/security.yaml. Real value comes from platypod-sops'
+    # clusters/<env>/secrets.enc.yaml (encrypted, not in this repo).
     bindPassword: verySecretMuchSecureNeverGonnaBeGuessedJellyfinLdapPassword
     # LLDAP groups whose members may log into Jellyfin at all (OR'd into one
     # LDAP filter by jellyfin-plugins-setup) — granular + category composite +
-    # the global superuser, per values/default/security.yaml's accessGroups.
+    # the global superuser, per apps/base/values/security.yaml's accessGroups.
     # Includes the *_admin groups too: LdapSearchFilter gates login itself, so
     # someone who is ONLY jellyfin_admin/media_admin (not also the _user
     # equivalent) would otherwise be rejected before LdapAdminFilter is ever
@@ -252,7 +252,7 @@ prowlarr:
       targetPort: 9696
   # Newznab indexers auto-wired by the sabnzbd-setup Job. apiKey empty = skip
   # (real key comes from the user's althub.co.za profile → Integrations tab,
-  # set only in values/dev or values/prd, never committed here).
+  # set only in platypod-sops' clusters/<env>/secrets.enc.yaml, never committed here).
   indexers:
     althub:
       baseUrl: "https://www.althub.co.za"

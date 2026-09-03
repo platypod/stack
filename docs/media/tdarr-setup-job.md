@@ -9,4 +9,4 @@ It upserts:
 2. A library bound to that flow, pointing at the configured folder
 3. Folder-watch status (+ optional `scanFindNew` trigger)
 
-Driven by `tdarr.setup.*` in `values/default/media/tdarr.yaml`.
+Driven by `tdarr.setup.*` in `apps/base/values/media.yaml`.

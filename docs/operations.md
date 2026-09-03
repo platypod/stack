@@ -142,7 +142,7 @@ would fight the Flux-managed release for ownership (see
 Prod uses public DNS (`platypod.ovh`) and ACME/Let's Encrypt for TLS — no mkcert.
 The ACME email/endpoint, and every other prod-specific override, live in
 `platypod-sops/clusters/prd/secrets.enc.yaml` now (migrated from the old
-NFS-symlinked `values/prd/values.yaml` in Phase 7) — `sops -d` it to read,
+NFS-symlinked `values/prd/values.yaml`, retired in Phase 7) — `sops -d` it to read,
 same as `local`'s.
 
 > Prod's control plane is bare metal on the LAN (`chuwi-cp1`,

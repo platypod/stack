@@ -251,7 +251,7 @@ ship-transcripts: ## [retired → prompt-meter submodule] Ship AI usage telemetr
 # ---------------------------------------------------------------------------
 
 # Mirrors the local/prd domains (local's now in platypod-sops, prd's in
-# values/prd/values.yaml).
+# clusters/prd/secrets.enc.yaml in platypod-sops).
 DOMAIN_local := platypod.local
 DOMAIN_prd := platypod.ovh
 

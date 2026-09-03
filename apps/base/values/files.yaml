@@ -1,5 +1,5 @@
 # Implementation tier — files module. Registry fields (enable/label/host)
-# for these services live in values/default/registry.yaml instead.
+# for these services live in apps/base/values/registry.yaml instead.
 
 deluge:
   image: lscr.io/linuxserver/deluge:2.2.0-ls381

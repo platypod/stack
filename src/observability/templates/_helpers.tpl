@@ -5,7 +5,7 @@ env var and docs/observability/dashboard-multitenancy.md): grafana's own
 "_admin" group, every category it belongs to that actually has an admin tier,
 and the global "admins" superuser.
 
-Source of truth is values/default/security/access-groups.yaml, read directly
+Source of truth is apps/base/values/security.yaml's security.accessGroups, read directly
 here rather than via the security chart's equivalent helpers
 (security.toolSubjects et al) — Helm named templates aren't visible across
 separate top-level charts, and this chart only ever needs it for one tool, so

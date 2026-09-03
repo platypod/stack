@@ -10,8 +10,8 @@ Lightweight LDAP — the single source of users/groups that Authelia binds again
 
 ## Seeding
 Groups + users are created by the [lldap-seed-job](lldap-seed-job.md) (post-install
-hook). **Prod seed users live in `values/prd/values.yaml`**, NOT the default
-`lldap.yaml` (prod overrides it entirely) — including the **`otel-telemetry` service
+hook). **Prod seed users live in `platypod-sops`'s `clusters/prd/secrets.enc.yaml`**, NOT the default
+`lldap.seed` in `apps/base/values/security.yaml` (prod overrides it entirely) — including the **`otel-telemetry` service
 account** used by the OTLP Basic-auth path (see [decisions.md](../decisions.md)) and the
 **`jellyfin-ldap`** read-only bind account (prod-only, added there specifically —
 see [../media/jellyfin-ldap.md](../media/jellyfin-ldap.md)).

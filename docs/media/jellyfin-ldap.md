@@ -82,10 +82,10 @@ entrypoint:
   Terminates at Traefik; forwards **plaintext** to `lldap:3890` inside the
   cluster — same edge-TLS/plaintext-inside pattern as every HTTPS-fronted app
   here. LLDAP itself needs zero TLS config.
-- Prod-only bind account `jellyfin-ldap` lives in `values/prd/values.yaml`'s
-  `lldap.seed.users` (NFS-stored, not in git — prod's seed list fully
-  **overrides** the default one, so it has to be added there specifically, not
-  just in `values/default`).
+- Prod-only bind account `jellyfin-ldap` lives in `platypod-sops`'s `clusters/prd/secrets.enc.yaml`'s
+  `lldap.seed.users` (SOPS/age-encrypted in that private repo — prod's seed list
+  fully **overrides** the default one, so it has to be added there specifically,
+  not just in `apps/base/values/security.yaml`).
 
 ### DNS gotcha — mini4 needs a hosts-file override
 
@@ -170,7 +170,7 @@ is wanted.
 |---|---|---|
 | `jellyfin.pvc.media` | `storage.defaultVolumes.media` | Read-only NFS mount at `/media` (dev only — prod is host-native) |
 | `jellyfin.libraries` | placeholder movies/tv | Seeded via `VirtualFolders`; **replace paths before relying on it** |
-| `jellyfin.ldap.*` | see [jellyfin.yaml](../../values/default/media/jellyfin.yaml) | Plugin version pin, bind account, group filters |
+| `jellyfin.ldap.*` | see [`jellyfin` in media.yaml](../../apps/base/values/media.yaml) | Plugin version pin, bind account, group filters |
 | `jellyfin.moonfin.*` | see same file | Repo URL, enable flag |
 | `lldap.ldaps.enable` | `false` (`true` in prod) | Gates the `IngressRouteTCP` |
 | `traefik.ports.ldaps` | `:636` | Dedicated TCP entrypoint, always present (cheap; only routed when `lldap.ldaps.enable`) |

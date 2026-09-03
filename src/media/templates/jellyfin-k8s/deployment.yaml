@@ -58,7 +58,7 @@ spec:
           containerPort: {{ .Values.jellyfinK8s.ports.http.targetPort }}
         volumeMounts:
         # /config is Jellyfin's default config directory (JELLYFIN_ConfigDir) —
-        # local (non-NFS) volume, see values/default/media/jellyfin-k8s.yaml.
+        # local (non-NFS) volume, see jellyfinK8s in apps/base/values/media.yaml.
         - mountPath: /config
           name: {{ $configVolume }}
           subPath: jellyfin-k8s

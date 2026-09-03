@@ -2,7 +2,7 @@
 # Configure macOS to use Adguard as its system DNS server with 1.1.1.1 as
 # fallback. Adguard handles the *.DOMAIN → Traefik rewrite internally, and (in
 # prod) the k8s.platypod.lan → control-plane rewrite (adguard.rewrites in
-# values/prd/values.yaml) — see ../infra/docs/decisions.md.
+# clusters/prd/secrets.enc.yaml in platypod-sops) — see ../infra/docs/decisions.md.
 #
 # When the cluster is suspended, Adguard doesn't respond; macOS falls through
 # to 1.1.1.1 for internet DNS. *.DOMAIN (and, in prod, k8s.platypod.lan)

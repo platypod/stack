@@ -3,7 +3,7 @@
 # No Authelia middleware — jellyswarrm does its own auth (JELLYSWARRM_USERNAME/
 # PASSWORD), same "own auth, bypass ingress" pattern as Jellyfin/Jellyseerr
 # (see stack/docs/services.md). It no longer sits in front of jellyfin.<domain>
-# (see values/default/media/jellyswarrm.yaml for why), so this is now purely
+# (see jellyswarrm in apps/base/values/media.yaml for why), so this is now purely
 # an admin/benchmark route — access is via this dedicated hostname only.
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute

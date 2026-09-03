@@ -22,12 +22,12 @@ these ports cannot go through Traefik (HTTP-only). There is no HTTP ingress.
 Dev has MetalLB: set `palworld.loadBalancerIP` to a free pool IP. Prod has no
 MetalLB — set `palworld.externalIP` (shares `chuwi-cp1`'s LAN IP with
 Traefik/AdGuard) and `palworld.nodeSelector` to pin it there; see
-`traefik.externalIP` in `values/default/core/traefik.yaml` for the mechanism.
+`traefik.externalIP` in `apps/base/values/substrate.yaml` for the mechanism.
 Open the ports on the router/firewall if public access is needed.
 
-Server settings (`name`, `password`, `adminPassword`, `maxPlayers`, …) live in
-`values/default/games/palworld.yaml` and can be overridden per-env in
-`values/<env>/values.yaml`. Anything else the image exposes — the full table
+Server settings (`name`, `password`, `adminPassword`, `maxPlayers`, …) live under
+`palworld` in `apps/base/values/games.yaml` and can be overridden per-env in
+that env's `clusters/<env>/secrets.enc.yaml` in `platypod-sops`. Anything else the image exposes — the full table
 is at [palworld-server-docker.loef.dev](https://palworld-server-docker.loef.dev/),
 including the actual `PalWorldSettings.ini`-mapped gameplay/difficulty/drop-rate
 keys — drops straight into `palworld.server.extraEnv` as a plain key/value map,
@@ -40,7 +40,7 @@ plus an optional `WORKER_THREADS_SERVER` thread count via `extraEnv`.
 recommended — well above what a first guess might assume for a small
 multiplayer server. `palworld.resources` defaults conservatively (`4Gi`/`8Gi`,
 safe for a resource-constrained dev worker) but prod overrides it to
-`16Gi`/`32Gi` in `values/prd/values.yaml`, matching the real recommendation —
+`16Gi`/`32Gi` in `platypod-sops`'s `clusters/prd/secrets.enc.yaml`, matching the real recommendation —
 `chuwi-cp1` has ample headroom for it (as of 2026-07-31: ~61Gi allocatable,
 ~14% requested). Re-check `kubectl describe node chuwi-cp1`'s "Allocated
 resources" before enabling more game workloads there, since everything in this
@@ -63,7 +63,7 @@ hourly cron still catches real game updates without blocking startup on it.
 from Steam in minutes (proven during the 2026-08-02 migration) — backing them
 up nightly would waste NAS I/O and retention space for no benefit. Only
 world/save data is irreplaceable. `games.backupTargets` (in
-`values/default/games/backups.yaml`) drives a per-game nightly `<name>-backup`
+`apps/base/values/games.yaml`) drives a per-game nightly `<name>-backup`
 CronJob (`stack/src/games/templates/games-backup-cronjob.yaml`) that rsyncs
 just that game's `savePath` to a dated, hardlinked ("rsnapshot"-style) snapshot
 on the NFS `apps` share — unchanged files across nights are hardlinks, not
@@ -153,7 +153,7 @@ into `satisfactory.server.extraEnv`, same mechanism as the other game servers.
 ## Minecraft
 
 Zero or more named instances (vanilla, CurseForge modpacks) under
-`minecraft.instances` in `values/default/games/minecraft.yaml` — each is its
+`minecraft.instances` in `apps/base/values/games.yaml` — each is its
 own `itzg/minecraft-server` Deployment + **ClusterIP-only** Service (never
 exposed directly), keyed by name (e.g. `vanilla`, `bcgplus`, `cobbleverse`).
 Enable any subset simultaneously with `minecraft.instances.<name>.enable`.

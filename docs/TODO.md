@@ -135,7 +135,7 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
   only helps LAN clients.
 
 - **Verify CurseForge `fileId` pins before enabling bcgplus/cobbleverse.**
-  `values/default/games/minecraft.yaml` pins specific file IDs found via a
+  `apps/base/values/games.yaml`'s `minecraft` block pins specific file IDs found via a
   CurseForge page fetch on 2026-07-31 (BCG+ 2.15.0 / Cobbleverse 1.7.42) —
   confirm on curseforge.com that these are still the intended files (there are
   several similarly-named "BigChadGuys"/"Cobbleverse" packs by other

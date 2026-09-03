@@ -82,7 +82,7 @@ forward-auth layer (or are intentionally public).
 ## Access groups (LLDAP)
 
 Groups are **generated**, not hand-maintained, from a single table:
-[`values/default/security/access-groups.yaml`](../values/default/security/access-groups.yaml).
+[`security.accessGroups` in `apps/base/values/security.yaml`](../apps/base/values/security.yaml).
 That file is the source of truth — see its header comment for the full field
 reference. Two things read it:
 
@@ -93,7 +93,7 @@ reference. Two things read it:
   — one generated `access_control` rule per tool in
   [`authelia--config-map.yaml`](../src/security/templates/authelia/authelia--config-map.yaml).
   A handful of hand-written rules still live in
-  [`values/default/security/authelia.yaml`](../values/default/security/authelia.yaml)
+  [`authelia.rules` in `apps/base/values/security.yaml`](../apps/base/values/security.yaml)
   for things the table doesn't cover (bypass-only tools, the cluster-CIDR
   bypass for the *arr internal API calls, the OTLP ingest rule).
 
@@ -139,8 +139,8 @@ scope.
 
 1. Add the client block to `authelia--config-map.yaml` (hash the secret with
    `authelia crypto hash generate pbkdf2 --variant sha512`).
-2. Add per-env `oidc.clientId` / `clientSecret` to `values/local/values.yaml` and
-   `values/prd/values.yaml`.
+2. Add per-env `oidc.clientId` / `clientSecret` to `platypod-sops`'s
+   `clusters/local/secrets.enc.yaml` and `clusters/prd/secrets.enc.yaml`.
 3. Add `hostAliases` (Authelia public host → `traefik.loadBalancerIP`) to the
    app's Deployment, gated on `oidc.clientId`.
 4. Configure the app to use `https://authelia.<domain>` as issuer.

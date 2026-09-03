@@ -334,7 +334,7 @@ data:
           otel). subject = its role groups + its categories' composites +
           admins; domain = its host(s). See security.toolSubjects/toolHosts in
           src/security/templates/_helpers.tpl and the field reference at the
-          top of values/default/security/access-groups.yaml.
+          top of apps/base/values/security.yaml's security.accessGroups.
         */}}
         {{- range $tool, $cfg := .Values.security.accessGroups }}
         {{- if ne $cfg.authelia false }}

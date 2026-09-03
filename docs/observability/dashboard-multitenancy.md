@@ -17,7 +17,7 @@ point here.
 - A normal user opening a dashboard sees a view scoped to **themselves**.
 - Members of the LLDAP **`admins`** group see **all** users, aggregated — as do
   members of `grafana_admin` or `dev_admin`, the per-tool/category groups from
-  [`access-groups.yaml`](../../values/default/security/access-groups.yaml).
+  [`security.accessGroups`](../../apps/base/values/security.yaml).
   The scope-shim's `ADMIN_GROUPS` env var is generated
   (`observability.grafanaAdminGroups` in
   [`_helpers.tpl`](../../src/observability/templates/_helpers.tpl)) as the
@@ -296,7 +296,7 @@ write **its own** Loki tenant, without changing the client tool:
 
 1. **Per-user gateway auth.** The OTLP/gRPC ingest rule is opened from the single
    `otel-telemetry` account to the **`otel_writer` group** (Authelia
-   `access_control`, [authelia.yaml](../../values/default/security/authelia.yaml)).
+   `access_control`, [`authelia.rules`](../../apps/base/values/security.yaml)).
    Each shipper authenticates with its **own** LLDAP creds, so Authelia's
    `Remote-User` is the real identity. `otel-telemetry` stays a group member (the
    shared/CI path) until every shipper is a real account.

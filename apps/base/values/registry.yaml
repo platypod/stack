@@ -1,7 +1,7 @@
 # Registry tier — per-service identity (enable/label/host), collected here
 # so a Flux HelmRelease can pull the whole registry as one valuesFrom entry
 # instead of one per service. Implementation detail (image/resources/ports/
-# service config) lives in each module's own values/default/<module>.yaml.
+# service config) lives in each module's own apps/base/values/<module>.yaml.
 # See stack/docs/flux-migration.md for the tier design.
 
 homepage:
@@ -206,8 +206,8 @@ tdarr:
   label: tdarr
 
 audiobookshelf:
-  # New/unproven service — opt in per-env (see values/dev/values.yaml,
-  # values/prd/values.yaml) rather than defaulting on everywhere.
+  # New/unproven service — opt in per-env (see platypod-sops'
+  # clusters/<env>/secrets.enc.yaml) rather than defaulting on everywhere.
   enable: false
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.audiobookshelf.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   label: audiobookshelf

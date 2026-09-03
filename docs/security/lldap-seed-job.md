@@ -7,8 +7,8 @@ REST/GraphQL API.
 - **Image:** `python:3-alpine`.
 - **Idempotent:** skips groups/users that already exist; passwords set **only on
   creation** (existing users keep theirs).
-- **Source of truth:** `lldap.seed.{groups,users}`. **Prod uses `values/prd/values.yaml`**
-  (the default `lldap.yaml` seed is fully overridden in prod), where the
+- **Source of truth:** `lldap.seed.{groups,users}`. **Prod uses `platypod-sops`'s `clusters/prd/secrets.enc.yaml`**
+  (the default seed in `apps/base/values/security.yaml` is fully overridden in prod), where the
   `otel-telemetry` service account is defined for the OTLP Basic-auth path.
 
 See [lldap](lldap.md).

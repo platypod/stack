@@ -75,7 +75,7 @@ spec:
         # OpenJDK's container-aware default (MaxRAMPercentage=25) leaves the
         # heap too small; but going too high (75) leaves too little room for
         # the PDF renderer's off-heap/native memory and gets the whole
-        # container OOMKilled instead (see values/default/media/komga.yaml).
+        # container OOMKilled instead (see komga in apps/base/values/media.yaml).
         # 50% of the limit is the sweet spot found so far.
         - name: JDK_JAVA_OPTIONS
           value: "-XX:MaxRAMPercentage=50.0"
