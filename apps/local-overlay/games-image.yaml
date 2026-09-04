@@ -7,4 +7,4 @@
 pokeclicker:
   image: ghcr.io/platypod/pokeclicker:v0.10.25 # {"$imagepolicy": "flux-system:pokeclicker-local"}
 unbegotten:
-  image: ghcr.io/platypod/unbegotten:v0.16.0-dev.1 # {"$imagepolicy": "flux-system:unbegotten-local"}
+  image: ghcr.io/platypod/unbegotten:v0.16.0-dev.2 # {"$imagepolicy": "flux-system:unbegotten-local"}
