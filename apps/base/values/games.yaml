@@ -75,7 +75,7 @@ rommapp:
     limits:
       memory: 512Mi
 unbegotten:
-  image: ghcr.io/platypod/unbegotten:v0.15.2 # {"$imagepolicy": "flux-system:unbegotten"}
+  image: ghcr.io/platypod/unbegotten:v0.16.0 # {"$imagepolicy": "flux-system:unbegotten"}
   ports:
     http:
       name: http
