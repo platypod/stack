@@ -121,7 +121,9 @@ palworld:
     # needing a chart change per setting, e.g.:
     #   extraEnv:
     #     DEATH_PENALTY: "None"   # default is "Item"; drops nothing on death
-    extraEnv: {}
+    extraEnv:
+      BASE_CAMP_WORKER_MAX_NUM: "30"
+      BASE_CAMP_MAX_NUM: "10"
   pvc: "{{ .Values.storage.defaultVolumes.games }}"
   resources:
     requests:
