@@ -18,8 +18,6 @@ spec:
     metadata:
       labels:
         app: {{ $pod }}
-      annotations:
-        checksum/config: {{ .Values.palworld.server | toJson | sha256sum }}
     spec:
       # Must tolerate the primary-node taint: when pinned there via
       # externalIP/nodeSelector (prod, no MetalLB) it has nowhere else to run.
