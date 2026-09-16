@@ -589,10 +589,13 @@ comixDownloader:
     # the footprint of an already 3GB+ series.
     keep_images: false
     enable_logs: true
-    # 2x4, not the upstream 5x6 default: at 5x6 a 150-chapter batch spawned 22
-    # Chromium processes, wedged on a lapsed WAF token and made no progress for
-    # ~10min. At 2x4 the same work ran ~4.4x faster (2.9 MB/s vs 0.67 MB/s).
-    max_chapter_workers: 2
+    # 1x4, walked down from the upstream 5x6 default. At 5x6 a 150-chapter batch
+    # spawned 22 Chromium processes, wedged on a lapsed WAF token and made no
+    # progress for ~10min. 2x4 ran ~4.4x faster (2.9 MB/s vs 0.67 MB/s) but its
+    # fan-out still tripped a Cloudflare rate rule: the page loads, then flips
+    # to "Sorry, you have been blocked" seconds later as the workers burst.
+    # 1 chapter at a time is the least bursty shape the app can take.
+    max_chapter_workers: 1
     max_image_workers: 4
     retry_count: 3
     retry_delay: 2.0
