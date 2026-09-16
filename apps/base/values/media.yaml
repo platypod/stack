@@ -558,8 +558,10 @@ comixDownloader:
   ports:
     http:
       # noVNC/websockify, not the app -- the app is a native Qt binary with no
-      # HTTP listener of its own.
-      name: comix-downloader-http
+      # HTTP listener of its own. Kept short on purpose: container port names
+      # are IANA_SVC_NAME, capped at 15 chars, so "comix-downloader-http" (21)
+      # is rejected by the API server even though Helm renders it fine.
+      name: comix-http
       targetPort: 9000
   display:
     # Matches the Qt window's own 1100x750 plus room for the scraping Chromium
