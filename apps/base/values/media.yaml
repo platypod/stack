@@ -542,6 +542,74 @@ suwayomi:
     # (20 restarts/32d in prod, exit 134). Bumped to 1.25Gi.
     limits:
       memory: 1280Mi
+comixDownloader:
+  # comix.to downloader (https://github.com/Yui007/comix-downloader), wrapped by
+  # platypod/comix-downloader. Overlaps with suwayomi above, which covers many
+  # sources unattended -- this one exists only for comix.to, which suwayomi's
+  # extension repos do not carry.
+  #
+  # NOT an unattended service, unlike the rest of this module. comix.to gates
+  # every title page behind an interactive WAF puzzle ("drag to rotate the
+  # circle until the picture lines up") that no headless bypass clears, and the
+  # resulting `waf_pass` cookie lasts only ~1h. So the pod ships a Qt GUI on a
+  # virtual X display exported over noVNC: you open it, solve the puzzle by
+  # hand, queue a batch that fits inside the hour, and close it.
+  image: ghcr.io/platypod/comix-downloader:v0.1.0 # {"$imagepolicy": "flux-system:comix-downloader"}
+  ports:
+    http:
+      # noVNC/websockify, not the app -- the app is a native Qt binary with no
+      # HTTP listener of its own.
+      name: comix-downloader-http
+      targetPort: 9000
+  display:
+    # Matches the Qt window's own 1100x750 plus room for the scraping Chromium
+    # to sit over it while you solve the puzzle.
+    geometry: 1400x950x24
+  # x11vnc password. Empty here on purpose -- set per-env in platypod-sops
+  # (clusters/<env>/secrets.enc.yaml), same as the komga/kavita credentials.
+  # Authelia gates the IngressRoute; this is the second layer for anything that
+  # can reach the Service directly inside the cluster.
+  vncPassword: ""
+  # Chromium's default 64MB /dev/shm crashes renderers partway through
+  # image-heavy chapters; pod equivalent of compose's shm_size.
+  shmSize: 2Gi
+  storage:
+    mediaPvc: "{{ .Values.storage.defaultVolumes.media }}"
+    appsPvc: "{{ .Values.storage.defaultVolumes.apps }}"
+    # Komga's generic `manga` library root (see komga.libraries above), so
+    # finished chapters are picked up by the next scan with no move step.
+    librarySubPath: manga/mangas
+  # Seeded into config.json by the init container on FIRST BOOT ONLY; changes
+  # made from the GUI afterwards are never overwritten.
+  defaultSettings:
+    output_format: pdf
+    # false: PDF only. true also retains every raw .webp page, roughly doubling
+    # the footprint of an already 3GB+ series.
+    keep_images: false
+    enable_logs: true
+    # 2x4, not the upstream 5x6 default: at 5x6 a 150-chapter batch spawned 22
+    # Chromium processes, wedged on a lapsed WAF token and made no progress for
+    # ~10min. At 2x4 the same work ran ~4.4x faster (2.9 MB/s vs 0.67 MB/s).
+    max_chapter_workers: 2
+    max_image_workers: 4
+    retry_count: 3
+    retry_delay: 2.0
+    chapters_display_limit: 0
+    download_path: "{{ .Values.media.system.data.path }}/{{ .Values.comixDownloader.storage.librarySubPath }}"
+    # false: the scraping Chromium must be VISIBLE on the X display, otherwise
+    # the WAF puzzle cannot be solved and every fetch dies after 60s with
+    # "Comix page did not become ready".
+    headless: false
+  replicasNb: 1
+  resources:
+    requests:
+      cpu: 200m
+      memory: 1Gi
+    limits:
+      # Qt GUI + Xvfb + a Chromium tree. Measured ~3.5Gi resident at 5x6
+      # workers; 4Gi leaves headroom at the 2x4 defaults above.
+      memory: 4Gi
+
 mediarvester:
   image: ghcr.io/platypod/mediarvester:v1.9.0 # {"$imagepolicy": "flux-system:mediarvester"}
   ports:

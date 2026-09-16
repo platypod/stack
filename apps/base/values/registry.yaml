@@ -195,6 +195,11 @@ jellyswarrm:
   # the benchmark comparison itself.
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyswarrm.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
 
+comixDownloader:
+  enable: true
+  host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.comixDownloader.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
+  label: comix-downloader
+
 suwayomi:
   enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.suwayomi.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"

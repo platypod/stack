@@ -1,0 +1,144 @@
+{{- if .Values.comixDownloader.enable }}
+{{- $appVolume := "app-volume" }}
+{{- $mediaVolume := "media-volume" }}
+{{- $shmVolume := "dshm" }}
+{{- $pod := print .Values.k8s.names.pods.prefix .Values.comixDownloader.label .Values.k8s.names.pods.suffix }}
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ .Values.comixDownloader.replicasNb }}
+  # Recreate, not RollingUpdate: the scraping Chromium holds a single cookie
+  # jar and a single X display. Two pods overlapping during a rollout fight
+  # over both, and the site invalidates clearance shared across sessions.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+    spec:
+      # Must tolerate the primary-node taint: pinned there by the local config
+      # volume, same as komga.
+      tolerations:
+      - key: platypod.io/reserved
+        operator: Equal
+        value: primary
+        effect: NoSchedule
+      # DELIBERATE DEVIATION from the media-module norm of runAsUser/runAsGroup
+      # = media.system.{userId,groupId}.
+      #
+      # comix-downloader drives a real Chromium (nodriver) to clear the site's
+      # WAF. Upstream decides Chrome's sandbox flag from the euid:
+      #   src/utils/nodriver_browser.py:_sandbox_enabled()
+      #     return not (os.name == "posix" and os.geteuid() == 0)
+      # As a non-root uid it therefore asks for the namespace sandbox, which
+      # needs CAP_SYS_ADMIN or a loosened seccomp profile to work in a pod and
+      # otherwise aborts Chromium at startup. Running as uid 0 makes upstream
+      # pass --no-sandbox instead, which is the only combination that starts
+      # without granting the pod extra capabilities.
+      #
+      # Consequence: files land root-owned on the NFS share. The init container
+      # below sets the library subPath setgid to media.system.groupId, so new
+      # files inherit that group and umask 002 leaves them group-readable —
+      # which is all Komga needs to scan them.
+      #
+      # NEVER set fsGroup here: csi-driver-nfs declares fsGroupPolicy=File, so
+      # kubelet recursively chowns the WHOLE 18TB share on every pod start.
+      securityContext:
+        runAsUser: 0
+      initContainers:
+      # Create and prepare ONLY this service's own subPaths, never the whole
+      # volume (same pattern as komga/jellyseerr).
+      - name: init-permissions
+        image: busybox:1.37.0
+        securityContext:
+          runAsUser: 0
+        command:
+        - sh
+        - -c
+        - |
+          # Path must match the container's subPath mount below, not just the
+          # service name: the app resolves its settings to
+          # $XDG_CONFIG_HOME/comix-downloader/config.json, and XDG_CONFIG_HOME
+          # is the /config mount.
+          CONF=/config/comix-downloader/config/comix-downloader
+          mkdir -p "$CONF"
+          # Seed settings on first boot only; never overwrite changes made from
+          # the GUI afterwards (same philosophy as the komga/kavita setup Jobs).
+          if [ ! -f "$CONF/config.json" ]; then
+            cat > "$CONF/config.json" <<'JSON'
+          {{ tpl (.Values.comixDownloader.defaultSettings | toJson) . }}
+          JSON
+          fi
+          chown -R {{ .Values.media.system.userId }}:{{ .Values.media.system.groupId }} /config/comix-downloader
+          mkdir -p /data/{{ .Values.comixDownloader.storage.librarySubPath }}
+          chgrp {{ .Values.media.system.groupId }} /data/{{ .Values.comixDownloader.storage.librarySubPath }}
+          # setgid so chapters written by uid 0 still inherit the media group
+          # and stay readable by Komga without chowning the library.
+          chmod g+rwxs /data/{{ .Values.comixDownloader.storage.librarySubPath }}
+        volumeMounts:
+        - name: {{ $appVolume }}
+          mountPath: /config
+        - name: {{ $mediaVolume }}
+          mountPath: /data
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.comixDownloader.label }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ .Values.comixDownloader.image }}
+        resources:
+          {{- toYaml .Values.comixDownloader.resources | nindent 10 }}
+        ports:
+        - name: {{ .Values.comixDownloader.ports.http.name }}
+          containerPort: {{ .Values.comixDownloader.ports.http.targetPort }}
+        env:
+        - name: NOVNC_PORT
+          value: "{{ .Values.comixDownloader.ports.http.targetPort }}"
+        - name: SCREEN_GEOMETRY
+          value: "{{ .Values.comixDownloader.display.geometry }}"
+        # Group-writable output so Komga (media uid/gid) can read chapters that
+        # this pod writes as root. See the securityContext note above.
+        - name: UMASK
+          value: "{{ .Values.media.system.umask }}"
+        - name: XDG_CONFIG_HOME
+          value: /config
+        # x11vnc runs with a password rather than -nopw: Authelia gates the
+        # route, but a bare VNC port inside the cluster is still a full remote
+        # desktop to anything that can reach the Service directly.
+        # Set per-env in platypod-sops (clusters/<env>/secrets.enc.yaml), the
+        # same way komga/kavita credentials are — this stack carries secrets as
+        # SOPS-merged Helm values, not as k8s Secret objects.
+        - name: VNC_PASSWORD
+          value: {{ .Values.comixDownloader.vncPassword | quote }}
+        volumeMounts:
+        # config.json + the WAF clearance cookie jar.
+        - mountPath: /config
+          name: {{ $appVolume }}
+          subPath: comix-downloader/config
+        - mountPath: {{ .Values.media.system.data.path }}
+          name: {{ $mediaVolume }}
+        # Chromium's default 64MB /dev/shm makes renderers crash partway
+        # through image-heavy pages; this is the pod equivalent of compose's
+        # shm_size.
+        - mountPath: /dev/shm
+          name: {{ $shmVolume }}
+      volumes:
+      - name: {{ $mediaVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.comixDownloader.storage.mediaPvc . }}
+      - name: {{ $appVolume }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.comixDownloader.storage.appsPvc . }}
+      - name: {{ $shmVolume }}
+        emptyDir:
+          medium: Memory
+          sizeLimit: {{ .Values.comixDownloader.shmSize }}
+{{- end }}
