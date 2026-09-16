@@ -602,7 +602,15 @@ comixDownloader:
     # the WAF puzzle cannot be solved and every fetch dies after 60s with
     # "Comix page did not become ready".
     headless: false
-  replicasNb: 1
+  # 0 on purpose. This is an on-demand service and local-w1 has ~900Mi of
+  # schedulable memory left across 21 pods -- not enough for a Qt GUI + Xvfb +
+  # a Chromium tree that measured ~3.5Gi resident under load. At replicas 1 the
+  # pod sits Pending forever, which keeps the media HelmRelease un-ready and
+  # blocks `files` behind its dependsOn.
+  #
+  # Scale up by hand when you want it (and have freed memory):
+  #   kubectl scale deploy/comix-downloader -n local-platypod --replicas=1
+  replicasNb: 0
   resources:
     requests:
       cpu: 200m
