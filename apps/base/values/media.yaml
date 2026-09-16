@@ -596,7 +596,9 @@ comixDownloader:
     # to "Sorry, you have been blocked" seconds later as the workers burst.
     # 1 chapter at a time is the least bursty shape the app can take.
     max_chapter_workers: 1
-    max_image_workers: 4
+    # 2, down from 4: with 1 chapter worker the fan-out is entirely this number,
+    # so 1x2 is 2 concurrent fetches against the upstream default's 30.
+    max_image_workers: 2
     retry_count: 3
     retry_delay: 2.0
     chapters_display_limit: 0
