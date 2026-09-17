@@ -525,6 +525,11 @@ suwayomi:
   # WebUI equivalent is Settings → Browse → Extension Repositories.
   extensionRepos:
     - https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json
+    # comix.to source (N3uralCreativity). Third-party, outside keiyoushi, and
+    # flagged nsfw:1 in its index -- Suwayomi's WebUI hides nsfw sources behind
+    # a client-side toggle (there is no server-side nsfw setting in v2.2.2100),
+    # so it must also be enabled per-browser under the WebUI settings.
+    - https://raw.githubusercontent.com/n3uralcreativity/comix-downloader/repo/index.min.json
   ports:
     http:
       name: suwayomi-http
