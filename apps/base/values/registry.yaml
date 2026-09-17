@@ -196,7 +196,12 @@ jellyswarrm:
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.jellyswarrm.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
 
 comixDownloader:
-  enable: true
+  # Disabled in both envs. The chart is complete and deployable, but comix.to
+  # now refuses the automated client it drives (a normal browser from the same
+  # IP is served fine), and suwayomi covers comix.to via its own extension repo
+  # -- unattended, and without a root Chromium or a noVNC remote desktop.
+  # Flip to true to bring back the Deployment/Service/IngressRoute.
+  enable: false
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.comixDownloader.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   label: comix-downloader
 
