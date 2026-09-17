@@ -32,5 +32,6 @@ requests (Jellyseerr), and housekeeping. Many apps use SQLite on the **local
 post-install hooks (admin/config seeding).
 
 ## Runbooks
-[bd-library-move](bd-library-move.md) — one-time migration of the `bd` Komga
-library out of Suwayomi's download root (`media/manga/bd` → `media/bd`).
+[comics-layout-migration](comics-layout-migration.md) — one-time move of the
+comics libraries out of Suwayomi's download root to top-level `media/bds` and
+`media/mangas`.

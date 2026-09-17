@@ -44,21 +44,29 @@ create-if-missing only — see [docs/media/komga-setup-job.md](../../docs/media/
 
 ## Suwayomi (manga downloader)
 
-Feeds Komga: downloads land as **CBZ** in the media share's `manga` subfolder
+Feeds Komga: downloads land as **CBZ** in the top-level `mangas` folder
 (`suwayomi.mangaSubPath`), which Komga serves as a library.
 
 Unlike the *arrs there is **no import step** — Suwayomi is both the downloader
-and the library manager, so its download root *is* the library, laid out by
-Suwayomi itself as `manga/mangas/<source>/<series>/<chapter>.cbz` (plus a
-sibling `manga/thumbnails/`). That is why Komga's `manga` library root is
-`manga/mangas` and not `manga`, and why **nothing else may be parked under
-`manga/`** — the init container chowns that whole subtree to uid 1000 on every
-pod start. The `bd` library used to live there and was moved to a top-level
-`media/bd` on 2026-09-17 ([runbook](../../docs/media/bd-library-move.md)).
+and the library manager, and it hard-codes its layout as
+`<downloadsPath>/mangas/<source>/<series>/<chapter>.cbz` with a `thumbnails/`
+alongside. So the deployment mounts **only** the `mangas` level from the share,
+at `<downloadsPath>/mangas`, and leaves `<downloadsPath>` itself on the app
+volume: Suwayomi's scratch stays off the media share, and the one NFS path it
+can reach is the library folder. Until 2026-09-17 it owned the whole `manga/`
+folder on the share, with the `bd` library parked inside it
+([runbook](../../docs/media/comics-layout-migration.md)).
 
-- Runs as its **native uid 1000** — the bundled JAR at `/home/suwayomi/startup`
-  is mode `0750` (owner-only), so custom uids can't launch it. Downloads end up
-  `1000:1000` but world-readable, so Komga (media user) still serves them.
+- Runs as its **native uid 1000** — not for the JAR's sake (that is `0777` and
+  would run under any uid; an older note here claiming `0750` was wrong), but
+  because the JCEF/Chromium cache dirs under `/home/suwayomi` are `0700` owned
+  by that uid, and the JS-heavy sources need that browser.
+- Its identity therefore matches neither the media user nor the laptop over NFS.
+  Access is handled by **mode, not ownership**: the library folder is `2777` +
+  setgid to `media.system.groupId`, and the container is re-exec'd under
+  `umask 002` (the image default is `0022`, which is what used to leave every
+  new series directory `0755` and locked the laptop out). The init container
+  asserts the mountpoint's mode only — it must never `chown -R` the library.
 - `AUTH_MODE=none` — gated solely by Authelia forward-auth.
 - Reuses the shared **Flaresolverr** to bypass Cloudflare.
 

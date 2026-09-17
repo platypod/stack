@@ -13,20 +13,21 @@ Comics/manga server (JVM-based).
   [`komga` in media.yaml](../../apps/base/values/media.yaml) declares the roots;
   the **komga-setup** Job creates any that don't exist yet.
 
-  | Library | Root | Owned by |
+  | Library | Root | Written by |
   |---|---|---|
-  | `bd` | `/data/bd` | managed by hand (top-level media folder) |
-  | `manga` | `/data/manga/mangas` | **Suwayomi** — its download root's own `mangas/` dir |
+  | `bds` | `/data/bds` | by hand, from the laptop |
+  | `mangas` | `/data/mangas` | Suwayomi (and comix-downloader, when enabled) |
   | `ebooks` | `/data/books` | Readarr/Bookshelf |
 
-  `bd` is deliberately *not* under `manga/`: that folder belongs to Suwayomi,
-  which `chown -R`s it on every pod start. See
-  [bd-library-move](bd-library-move.md) for the migration that moved it out.
+  `bds` and `mangas` are siblings at the top level of the share, and neither
+  sits inside a service's working directory — see
+  [comics-layout-migration](comics-layout-migration.md) for why that matters and
+  how they got there.
 
 - **Changing a library root is destructive.** Komga stores absolute per-book
   paths and deletes books it can't find on scan, and the setup Job is
   create-if-missing *by name* so it will never re-point an existing library.
   Editing a root in Git is therefore a no-op on a live instance, and doing it in
   the UI loses the library unless the new path is a parent of the old one —
-  migrate with [bd-library-move](bd-library-move.md) instead.
+  migrate with [comics-layout-migration](comics-layout-migration.md) instead.
 - **Setup:** [komga-setup](komga-setup-job.md).

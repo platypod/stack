@@ -24,35 +24,71 @@ spec:
       labels:
         app: {{ $pod }}
     spec:
-      # Suwayomi's bundled JAR lives in the suwayomi user's home at mode 0750, so
-      # the image only works as its native uid 1000 (custom uids can't read it).
-      # Downloads therefore land as 1000:1000 — world-readable (0644/0755), so
-      # Komga (running as the media user) still serves them. NEVER fsGroup on the
-      # NFS PVCs (recursive chown of the whole 18TB share) — see CLAUDE.md.
-      initContainers:
-      # Data dir (DB/config) + manga download dir are root-owned on first mount;
-      # chown to suwayomi's uid so it can write, never the whole volume.
+      # Runs as the image's native uid 1000 (no runAsUser): Suwayomi is not a
+      # linuxserver image and has no PUID/PGID, and its JCEF/Chromium cache dirs
+      # under /home/suwayomi are mode 0700 owned by that uid, so a custom uid
+      # loses the embedded browser the JS-heavy sources need. (The bundled JAR
+      # itself is 0777 and would run under any uid — an older comment here
+      # claiming 0750 was wrong for this image.)
       #
-      # The `chown -R` below walks EVERYTHING under suwayomi.mangaSubPath on every
-      # pod start — it is only safe because that subPath is Suwayomi's own download
-      # root and nothing else lives in it. Never park another library under it: the
-      # `bd` collection used to sit there and got its 116GB/62 series taken over by
-      # uid 1000 on each restart (moved to a top-level `bd` on 2026-09-17, see the
-      # komga.libraries comment in apps/base/values/media.yaml).
+      # Its identity therefore does NOT match the media user, and over NFS it
+      # matches the laptop even less. What makes the library manageable by all
+      # three is mode, not ownership: the library folder is setgid to
+      # media.system.groupId and Suwayomi runs with media.system.umask, so every
+      # directory and file it creates comes out group-owned by that gid and
+      # group-writable — the same convention as every other folder on the share.
+      # NEVER fsGroup on the NFS PVCs (recursive chown of the whole 18TB share)
+      # — see CLAUDE.md.
+      initContainers:
+      # The app-volume data dir is root-owned on first mount — chown it to
+      # suwayomi's uid, never the whole volume.
+      #
+      # The media library folder is deliberately NOT chowned. It is shared with
+      # comix-downloader and managed by hand from the laptop, so a recursive
+      # chown here would take it over on every pod start — which is exactly what
+      # used to happen, and why 116GB of BD parked under this path ended up
+      # 1000:1000 and unmanageable (see docs/media/comics-layout-migration.md).
+      # Only the mountpoint's own mode is asserted, non-recursively: 2777 so any
+      # uid can write, +setgid so everything created beneath inherits
+      # media.system.groupId and stays group-writable for the other writers.
       - name: init-permissions
         image: busybox:1.37.0
         securityContext:
           runAsUser: 0
-        command: ['sh', '-c', 'mkdir -p /data/suwayomi /manga && chown -R 1000:1000 /data/suwayomi /manga']
+        command:
+        - sh
+        - -c
+        - |
+          mkdir -p /data/suwayomi/downloads
+          chown -R 1000:1000 /data/suwayomi
+          mkdir -p /library
+          chgrp {{ .Values.media.system.groupId }} /library || true
+          chmod 2777 /library
         volumeMounts:
         - name: {{ $appVolume }}
           mountPath: /data
         - name: {{ $mediaVolume }}
-          mountPath: /manga
+          mountPath: /library
           subPath: {{ .Values.suwayomi.mangaSubPath }}
       containers:
       - name: {{ .Values.k8s.names.containers.prefix }}{{ .Values.suwayomi.label }}{{ .Values.k8s.names.containers.suffix }}
         image: {{ .Values.suwayomi.image }}
+        # Upstream entrypoint is `tini -- /home/suwayomi/startup_script.sh`, run
+        # under the image's default umask 0022 — which is what made every new
+        # series directory 0755 and locked the laptop (and comix-downloader) out
+        # of anything Suwayomi created. Re-exec it under media.system.umask so
+        # new content is group-writable like the rest of the share. tini is kept
+        # as PID 1: Suwayomi forks a headless Chromium per update and needs the
+        # zombie reaping.
+        command:
+        - /usr/bin/tini
+        - --
+        - sh
+        - -c
+        # printf: media.system.umask is 002 in values, which YAML loads as the
+        # integer 2 — harmless to `umask` (it reads octal) but unreadable in a
+        # rendered manifest, so pad it back to 3 digits.
+        - "umask {{ printf "%03d" (int .Values.media.system.umask) }} && exec /home/suwayomi/startup_script.sh"
         resources:
           {{- toYaml .Values.suwayomi.resources | nindent 10 }}
         ports:
@@ -76,8 +112,15 @@ spec:
         - mountPath: {{ $dataDir }}
           name: {{ $appVolume }}
           subPath: suwayomi
-        # Downloads land in the shared media `manga` folder Kavita serves.
-        - mountPath: {{ $dataDir }}/downloads
+        # Suwayomi hard-codes <downloadsPath>/mangas/<source>/<series>/<chapter>
+        # and puts its own thumbnails/ next to that `mangas`. Mount ONLY the
+        # `mangas` level from the media share, so <downloadsPath> itself stays on
+        # the app volume: Suwayomi's scratch never lands on the share, the share
+        # never has a folder that is really Suwayomi's app data, and the library
+        # folder is a plain top-level `mangas` that Komga reads directly.
+        # Mounts are applied shortest-path-first, so this nests inside the
+        # $dataDir mount above.
+        - mountPath: {{ $dataDir }}/downloads/mangas
           name: {{ $mediaVolume }}
           subPath: {{ .Values.suwayomi.mangaSubPath }}
       volumes:

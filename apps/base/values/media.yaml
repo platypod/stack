@@ -411,23 +411,19 @@ komga:
   # afterward are left alone). See komga--setup-job.yaml for the rest of each
   # library's scan settings.
   convertToCbz: true
-  # `bd` is a TOP-LEVEL media folder, a sibling of books/anime/movies/series --
-  # it deliberately does NOT live under `manga/`. `manga/` is Suwayomi's own
-  # download root (it creates `mangas/` and `thumbnails/` inside it by its own
-  # layout), so a `bd` nested there was 116GB of comics parked inside another
-  # service's app data: suwayomi's init container chowns its download root
-  # recursively on every pod start (suwayomi--deployment.yaml), so it walked the
-  # whole BD collection and left it 1000:1000 0775 -- unmanageable from the
-  # laptop over NFS, which maps to neither owner nor group. Moved out 2026-09-17.
-  #
-  # Changing a root here does NOT migrate an existing Komga library: the Job is
-  # create-if-missing by name, and Komga stores absolute per-book paths, so a
-  # live library must be migrated with docs/media/bd-library-move.md FIRST.
+  # `bds` and `mangas` are TOP-LEVEL media folders, siblings of each other and of
+  # books/anime/movies/series. Neither is nested under the other, and neither is
+  # inside a service's app data: until 2026-09-17 both lived under `manga/`,
+  # which was really Suwayomi's download root, so BD sat inside the manga
+  # downloader's working directory and got `chown -R`'d to uid 1000 on every
+  # Suwayomi restart -- which is what made the tree unmanageable from the laptop
+  # over NFS (no idmap; the laptop uid matches neither owner nor group).
+  # See docs/media/comics-layout-migration.md.
   libraries:
-    - name: bd
-      root: "{{ .Values.media.system.data.path }}/bd"
-    - name: manga
-      root: "{{ .Values.media.system.data.path }}/manga/mangas"
+    - name: bds
+      root: "{{ .Values.media.system.data.path }}/bds"
+    - name: mangas
+      root: "{{ .Values.media.system.data.path }}/mangas"
   ports:
     http:
       name: komga-http
@@ -530,14 +526,18 @@ suwayomi:
   # is disabled, see docs/media/kavita.md). No native auth/OIDC (AUTH_MODE=none)
   # — sits behind Authelia forwardauth like the *arrs.
   image: ghcr.io/suwayomi/suwayomi-server:v2.2.2100
-  # Media subpath Suwayomi owns outright as its download root. Unlike the *arrs
-  # there is no import/move step: Suwayomi IS the library manager, and it lays
-  # the tree out itself as <root>/mangas/<source>/<series>/<chapter> plus a
-  # sibling <root>/thumbnails/. That `mangas/` is why komga.libraries' `manga`
-  # root is `manga/mangas` and not `manga` — and why nothing else belongs in
-  # here: the init container chowns this whole subtree to uid 1000 on every pod
-  # start (see suwayomi--deployment.yaml).
-  mangaSubPath: manga
+  # Media subpath holding the manga library — the SAME top-level `mangas` folder
+  # Komga serves (komga.libraries above), not a folder of Suwayomi's own.
+  #
+  # Unlike the *arrs there is no import/move step: Suwayomi is downloader AND
+  # library manager, and it hard-codes its layout as
+  # <downloadsPath>/mangas/<source>/<series>/<chapter>. So rather than hand it a
+  # download root on the share, the deployment mounts this subpath at
+  # <downloadsPath>/mangas and leaves <downloadsPath> itself on the app volume:
+  # Suwayomi's own scratch (thumbnails/, ~1MB) stays off the media share, and the
+  # only NFS path it can reach is the library folder. See
+  # suwayomi--deployment.yaml.
+  mangaSubPath: mangas
   # Extension source repositories, seeded into Suwayomi by the suwayomi-setup Job
   # (Suwayomi ships none since the original Tachiyomi repo was taken down). The
   # WebUI equivalent is Settings → Browse → Extension Repositories.
@@ -601,9 +601,15 @@ comixDownloader:
   storage:
     mediaPvc: "{{ .Values.storage.defaultVolumes.media }}"
     appsPvc: "{{ .Values.storage.defaultVolumes.apps }}"
-    # Komga's generic `manga` library root (see komga.libraries above), so
-    # finished chapters are picked up by the next scan with no move step.
-    librarySubPath: manga/mangas
+    # Komga's `mangas` library root (see komga.libraries above), so finished
+    # chapters are picked up by the next scan with no move step. That is the same
+    # folder Suwayomi downloads into; both are meant to write group-writable
+    # (this pod via its UMASK env, Suwayomi via its umask wrapper) under the
+    # folder's setgid bit, so neither can lock the other — or the laptop — out of
+    # what it creates. Untested in practice: this service is enable:false in both
+    # envs (see registry.yaml), so verify the mode of what it writes if it is
+    # ever turned back on.
+    librarySubPath: mangas
   # Seeded into config.json by the init container on FIRST BOOT ONLY; changes
   # made from the GUI afterwards are never overwritten.
   defaultSettings:
