@@ -1,5 +1,11 @@
 # Comics layout: `bds` and `mangas` as top-level folders (runbook)
 
+> **Executed on prod 2026-09-17.** Result: `bds` 62 series / 116 GB, `mangas`
+> 7 series / 5.1 GB / 487 CBZ, Suwayomi 477 chapters still marked downloaded and
+> verified serving a page from one. Nothing was deleted. See
+> [What actually happened](#what-actually-happened) for the two gotchas the
+> steps below did not predict — read that section before re-running this on local.
+
 One-time migration, 2026-09-17:
 
 ```
@@ -179,3 +185,106 @@ git revert <the chart commit>     # then let Flux reconcile
 
 Then delete the `bds`/`mangas` libraries in Komga and let the reverted
 komga-setup recreate `bd` and `manga`.
+
+
+## What actually happened
+
+Two things the plan above did not predict.
+
+### Helm leaves the old volumeMount behind
+
+`volumeMounts` merges on `mountPath` as the key, so the upgrade produced the
+**union** of old and new — the pod came up with three mounts, including the
+stale `downloads` -> subPath `manga`:
+
+```
+/home/suwayomi/.local/share/Tachidesk              subPath=suwayomi
+/home/suwayomi/.local/share/Tachidesk/downloads    subPath=manga     <- stale
+/home/suwayomi/.local/share/Tachidesk/downloads/mangas  subPath=mangas
+```
+
+The rendered chart was correct (two mounts); only the live object was wrong.
+It "worked" — `mangas` was mounted over the top — but `downloads/` was still the
+NFS `manga/` folder, which is precisely what this change exists to stop.
+
+Fix: delete the Deployment and let Helm recreate it, rather than trusting the
+upgrade to converge.
+
+```bash
+kubectl -n prd-platypod delete deploy suwayomi
+flux -n prd-platypod reconcile helmrelease media --force
+```
+
+Always confirm the live spec afterwards, not just the render:
+
+```bash
+kubectl -n prd-platypod get deploy suwayomi \
+  -o jsonpath='{range .spec.template.spec.containers[0].volumeMounts[*]}{.mountPath}{" subPath="}{.subPath}{"\n"}{end}'
+```
+
+That stale mount also left an empty root-owned `media/manga/mangas` behind,
+created by kubelet as a mountpoint for the nested subPath. Harmless, removed.
+
+### The group on the library folder drifts to 100
+
+`media/mangas` was set to gid 20 during the move, and was found back at gid 100
+(`users`, the NAS-native group) after the first pod start — then stayed at 20
+once re-set. `chgrp` works and `chmod` does not reset it, so something NAS-side
+did it; the cause was not pinned down.
+
+It does not matter in practice: the folder is `2777`, and the laptop is in both
+gid 20 (primary) and gid 100 (supplementary, `_lpoperator`), so it can write
+either way. Worth knowing before treating a gid-100 sighting as a regression.
+
+## Verifying the permission chain
+
+The one test that matters is not the one-time `chmod` — it is whether content
+Suwayomi creates *later* is still writable. Confirmed end to end:
+
+```
+process umask (the JCEF/Java procs, not tini at PID 1) : 0002
+new dir  created by Suwayomi : uid=1000 gid=20 mode=2775
+new file created by Suwayomi : uid=1000 gid=20 mode=664
+laptop (uid 502, gid 20)     : mkdir / rename / create / delete all OK
+```
+
+```bash
+# process umask -- check the java/jcef procs, NOT /proc/1 (that is tini, 0022)
+kubectl -n prd-platypod exec deploy/suwayomi -c suwayomi -- sh -c \
+  'for p in /proc/[0-9]*; do case "$(tr "\0" " " < $p/cmdline)" in *jcef*|*java*) grep -i ^Umask $p/status;; esac; done'
+
+# laptop write test
+mkdir /Users/pittinic/nfs/kubernetes/media/mangas/.wtest && \
+  rmdir /Users/pittinic/nfs/kubernetes/media/mangas/.wtest && echo OK
+```
+
+## Doing the file moves without NAS shell access
+
+Step 3 says "on the Synology". A root pod with an **inline NFS volume** does the
+same job from the cluster, and avoids contending for the RWO `media` PVC:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata: {name: media-layout-migration, namespace: prd-platypod}
+spec:
+  restartPolicy: Never
+  containers:
+  - name: shell
+    image: busybox:1.37.0
+    securityContext: {runAsUser: 0}
+    command: ['sh','-c','sleep 1800']
+    volumeMounts: [{name: media, mountPath: /data}]
+  volumes:
+  - name: media
+    nfs: {server: 192.168.1.30, path: /volume1/kubernetes/media}
+```
+
+PodSecurity `baseline` warns about `restricted` here but admits the pod. Root is
+not squashed on this export, so `mv`/`chgrp`/`chmod` all work.
+
+## Left behind
+
+`media/manga/` still exists, holding only the now-duplicated `thumbnails/`
+(also restored onto the app volume), plus the NAS's `@eaDir` and a `.DS_Store`.
+It is inert. Remove it once the new layout has proven itself.
