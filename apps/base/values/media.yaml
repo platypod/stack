@@ -667,9 +667,8 @@ comixDownloader:
       # Qt GUI + Xvfb + a Chromium tree. Measured ~3.5Gi resident at 5x6
       # workers; 4Gi leaves headroom at the 2x4 defaults above.
       memory: 4Gi
-
 mediarvester:
-  image: ghcr.io/platypod/mediarvester:v1.9.0 # {"$imagepolicy": "flux-system:mediarvester"}
+  image: ghcr.io/platypod/mediarvester:v1.9.1 # {"$imagepolicy": "flux-system:mediarvester"}
   ports:
     http:
       name: http
