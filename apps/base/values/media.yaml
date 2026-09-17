@@ -525,7 +525,21 @@ suwayomi:
   # share's `manga` folder, which Komga serves as a library (NOT Kavita — Kavita
   # is disabled, see docs/media/kavita.md). No native auth/OIDC (AUTH_MODE=none)
   # — sits behind Authelia forwardauth like the *arrs.
-  image: ghcr.io/suwayomi/suwayomi-server:v2.2.2100
+  # v2.3.2243 (2026-07-13, "Fix 4 for v2.3.2223") — latest stable; index digest
+  # sha256:e59f212ccf91b26de8676a063a2db90256c148c6261535c7c477d47a43d9751b,
+  # linux/arm64 present. Entrypoint/Cmd/User are unchanged from v2.2.2100
+  # (`tini -- /home/suwayomi/startup_script.sh`, uid 1000, default umask 0022),
+  # so the umask wrapper in suwayomi--deployment.yaml still applies as-is.
+  #
+  # Two upgrade notes from the v2.3.2223 release:
+  # - H2 database engine was upgraded, and it downloads migration tooling on
+  #   first boot (needs egress). Treat the H2 migration as ONE-WAY: take a copy
+  #   of apps/suwayomi/database.mv.db before rolling back to a 2.2.x pin.
+  # - Upstream warns Extension Repos may be lost, because v1.6 replaces the
+  #   Extension Repo system with Mihon's Extension Store. Covered here: the
+  #   suwayomi-setup Job is a post-upgrade hook that declaratively re-sets
+  #   extensionRepos below on every deploy.
+  image: ghcr.io/suwayomi/suwayomi-server:v2.3.2243
   # Media subpath holding the manga library — the SAME top-level `mangas` folder
   # Komga serves (komga.libraries above), not a folder of Suwayomi's own.
   #

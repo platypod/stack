@@ -140,9 +140,12 @@ and the dropped chown, and so komga-setup learns the two new libraries.
 
 ### 7. Restore the thumbnails onto the app volume
 
+Suwayomi's app volume is the **`apps` PVC, which is NFS** (`/volume1/kubernetes/
+apps`), not the local `config` volume — so this is a plain copy, no `talosctl`:
+
 ```bash
-talosctl -n "$NODE" cp /tmp/suwayomi-thumbnails \
-  /var/local/platypod/volumes/config/suwayomi/downloads/thumbnails
+cp -a /tmp/suwayomi-thumbnails \
+  /volume1/kubernetes/apps/suwayomi/downloads/thumbnails
 ```
 
 ### 8. Bring the services back
