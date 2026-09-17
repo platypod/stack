@@ -47,6 +47,15 @@ create-if-missing only — see [docs/media/komga-setup-job.md](../../docs/media/
 Feeds Komga: downloads land as **CBZ** in the media share's `manga` subfolder
 (`suwayomi.mangaSubPath`), which Komga serves as a library.
 
+Unlike the *arrs there is **no import step** — Suwayomi is both the downloader
+and the library manager, so its download root *is* the library, laid out by
+Suwayomi itself as `manga/mangas/<source>/<series>/<chapter>.cbz` (plus a
+sibling `manga/thumbnails/`). That is why Komga's `manga` library root is
+`manga/mangas` and not `manga`, and why **nothing else may be parked under
+`manga/`** — the init container chowns that whole subtree to uid 1000 on every
+pod start. The `bd` library used to live there and was moved to a top-level
+`media/bd` on 2026-09-17 ([runbook](../../docs/media/bd-library-move.md)).
+
 - Runs as its **native uid 1000** — the bundled JAR at `/home/suwayomi/startup`
   is mode `0750` (owner-only), so custom uids can't launch it. Downloads end up
   `1000:1000` but world-readable, so Komga (media user) still serves them.

@@ -30,3 +30,7 @@ requests (Jellyseerr), and housekeeping. Many apps use SQLite on the **local
 [suwayomi-setup](suwayomi-setup-job.md), [reclaimerr-setup](reclaimerr-setup-job.md),
 [tdarr-setup](tdarr-setup-job.md) —
 post-install hooks (admin/config seeding).
+
+## Runbooks
+[bd-library-move](bd-library-move.md) — one-time migration of the `bd` Komga
+library out of Suwayomi's download root (`media/manga/bd` → `media/bd`).

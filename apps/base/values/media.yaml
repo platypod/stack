@@ -411,9 +411,21 @@ komga:
   # afterward are left alone). See komga--setup-job.yaml for the rest of each
   # library's scan settings.
   convertToCbz: true
+  # `bd` is a TOP-LEVEL media folder, a sibling of books/anime/movies/series --
+  # it deliberately does NOT live under `manga/`. `manga/` is Suwayomi's own
+  # download root (it creates `mangas/` and `thumbnails/` inside it by its own
+  # layout), so a `bd` nested there was 116GB of comics parked inside another
+  # service's app data: suwayomi's init container chowns its download root
+  # recursively on every pod start (suwayomi--deployment.yaml), so it walked the
+  # whole BD collection and left it 1000:1000 0775 -- unmanageable from the
+  # laptop over NFS, which maps to neither owner nor group. Moved out 2026-09-17.
+  #
+  # Changing a root here does NOT migrate an existing Komga library: the Job is
+  # create-if-missing by name, and Komga stores absolute per-book paths, so a
+  # live library must be migrated with docs/media/bd-library-move.md FIRST.
   libraries:
     - name: bd
-      root: "{{ .Values.media.system.data.path }}/manga/bd"
+      root: "{{ .Values.media.system.data.path }}/bd"
     - name: manga
       root: "{{ .Values.media.system.data.path }}/manga/mangas"
   ports:
@@ -513,12 +525,18 @@ audiobookshelf:
     limits:
       memory: 768Mi
 suwayomi:
-  # Suwayomi-Server (Tachidesk) — *arr-style manga downloader. Downloads into the
-  # media share's `manga` folder, which Kavita serves as a library. No native
-  # auth/OIDC (AUTH_MODE=none) — sits behind Authelia forwardauth like the *arrs.
+  # Suwayomi-Server (Tachidesk) — manga downloader. Downloads into the media
+  # share's `manga` folder, which Komga serves as a library (NOT Kavita — Kavita
+  # is disabled, see docs/media/kavita.md). No native auth/OIDC (AUTH_MODE=none)
+  # — sits behind Authelia forwardauth like the *arrs.
   image: ghcr.io/suwayomi/suwayomi-server:v2.2.2100
-  # Media subpath where Suwayomi writes downloads and Kavita reads its manga
-  # library — the "link" between the two.
+  # Media subpath Suwayomi owns outright as its download root. Unlike the *arrs
+  # there is no import/move step: Suwayomi IS the library manager, and it lays
+  # the tree out itself as <root>/mangas/<source>/<series>/<chapter> plus a
+  # sibling <root>/thumbnails/. That `mangas/` is why komga.libraries' `manga`
+  # root is `manga/mangas` and not `manga` — and why nothing else belongs in
+  # here: the init container chowns this whole subtree to uid 1000 on every pod
+  # start (see suwayomi--deployment.yaml).
   mangaSubPath: manga
   # Extension source repositories, seeded into Suwayomi by the suwayomi-setup Job
   # (Suwayomi ships none since the original Tachiyomi repo was taken down). The

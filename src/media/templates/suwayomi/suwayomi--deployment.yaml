@@ -27,11 +27,18 @@ spec:
       # Suwayomi's bundled JAR lives in the suwayomi user's home at mode 0750, so
       # the image only works as its native uid 1000 (custom uids can't read it).
       # Downloads therefore land as 1000:1000 — world-readable (0644/0755), so
-      # Kavita (running as the media user) still serves them. NEVER fsGroup on the
+      # Komga (running as the media user) still serves them. NEVER fsGroup on the
       # NFS PVCs (recursive chown of the whole 18TB share) — see CLAUDE.md.
       initContainers:
       # Data dir (DB/config) + manga download dir are root-owned on first mount;
       # chown to suwayomi's uid so it can write, never the whole volume.
+      #
+      # The `chown -R` below walks EVERYTHING under suwayomi.mangaSubPath on every
+      # pod start — it is only safe because that subPath is Suwayomi's own download
+      # root and nothing else lives in it. Never park another library under it: the
+      # `bd` collection used to sit there and got its 116GB/62 series taken over by
+      # uid 1000 on each restart (moved to a top-level `bd` on 2026-09-17, see the
+      # komga.libraries comment in apps/base/values/media.yaml).
       - name: init-permissions
         image: busybox:1.37.0
         securityContext:
