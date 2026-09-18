@@ -668,7 +668,7 @@ comixDownloader:
       # workers; 4Gi leaves headroom at the 2x4 defaults above.
       memory: 4Gi
 mediarvester:
-  image: ghcr.io/platypod/mediarvester:v1.9.3 # {"$imagepolicy": "flux-system:mediarvester"}
+  image: ghcr.io/platypod/mediarvester:v1.10.0 # {"$imagepolicy": "flux-system:mediarvester"}
   ports:
     http:
       name: http
