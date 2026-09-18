@@ -124,15 +124,38 @@ jellyfin:
     # Read-only NFS media mount, same share as the *arr stack and jellyfin-k8s.
     media: "{{ .Values.storage.defaultVolumes.media }}"
   # Libraries seeded via POST /Library/VirtualFolders by jellyfin-plugins-setup.
-  # Placeholder paths — replace with the real subfolder layout under /media
-  # before deploying for real; the seeding is generic (loops this list).
+  #
+  # These are the libraries that ACTUALLY exist on prod's host-native Jellyfin
+  # (mini4), so the seeding job matches every one by name and does nothing.
+  # That is the point: the job matches on NAME ONLY, so a name here that does
+  # not exist on the server gets created — the previous placeholder list would
+  # have created a "TV Shows" library pointing at /media/tv, a path that does
+  # not exist on mini4, on the next helm upgrade.
+  #
+  # `path` is resolved by JELLYFIN, not by this cluster: prod's Jellyfin runs
+  # on the mini4 host (see jellyfin.host below) and mounts the Synology share
+  # at /Users/pittinic/synology, which is why these are host paths and not the
+  # /media container paths the rest of this file uses.
   libraries:
     - name: Movies
       collectionType: movies
-      path: /media/movies
-    - name: TV Shows
+      path: /Users/pittinic/synology/movies
+    - name: Series
       collectionType: tvshows
-      path: /media/tv
+      path: /Users/pittinic/synology/series
+    - name: Anime
+      collectionType: tvshows
+      path: /Users/pittinic/synology/anime
+    # mediarvester's output, split so each half gets the collection type it
+    # needs — see mediarvester's services/library_layout.py. A tvshows library
+    # turns a loose creator video into a bogus one-episode show, so standalone
+    # content has to live in a separate movies library.
+    - name: Replays - Series
+      collectionType: tvshows
+      path: /Users/pittinic/synology/replays/series
+    - name: Replays - Singles
+      collectionType: movies
+      path: /Users/pittinic/synology/replays/singles
   # LDAP Authentication plugin (jellyfin/jellyfin-plugin-ldapauth, official
   # repo, guid 958aad66-3784-4d2a-b89a-a7b6fab6e25c) — installed and
   # configured by jellyfin-plugins-setup. See docs/media/jellyfin-ldap.md.
