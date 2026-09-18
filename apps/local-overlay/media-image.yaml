@@ -7,4 +7,4 @@
 # build; apps/base's own pin (managed separately, by prod's own automation)
 # never does.
 mediarvester:
-  image: ghcr.io/platypod/mediarvester:v1.12.0 # {"$imagepolicy": "flux-system:mediarvester-local"}
+  image: ghcr.io/platypod/mediarvester:v1.12.1 # {"$imagepolicy": "flux-system:mediarvester-local"}
