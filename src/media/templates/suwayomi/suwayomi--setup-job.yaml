@@ -85,21 +85,32 @@ spec:
           except Exception as e:
               print(f"  extension fetch skipped: {e}")
 
-          # 4. install the wanted extensions (pkgName list; skips installed ones)
-          nodes = gql("{extensions{nodes{pkgName isInstalled}}}")["data"]["extensions"]["nodes"]
-          state = {n["pkgName"]: n["isInstalled"] for n in nodes}
+          # 4. install the wanted extensions (pkgName list). The mutation can
+          # return success without the extension ending up installed (seen right
+          # after startup), so re-query isInstalled and retry until it sticks.
+          def installed():
+              nodes = gql("{extensions{nodes{pkgName isInstalled}}}")["data"]["extensions"]["nodes"]
+              return {n["pkgName"]: n["isInstalled"] for n in nodes}
+
+          state = installed()
+          missing = [p for p in EXTS if p not in state]
+          if missing:
+              raise SystemExit(f"extensions not found in any repo: {missing}")
           for pkg in EXTS:
-              if pkg not in state:
-                  raise SystemExit(f"extension {pkg} not found in any repo")
-              if state[pkg]:
-                  print(f"  {pkg}: already installed"); continue
-              res = gql(
-                  "mutation($id:String!){updateExtension(input:{id:$id,patch:{install:true}})"
-                  "{extension{pkgName isInstalled}}}",
-                  {"id": pkg},
-              )
-              if res.get("errors"):
-                  raise SystemExit(f"install {pkg} failed: {res['errors']}")
+              for attempt in range(1, 6):
+                  if state.get(pkg):
+                      break
+                  res = gql(
+                      "mutation($id:String!){updateExtension(input:{id:$id,patch:{install:true}})"
+                      "{extension{pkgName isInstalled}}}",
+                      {"id": pkg},
+                  )
+                  if res.get("errors"):
+                      print(f"  {pkg}: attempt {attempt} errored: {res['errors']}")
+                  time.sleep(5)
+                  state = installed()
+              if not state.get(pkg):
+                  raise SystemExit(f"{pkg} still not installed after 5 attempts")
               print(f"  {pkg}: installed")
           print("Suwayomi setup complete.")
 {{- end }}
