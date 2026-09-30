@@ -1,0 +1,14 @@
+# Local-only override of jellyfin.libraries (base lists prod's host-native
+# Jellyfin paths under /Users/pittinic/synology, which don't exist in local's
+# in-cluster Jellyfin: the seed job's POST /Library/VirtualFolders 400s).
+# These are the libraries local's Jellyfin actually has, with in-pod /media paths;
+# jellyfin-plugins-setup matches by name, so listing exactly these creates nothing.
+# Kept out of media-image.yaml because image automation rewrites that file.
+jellyfin:
+  libraries:
+    - name: Movies
+      collectionType: movies
+      path: /media/movies
+    - name: TV Shows
+      collectionType: tvshows
+      path: /media/tv

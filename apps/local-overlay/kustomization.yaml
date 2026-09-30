@@ -34,6 +34,9 @@ configMapGenerator:
   - name: platypod-media-local-override
     files:
       - media-image.yaml=media-image.yaml
+  - name: platypod-media-jellyfin-local-override
+    files:
+      - media-jellyfin.yaml=media-jellyfin.yaml
   - name: platypod-games-local-override
     files:
       - games-image.yaml=games-image.yaml

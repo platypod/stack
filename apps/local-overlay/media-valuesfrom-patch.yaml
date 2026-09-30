@@ -4,3 +4,9 @@
     kind: ConfigMap
     name: platypod-media-local-override
     valuesKey: media-image.yaml
+- op: add
+  path: /spec/valuesFrom/-
+  value:
+    kind: ConfigMap
+    name: platypod-media-jellyfin-local-override
+    valuesKey: media-jellyfin.yaml
