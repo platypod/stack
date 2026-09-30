@@ -37,6 +37,8 @@ spec:
           value: "http://{{ $svc }}:{{ .Values.suwayomi.ports.http.targetPort }}"
         - name: EXTENSION_REPOS
           value: {{ .Values.suwayomi.extensionRepos | toJson | quote }}
+        - name: EXTENSIONS
+          value: {{ .Values.suwayomi.extensions | default list | toJson | quote }}
         command:
         - python3
         - -c
@@ -45,6 +47,7 @@ spec:
 
           BASE  = os.environ["SUWAYOMI_URL"]
           REPOS = json.loads(os.environ["EXTENSION_REPOS"])
+          EXTS  = json.loads(os.environ["EXTENSIONS"])
 
           def gql(query, variables=None):
               body = json.dumps({"query": query, "variables": variables or {}}).encode()
@@ -81,5 +84,22 @@ spec:
               print(f"  fetched {len(n)} extensions.")
           except Exception as e:
               print(f"  extension fetch skipped: {e}")
+
+          # 4. install the wanted extensions (pkgName list; skips installed ones)
+          nodes = gql("{extensions{nodes{pkgName isInstalled}}}")["data"]["extensions"]["nodes"]
+          state = {n["pkgName"]: n["isInstalled"] for n in nodes}
+          for pkg in EXTS:
+              if pkg not in state:
+                  raise SystemExit(f"extension {pkg} not found in any repo")
+              if state[pkg]:
+                  print(f"  {pkg}: already installed"); continue
+              res = gql(
+                  "mutation($id:String!){updateExtension(input:{id:$id,patch:{install:true}})"
+                  "{extension{pkgName isInstalled}}}",
+                  {"id": pkg},
+              )
+              if res.get("errors"):
+                  raise SystemExit(f"install {pkg} failed: {res['errors']}")
+              print(f"  {pkg}: installed")
           print("Suwayomi setup complete.")
 {{- end }}

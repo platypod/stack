@@ -548,8 +548,8 @@ suwayomi:
   # share's `manga` folder, which Komga serves as a library (NOT Kavita — Kavita
   # is disabled, see docs/media/kavita.md). No native auth/OIDC (AUTH_MODE=none)
   # — sits behind Authelia forwardauth like the *arrs.
-  # v2.3.2243 (2026-07-13, "Fix 4 for v2.3.2223") — latest stable; index digest
-  # sha256:e59f212ccf91b26de8676a063a2db90256c148c6261535c7c477d47a43d9751b,
+  # v2.4.2366 (2026-09-30, "Syncyomi v2 and Other Improvements") — latest stable; index digest
+  # sha256:1fac27c387dc2ea9949e1a01ad7f6d6de9d72d3988338a95476748e5c45c4582,
   # linux/arm64 present. Entrypoint/Cmd/User are unchanged from v2.2.2100
   # (`tini -- /home/suwayomi/startup_script.sh`, uid 1000, default umask 0022),
   # so the umask wrapper in suwayomi--deployment.yaml still applies as-is.
@@ -562,7 +562,7 @@ suwayomi:
   #   Extension Repo system with Mihon's Extension Store. Covered here: the
   #   suwayomi-setup Job is a post-upgrade hook that declaratively re-sets
   #   extensionRepos below on every deploy.
-  image: ghcr.io/suwayomi/suwayomi-server:v2.3.2243
+  image: ghcr.io/suwayomi/suwayomi-server:v2.4.2366
   # Media subpath holding the manga library — the SAME top-level `mangas` folder
   # Komga serves (komga.libraries above), not a folder of Suwayomi's own.
   #
@@ -585,6 +585,13 @@ suwayomi:
     # a client-side toggle (there is no server-side nsfw setting in v2.2.2100),
     # so it must also be enabled per-browser under the WebUI settings.
     - https://raw.githubusercontent.com/n3uralcreativity/comix-downloader/repo/index.min.json
+  # Extensions installed by the suwayomi-setup Job (pkgName; must exist in one of
+  # the repos above). Mirrors what was hand-installed on prod.
+  extensions:
+    - eu.kanade.tachiyomi.extension.all.mangaplus
+    - eu.kanade.tachiyomi.extension.all.mangaup
+    - eu.kanade.tachiyomi.extension.all.webtoons
+    - eu.kanade.tachiyomi.extension.en.comix
   ports:
     http:
       name: suwayomi-http

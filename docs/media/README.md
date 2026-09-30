@@ -18,7 +18,7 @@ requests (Jellyseerr), and housekeeping. Many apps use SQLite on the **local
 | [komga](komga.md) | `gotson/komga:1.25.0` | comics/manga (JVM) |
 | [kavita](kavita.md) | `jvmilazz0/kavita:0.9.0.2` | ebooks; Authelia bypass; OIDC |
 | [audiobookshelf](audiobookshelf.md) | `ghcr.io/advplyr/audiobookshelf:2.35.1` | audiobooks/podcasts; setup Job; OIDC |
-| [suwayomi](suwayomi.md) | `ghcr.io/suwayomi/suwayomi-server:v2.2.2100` | manga; setup Job |
+| [suwayomi](suwayomi.md) | `ghcr.io/suwayomi/suwayomi-server:v2.4.2366` | manga; setup Job |
 | [reclaimerr](reclaimerr.md) | `ghcr.io/jessielw/reclaimerr:latest` | disk reclaim; setup Job |
 | [mediarvester](mediarvester.md) | `ghcr.io/platypod/mediarvester:v1.0.0` | **custom** image |
 | [tdarr](tdarr.md) | `ghcr.io/haveagitgat/tdarr:latest` + `ghcr.io/haveagitgat/tdarr_node:latest` | media normalization/transcoding |
