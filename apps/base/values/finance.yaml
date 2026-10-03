@@ -7,10 +7,9 @@
 finance:
   enable: false
   label: finance
-  # Pinned; the image is built from the repo's finance-pipelines/ dir. No Flux
-  # ImagePolicy yet — add one (clusters/<env>/image-automation.yaml) once the
-  # image is published.
-  image: ghcr.io/platypod/finance-pipelines:0.1.0
+  # Pinned; built by github.com/platypod/finance-pipelines CI on a vX.Y.Z tag (multi-arch,
+  # GHCR, public). No Flux ImagePolicy yet: bump this by hand.
+  image: ghcr.io/platypod/finance-pipelines:v0.1.0
   database:
     image: postgres:17
     label: "{{ .Values.finance.label }}-db"
@@ -61,13 +60,20 @@ finance:
     heartbeat:
       enable: true
       schedule: "17 4 * * *"
-    # Payslips: PDFs on the NAS home share, mounted read-only. Weekly scan; a no-op
-    # unless a new file (new SHA-256) showed up.
+    # Payslips: PDFs on the NAS, read-only. Weekly scan; a no-op unless a new file (new SHA-256)
+    # showed up.
     payslips:
       enable: false
       schedule: "30 6 * * 1"
+      source:
+        # apps (default): a read-only subPath of the shared apps NFS volume. The `homes` share is
+        # exported by the Synology only to the laptops, NOT to the cluster nodes, so the archive is
+        # copied to <apps>/finance/payslips (`make sync-payslips` in finance-pipelines).
+        # nfs: a dedicated read-only NFS PV on a share the nodes may mount (nfs.* below).
+        type: apps
+        subPath: finance/payslips
       nfs:
-        # Defaults to the stack's NFS server (set per env in platypod-sops).
+        # Only for source.type: nfs. Defaults to the stack's NFS server (platypod-sops).
         server: "{{ .Values.storage.nfs.default.server }}"
         share: /volume1/homes/pittinic/bulletins-de-salaire
   # OPTIONAL dedicated Grafana with a Postgres datasource (off by default). The default way

@@ -40,8 +40,11 @@ events are stored in `ops.openlineage_event` (no backend yet).
    generate the hash with the `docker run … authelia crypto hash generate pbkdf2` command shown in
    `apps/base/values/finance.yaml`, and make sure your LLDAP user is in `admins` (or `finance_user`).
    Authelia registers the client only when `clientId` is set; the chart refuses to render without it.
-6. Payslips: set `finance.pipelines.payslips.enable: true` and check `…payslips.nfs.share` (the
-   default points at `/volume1/homes/pittinic/bulletins-de-salaire`) and the NFS `server`.
+6. Payslips: set `finance.pipelines.payslips.enable: true`. **The Synology exports `homes` only to the
+   laptops, not to the cluster nodes** (`showmount -e <nas>`), so the default source is a read-only subPath of
+   the apps NFS volume (`finance/payslips`), filled by `make sync-payslips` in finance-pipelines (add-only
+   rsync of the archive; run it whenever a new payslip lands). A dedicated NFS PV (`source.type: nfs`) only
+   works if DSM lets the nodes mount the share.
 
 ## Pitfalls
 

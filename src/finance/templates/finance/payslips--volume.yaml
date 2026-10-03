@@ -1,4 +1,4 @@
-{{- if and .Values.finance.enable .Values.finance.pipelines.payslips.enable }}
+{{- if and .Values.finance.enable .Values.finance.pipelines.payslips.enable (eq .Values.finance.pipelines.payslips.source.type "nfs") }}
 {{- $nfs := .Values.finance.pipelines.payslips.nfs }}
 {{- $name := print .Values.finance.label "-payslips" }}
 {{- /* Static, READ-ONLY NFS volume on the NAS home share. The pipeline never writes

@@ -1,4 +1,5 @@
 {{- if and .Values.finance.enable .Values.finance.pipelines.payslips.enable }}
+{{- $src := .Values.finance.pipelines.payslips.source }}
 {{- $secret := print .Values.k8s.names.services.prefix .Values.finance.label .Values.k8s.names.services.suffix "-pipeline-env" }}
 apiVersion: batch/v1
 kind: CronJob
@@ -38,9 +39,16 @@ spec:
             - name: payslips
               mountPath: /data/payslips
               readOnly: true
+              {{- if eq $src.type "apps" }}
+              subPath: {{ $src.subPath }}
+              {{- end }}
           volumes:
           - name: payslips
             persistentVolumeClaim:
+              {{- if eq $src.type "apps" }}
+              claimName: {{ tpl .Values.storage.defaultVolumes.apps . }}
+              {{- else }}
               claimName: {{ .Values.finance.label }}-payslips
+              {{- end }}
               readOnly: true
 {{- end }}
