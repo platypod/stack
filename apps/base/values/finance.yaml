@@ -1,0 +1,123 @@
+# Implementation tier — finance module (personal finance data platform).
+# Design + phases: ../platypod/docs/plans/finance-data-platform.md
+#
+# Master gate: false renders NOTHING. Flip to true per environment (via
+# platypod-sops) only once the image below is published to GHCR and, on prod,
+# the db volume prerequisite is in place (see src/finance/README.md).
+finance:
+  enable: false
+  label: finance
+  # Pinned; the image is built from the repo's finance-pipelines/ dir. No Flux
+  # ImagePolicy yet — add one (clusters/<env>/image-automation.yaml) once the
+  # image is published.
+  image: ghcr.io/platypod/finance-pipelines:0.1.0
+  database:
+    image: postgres:17
+    label: "{{ .Values.finance.label }}-db"
+    name: finance
+    ports:
+      http:
+        name: pgsql
+        targetPort: 5432
+    replicasNb: 1
+    # Placeholders — real values come from platypod-sops. Rendering with a
+    # placeholder fails on purpose (see templates/finance/_guard.yaml).
+    # Roles are created ONCE, on first init of an empty data dir; changing a
+    # password later needs ALTER ROLE by hand (same as LLDAP).
+    credentials:
+      owner:     { username: finance_owner,     password: changeMe }
+      ingest:    { username: finance_ingest,    password: changeMe }
+      transform: { username: finance_transform, password: changeMe }
+      grafana:   { username: finance_grafana,   password: changeMe }
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        memory: 512Mi
+    storage:
+      # dev: the shared hostPath `apps` volume is fine. PROD MUST override this
+      # to a dedicated local, node-pinned db volume (e.g. `finance-db`, declared
+      # in storage.localDb.volumes via platypod-sops): NFS fsync latency +
+      # concurrency issues (see Authelia's lldap note), and prod NFS has no
+      # snapshots. Never set fsGroup on this pod.
+      pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  telemetry:
+    # Empty = the observability gateway's in-cluster HTTP OTLP endpoint (computed
+    # in pipeline--secret.yaml). Set to override.
+    otlpEndpoint: ""
+  # Optional OpenLineage backend (none yet). Events are always stored in
+  # ops.openlineage_event regardless.
+  openlineage:
+    url: ""
+    namespace: platypod
+  pipelines:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 768Mi
+    heartbeat:
+      enable: true
+      schedule: "17 4 * * *"
+    # Payslips: PDFs on the NAS home share, mounted read-only. Weekly scan; a no-op
+    # unless a new file (new SHA-256) showed up.
+    payslips:
+      enable: false
+      schedule: "30 6 * * 1"
+      nfs:
+        # Defaults to the stack's NFS server (set per env in platypod-sops).
+        server: "{{ .Values.storage.nfs.default.server }}"
+        share: /volume1/homes/pittinic/bulletins-de-salaire
+  # OPTIONAL dedicated Grafana with a Postgres datasource (off by default). The default way
+  # to view payslips is the shared Grafana via `finance.publish` below. Here the shared
+  # Grafana never gets finance credentials. Access: Authelia forward-auth rule for `finance_user`/`admins` +
+  # OIDC login with strict role mapping. See src/finance/README.md "Access model".
+  grafana:
+    enable: false
+    label: finance-grafana   # plain: it is embedded in the registry host template
+    image: "{{ .Values.observability.dashboard.image }}"
+    ports:
+      http:
+        name: http
+        targetPort: 3000
+    # Placeholders: the client is only registered in Authelia when clientId is set
+    # (platypod-sops). Hash the secret with:
+    #   docker run --rm authelia/authelia authelia crypto hash generate pbkdf2 --variant sha512 --password '<secret>'
+    oidc:
+      clientId: ""
+      clientSecret:
+        plain: ""
+        hashed: ""
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 384Mi
+  # Nightly logical backup (pg_dump -Fc) to the NFS apps share, in addition to the
+  # generic file-level `localDb` tar. Restore: see src/finance/README.md.
+  backup:
+    enable: true
+    schedule: "45 3 * * *"
+    retentionDays: 14
+    image: "{{ .Values.finance.database.image }}"
+    pvc: "{{ .Values.storage.defaultVolumes.apps }}"
+  # Publish payslip figures to Mimir (tenant `finance`) so the SHARED Grafana can show
+  # them, isolated per user by the existing `owner` label + scope shim (the same
+  # mechanism as Jellyfin). Off by default: enabling it changes the observability
+  # gateway and Mimir configs (a new pipeline/exporter and per-tenant limits).
+  publish:
+    # Receiving side of the payslip publication (gateway pipeline, Mimir tenant overrides, Grafana
+    # datasource + dashboard). Prod-authoritative like the rest of apps/base: ON here, OFF on local
+    # via apps/local-overlay/finance-publish.yaml (local does not run observability). Nothing is
+    # published until the finance module itself is enabled (finance.enable) with its owner set.
+    enable: true
+    tenant: finance
+    # Owner label stamped on every published series; must equal the Grafana/Authelia
+    # login of the person whose payslips these are. Set in platypod-sops.
+    owner: ""
+    # Per-tenant Mimir limits: payslip history is far older than the global 1y metrics
+    # retention, so this tenant gets a wide out-of-order window and NO block expiry.
+    window: 20y

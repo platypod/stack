@@ -84,3 +84,11 @@ refers to the model described in [authentication.md](authentication.md).
 Shared stateful backends (no public ingress): MariaDB / PostgreSQL / Redis
 instances consumed by the apps above, plus the NFS-backed PVCs
 (`apps`, `media`) on dev hostPath / prod Synology NFS.
+
+## finance
+Personal-finance data platform (phase 0, **disabled by default**): a dedicated
+PostgreSQL (`finance-db`, own roles; separate from `transverse-db` and the auth
+DBs) plus CronJobs running the `finance-pipelines` image and nightly logical backups. Figures are shown in
+the shared Grafana (per-user `owner` scoping, own Mimir tenant `finance`); an optional dedicated Grafana
+(`finance-grafana`) exists, off by default. See
+[`src/finance/README.md`](../src/finance/README.md).

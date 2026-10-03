@@ -32,6 +32,7 @@ bootstrap admin). Each has an Authelia OIDC client registered.
 | Service | Module | Notes |
 |---------|--------|-------|
 | Grafana | observability | OIDC via generic_oauth |
+| Grafana (finance, optional) | finance | Optional dedicated instance (off by default), OIDC with `role_attribute_strict`; only `finance_user` and `admins` reach it. Payslips normally use the *shared* Grafana with per-user `owner` scoping — see [src/finance/README.md](../src/finance/README.md) *Access model* |
 | BookStack | dev-tools | OIDC login |
 | Wiki.js | dev-tools | OIDC strategy |
 | Outline | dev-tools | OIDC is the only login method |

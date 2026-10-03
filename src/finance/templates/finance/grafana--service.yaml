@@ -1,0 +1,16 @@
+{{- if and .Values.finance.enable .Values.finance.grafana.enable }}
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .Values.k8s.names.services.prefix }}{{ tpl .Values.finance.grafana.label . }}{{ .Values.k8s.names.services.suffix }}
+
+spec:
+  selector:
+    app: {{ .Values.k8s.names.pods.prefix }}{{ tpl .Values.finance.grafana.label . }}{{ .Values.k8s.names.pods.suffix }}
+  ports:
+  - protocol: TCP
+    name: {{ .Values.finance.grafana.ports.http.name }}
+    port: {{ .Values.finance.grafana.ports.http.targetPort }}
+    targetPort: {{ .Values.finance.grafana.ports.http.targetPort }}
+{{- end }}

@@ -1,0 +1,46 @@
+{{- if and .Values.finance.enable .Values.finance.pipelines.payslips.enable }}
+{{- $secret := print .Values.k8s.names.services.prefix .Values.finance.label .Values.k8s.names.services.suffix "-pipeline-env" }}
+apiVersion: batch/v1
+kind: CronJob
+
+metadata:
+  name: {{ .Values.finance.label }}-payslips
+
+spec:
+  schedule: {{ .Values.finance.pipelines.payslips.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+          containers:
+          - name: payslips
+            image: {{ .Values.finance.image }}
+            args: ["run", "payslips"]
+            envFrom:
+            - secretRef:
+                name: {{ $secret }}
+            env:
+            - name: OTEL_SERVICE_NAME
+              value: finance-payslips
+            - name: PAYSLIPS_DIR
+              value: /data/payslips
+            resources:
+              {{- toYaml .Values.finance.pipelines.resources | nindent 14 }}
+            volumeMounts:
+            - name: payslips
+              mountPath: /data/payslips
+              readOnly: true
+          volumes:
+          - name: payslips
+            persistentVolumeClaim:
+              claimName: {{ .Values.finance.label }}-payslips
+              readOnly: true
+{{- end }}

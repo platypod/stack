@@ -1,4 +1,4 @@
-# Substrate/registry/per-module ConfigMaps + the 8 HelmReleases. The Secrets
+# Substrate/registry/per-module ConfigMaps + the 9 HelmReleases. The Secrets
 # tier (secretGenerator) is NOT here — it's sourced from the platypod-sops
 # GitRepository, which needs its own Kustomization with a different
 # sourceRef; see clusters/local/secrets.yaml. See stack/docs/flux-migration.md
@@ -32,6 +32,9 @@ configMapGenerator:
   - name: platypod-files
     files:
       - files.yaml=values/files.yaml
+  - name: platypod-finance
+    files:
+      - finance.yaml=values/finance.yaml
   - name: platypod-games
     files:
       - games.yaml=values/games.yaml
@@ -55,5 +58,6 @@ resources:
   - helmrelease-observability.yaml
   - helmrelease-dev-tools.yaml
   - helmrelease-media.yaml
+  - helmrelease-finance.yaml
   - helmrelease-games.yaml
   - helmrelease-files.yaml

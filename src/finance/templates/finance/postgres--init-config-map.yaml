@@ -1,0 +1,22 @@
+{{- if .Values.finance.enable }}
+{{- $c := .Values.finance.database.credentials }}
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ tpl .Values.finance.database.label . }}{{ .Values.k8s.names.configMaps.suffix }}
+
+data:
+  # Runs once, on first init of an empty data dir. The medallion schemas, the
+  # ops tables and every grant are applied by `pp migrate` (idempotent), not here.
+  init-roles.sh: |
+    #!/bin/bash
+    set -e
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+      CREATE ROLE "{{ $c.ingest.username }}"    LOGIN PASSWORD '{{ $c.ingest.password }}';
+      CREATE ROLE "{{ $c.transform.username }}" LOGIN PASSWORD '{{ $c.transform.password }}';
+      CREATE ROLE "{{ $c.grafana.username }}"   LOGIN PASSWORD '{{ $c.grafana.password }}';
+      GRANT CONNECT ON DATABASE "{{ .Values.finance.database.name }}"
+        TO "{{ $c.ingest.username }}", "{{ $c.transform.username }}", "{{ $c.grafana.username }}";
+    EOSQL
+{{- end }}

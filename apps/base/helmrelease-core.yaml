@@ -37,6 +37,9 @@ spec:
       name: platypod-files
       valuesKey: files.yaml
     - kind: ConfigMap
+      name: platypod-finance
+      valuesKey: finance.yaml
+    - kind: ConfigMap
       name: platypod-games
       valuesKey: games.yaml
     - kind: ConfigMap

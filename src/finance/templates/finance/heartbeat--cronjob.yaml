@@ -1,0 +1,35 @@
+{{- if and .Values.finance.enable .Values.finance.pipelines.heartbeat.enable }}
+{{- $secret := print .Values.k8s.names.services.prefix .Values.finance.label .Values.k8s.names.services.suffix "-pipeline-env" }}
+apiVersion: batch/v1
+kind: CronJob
+
+metadata:
+  name: {{ .Values.finance.label }}-heartbeat
+
+spec:
+  schedule: {{ .Values.finance.pipelines.heartbeat.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+          containers:
+          - name: heartbeat
+            image: {{ .Values.finance.image }}
+            args: ["run", "heartbeat"]
+            envFrom:
+            - secretRef:
+                name: {{ $secret }}
+            env:
+            - name: OTEL_SERVICE_NAME
+              value: finance-heartbeat
+            resources:
+              {{- toYaml .Values.finance.pipelines.resources | nindent 14 }}
+{{- end }}

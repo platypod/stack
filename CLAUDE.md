@@ -30,8 +30,8 @@ live in `docs/` and in each module's `src/<module>/README.md`:
 | `make` targets + variables | [docs/make-targets.md](docs/make-targets.md) |
 | Backlog | [docs/TODO.md](docs/TODO.md) |
 
-Modules: `core` `dev-tools` `files` `games` `media` `observability` `persistence`
-`security` — each has `src/<module>/README.md` and `docs/<module>/`.
+Modules: `core` `dev-tools` `files` `finance` `games` `media` `observability`
+`persistence` `security` — each has `src/<module>/README.md` and `docs/<module>/`.
 
 ## Critical rules (full rationale in the linked docs)
 

@@ -1,0 +1,62 @@
+{{- if .Values.finance.enable }}
+{{- $db := .Values.finance.database }}
+{{- $pod := print .Values.k8s.names.pods.prefix (tpl $db.label .) .Values.k8s.names.pods.suffix }}
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: {{ $pod }}
+  labels:
+    app: {{ $pod }}
+
+spec:
+  replicas: {{ $db.replicasNb }}
+  # One writer on a ReadWriteOnce hostPath volume: never overlap old and new pods.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        app: {{ $pod }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/finance/postgres--init-config-map.yaml") . | sha256sum }}
+    spec:
+      # No fsGroup, ever: on NFS-backed PVCs it recursively chowns the share.
+      containers:
+      - name: {{ .Values.k8s.names.containers.prefix }}{{ tpl $db.label . }}{{ .Values.k8s.names.containers.suffix }}
+        image: {{ $db.image }}
+        resources:
+          {{- toYaml $db.resources | nindent 10 }}
+        ports:
+        - name: {{ $db.ports.http.name }}
+          containerPort: {{ $db.ports.http.targetPort }}
+        env:
+        - name: POSTGRES_USER
+          value: "{{ $db.credentials.owner.username }}"
+        - name: POSTGRES_PASSWORD
+          value: "{{ $db.credentials.owner.password }}"
+        - name: POSTGRES_DB
+          value: "{{ $db.name }}"
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "{{ $db.credentials.owner.username }}", "-d", "{{ $db.name }}"]
+          periodSeconds: 5
+        volumeMounts:
+        - mountPath: /docker-entrypoint-initdb.d/init-roles.sh
+          name: init
+          subPath: init-roles.sh
+        - mountPath: /var/lib/postgresql/data
+          name: data
+          subPath: {{ tpl $db.label . }}
+      volumes:
+      - name: init
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ tpl $db.label . }}{{ .Values.k8s.names.configMaps.suffix }}
+          defaultMode: 0755
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ tpl $db.storage.pvc . }}
+{{- end }}

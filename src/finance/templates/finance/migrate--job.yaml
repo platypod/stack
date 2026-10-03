@@ -1,0 +1,36 @@
+{{- if .Values.finance.enable }}
+{{- $secret := print .Values.k8s.names.services.prefix .Values.finance.label .Values.k8s.names.services.suffix "-pipeline-env" }}
+apiVersion: batch/v1
+kind: Job
+
+metadata:
+  name: {{ .Values.finance.label }}-migrate
+  annotations:
+    # Idempotent (CREATE ... IF NOT EXISTS + grants): safe on every install/upgrade.
+    # The hook runs after the db Deployment is created; retries absorb its startup.
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+
+spec:
+  backoffLimit: 30
+  template:
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+      - name: migrate
+        image: {{ .Values.finance.image }}
+        args: ["migrate"]
+        envFrom:
+        - secretRef:
+            name: {{ $secret }}
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            memory: 256Mi
+{{- end }}

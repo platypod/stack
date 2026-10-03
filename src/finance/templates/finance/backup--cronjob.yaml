@@ -1,0 +1,68 @@
+{{- if and .Values.finance.enable .Values.finance.backup.enable }}
+{{- $b := .Values.finance.backup }}
+{{- $secret := print .Values.k8s.names.services.prefix .Values.finance.label .Values.k8s.names.services.suffix "-pipeline-env" }}
+apiVersion: batch/v1
+kind: CronJob
+
+metadata:
+  name: {{ .Values.finance.label }}-db-dump
+
+spec:
+  schedule: {{ $b.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: dump
+            image: {{ tpl $b.image . }}
+            # Same user as the other backup CronJobs (root: NFS write access to _db-backups).
+            securityContext:
+              runAsUser: 0
+            envFrom:
+            - secretRef:
+                name: {{ $secret }}
+            env:
+            - name: PGHOST
+              value: "{{ .Values.k8s.names.services.prefix }}{{ tpl .Values.finance.database.label . }}{{ .Values.k8s.names.services.suffix }}"
+            - name: PGDATABASE
+              value: "{{ .Values.finance.database.name }}"
+            command:
+            - bash
+            - -c
+            - |
+              set -euo pipefail
+              # A logical, consistent snapshot (custom format) of the whole database - unlike a
+              # file-level copy of a running data directory. Owner role: it must read every schema.
+              export PGUSER="$FINANCE_PG_ADMIN_USER" PGPASSWORD="$FINANCE_PG_ADMIN_PASSWORD"
+              DEST=/backup/_db-backups/{{ .Values.finance.label }}-logical
+              mkdir -p "$DEST"
+              TS=$(date +%Y%m%d-%H%M%S)
+              OUT="$DEST/{{ .Values.finance.label }}-$TS.dump"
+              pg_dump --format=custom --no-owner --file="$OUT.partial"
+              # Refuse to keep a dump that cannot be read back.
+              pg_restore --list "$OUT.partial" > /dev/null
+              mv "$OUT.partial" "$OUT"
+              echo "wrote $OUT ($(du -h "$OUT" | cut -f1))"
+              find "$DEST" -name '{{ .Values.finance.label }}-*.dump' -mtime +{{ $b.retentionDays }} -delete
+              find "$DEST" -name '*.partial' -mmin +60 -delete
+              echo "kept:"; ls -1t "$DEST" | head -5
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+            volumeMounts:
+            - name: backup
+              mountPath: /backup
+          volumes:
+          - name: backup
+            persistentVolumeClaim:
+              claimName: {{ tpl $b.pvc . }}
+{{- end }}

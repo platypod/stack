@@ -1,0 +1,12 @@
+{{- /*
+  Render-time guard, emits nothing: fails the render when the module is enabled
+  but a database credential is still the placeholder. (Must NOT start with an
+  underscore -- Helm never renders `_*` files, so the guard would silently not run.)
+*/ -}}
+{{- if .Values.finance.enable }}
+{{- range $role, $c := .Values.finance.database.credentials }}
+{{- if eq $c.password "changeMe" }}
+{{- fail (printf "finance.database.credentials.%s.password is still the placeholder - set it in platypod-sops" $role) }}
+{{- end }}
+{{- end }}
+{{- end }}

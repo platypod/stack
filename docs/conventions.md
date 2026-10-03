@@ -29,7 +29,7 @@ Env-specific secrets/overrides live in the separate `platypod-sops` repo
 [flux-migration.md](flux-migration.md)'s SOPS design.
 
 Modules: `persistence`, `core`, `security`, `observability`, `dev-tools`,
-`files`, `media`, `games`. See [services.md](services.md) for the full per-module
+`files`, `media`, `games`, `finance`. See [services.md](services.md) for the full per-module
 service list.
 
 ## Key conventions
@@ -39,8 +39,8 @@ service list.
 - Values use Go template cross-references (`{{ .Values.some.key }}`),
   resolved by Helm at render time — same syntax throughout, no separate
   pre-processing step.
-- Every `HelmRelease` gets all 9 default-value ConfigMaps (substrate,
-  registry, all 7 module files) via `valuesFrom`, not just its own module's —
+- Every `HelmRelease` gets all 10 default-value ConfigMaps (substrate,
+  registry, all 8 module files) via `valuesFrom`, not just its own module's —
   cross-module references are real (e.g. Traefik reads `jellyfin.proxy.enable`
   from the `media` module). See [flux-migration.md](flux-migration.md) gotcha 2.
 - Module release order is declared via each `HelmRelease`'s `spec.dependsOn`

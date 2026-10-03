@@ -1,0 +1,46 @@
+{{- if and .Values.finance.enable .Values.finance.pipelines.payslips.enable }}
+{{- $nfs := .Values.finance.pipelines.payslips.nfs }}
+{{- $name := print .Values.finance.label "-payslips" }}
+{{- /* Static, READ-ONLY NFS volume on the NAS home share. The pipeline never writes
+       to it. No fsGroup anywhere near it (recursive chown rule). */ -}}
+apiVersion: v1
+kind: PersistentVolume
+
+metadata:
+  name: {{ $name }}
+  annotations:
+    volume.kubernetes.io/provisioned-by: nfs.csi.k8s.io
+
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+  - ReadOnlyMany
+  persistentVolumeReclaimPolicy: Retain
+  mountOptions:
+  - hard
+  - nfsvers=4.1
+  - ro
+  csi:
+    driver: nfs.csi.k8s.io
+    readOnly: true
+    volumeAttributes:
+      server: {{ tpl $nfs.server . }}
+      share: {{ $nfs.share }}
+    volumeHandle: "{{ tpl $nfs.server . }}#{{ $nfs.share }}#{{ $name }}"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+
+metadata:
+  name: {{ $name }}
+
+spec:
+  accessModes: [ReadOnlyMany]
+  resources:
+    requests:
+      storage: 1Gi
+  volumeName: {{ $name }}
+  storageClassName: ""
+{{- end }}

@@ -46,6 +46,9 @@ configMapGenerator:
   - name: platypod-files-local-override
     files:
       - files-image.yaml=files-image.yaml
+  - name: platypod-finance-local-override
+    files:
+      - finance-publish.yaml=finance-publish.yaml
 
 generatorOptions:
   disableNameSuffixHash: false
@@ -67,3 +70,12 @@ patches:
       kind: HelmRelease
       name: files
     path: files-valuesfrom-patch.yaml
+  # finance.publish is read by the observability chart (gateway, Mimir, Grafana) and the finance chart.
+  - target:
+      kind: HelmRelease
+      name: observability
+    path: finance-valuesfrom-patch.yaml
+  - target:
+      kind: HelmRelease
+      name: finance
+    path: finance-valuesfrom-patch.yaml

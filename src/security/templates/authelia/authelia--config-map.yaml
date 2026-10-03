@@ -45,6 +45,25 @@ data:
             - 'preferred_username'
         ## See: https://www.authelia.com/c/oidc
         clients:
+        {{- if .Values.finance.grafana.oidc.clientId }}
+        - audience:
+          - 'https://{{ tpl .Values.finance.grafana.host . }}{{ .Values.k8s.names.urls.port }}'
+          authorization_policy: 'one_factor'
+          claims_policy: 'platypod'
+          client_id: '{{ .Values.finance.grafana.oidc.clientId }}'
+          client_name: 'Grafana (finance)'
+          client_secret: '{{ .Values.finance.grafana.oidc.clientSecret.hashed }}'
+          public: false
+          redirect_uris:
+          - 'https://{{ tpl .Values.finance.grafana.host . }}{{ .Values.k8s.names.urls.port }}/login/generic_oauth'
+          scopes:
+          - 'openid'
+          - 'profile'
+          - 'groups'
+          - 'email'
+          token_endpoint_auth_method: 'client_secret_basic'
+          userinfo_signed_response_alg: 'none'
+        {{- end }}
         {{- if .Values.rommapp.oidc.clientId }}
         - audience:
           - 'https://{{ tpl .Values.rommapp.host . }}{{ .Values.k8s.names.urls.port }}'

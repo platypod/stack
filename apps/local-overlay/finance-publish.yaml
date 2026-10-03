@@ -1,0 +1,6 @@
+# Local-only: keep the finance payslip publication path OFF. apps/base is prod-authoritative and
+# turns finance.publish on (receiving side: observability gateway/Mimir/Grafana); local does not run
+# that stack, so it must not render any of it. Layered onto HelmRelease/observability and /finance.
+finance:
+  publish:
+    enable: false
