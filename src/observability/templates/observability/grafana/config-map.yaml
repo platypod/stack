@@ -89,6 +89,15 @@ data:
       allowUiUpdates: true
       options:
         path: /var/lib/grafana/dashboards/claude
+    {{- if .Values.finance.publish.enable }}
+    - name: 'Finance'
+      orgId: 1
+      folder: 'Finance'
+      type: file
+      allowUiUpdates: false
+      options:
+        path: /var/lib/grafana/dashboards/finance
+    {{- end }}
 
   datasources.yaml: |
     apiVersion: 1
@@ -192,6 +201,31 @@ data:
       secureJsonData:
         httpHeaderValue1: 'ai'
       {{- end }}
+
+    {{- if .Values.finance.publish.enable }}
+
+    - name: Mimir (finance)
+      # Payslip figures: the `finance` Mimir tenant (own retention, see mimir runtime.yaml),
+      # published by finance-pipelines. Same per-user `owner` isolation as every other
+      # metrics datasource: routed through the scope shim, which scopes the query to
+      # the caller's own series (a non-admin sees only owner=<their login>; admins see
+      # all owners). The shim passes this datasource's tenant header through untouched.
+      uid: metrics-finance
+      type: prometheus
+      access: proxy
+      {{- if .Values.observability.scopeShim.scopeMetrics }}
+      url: http://{{ range $.Values.observability.scopeShim.instances }}{{ if eq .name "metrics" }}{{ $.Values.k8s.names.services.prefix }}{{ .label }}{{ $.Values.k8s.names.services.suffix }}{{ end }}{{ end }}:{{ $.Values.observability.scopeShim.ports.http.targetPort }}
+      editable: false
+      jsonData:
+        httpHeaderName1: '{{ .Values.observability.scopeShim.secretHeader }}'
+        httpHeaderName2: 'X-Scope-OrgID'
+      secureJsonData:
+        httpHeaderValue1: '{{ .Values.observability.scopeShim.secret }}'
+        httpHeaderValue2: '{{ .Values.finance.publish.tenant }}'
+      {{- else }}
+      {{- fail "finance.publish.enable requires observability.scopeShim.scopeMetrics: without the scope shim every Grafana user could read the finance tenant" }}
+      {{- end }}
+    {{- end }}
 
   jellyfin.json: |
     {

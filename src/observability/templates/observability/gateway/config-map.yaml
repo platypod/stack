@@ -329,7 +329,27 @@ data:
       filter/keep_node_collector:
         metrics:
           metric:
+            {{- if .Values.finance.publish.enable }}
+            - IsMatch(metric.name, "^(ai_tx_|claude_code_|finance[._])")
+            {{- else }}
             - IsMatch(metric.name, "^(ai_tx_|claude_code_)")
+            {{- end }}
+      {{- if .Values.finance.publish.enable }}
+      # Finance pipelines (finance-pipelines `pp run payslips`) push finance.* gauges
+      # here with explicit historical timestamps. They go to their own Mimir tenant
+      # (hardcoded, like `ai`), which has per-tenant retention/OOO overrides.
+      filter/keep_finance:
+        metrics:
+          metric:
+            - not IsMatch(metric.name, "^finance[._]")
+      # Safety net: a finance series without a concrete owner would fall to
+      # transform/owner's `_shared` default and become visible to every user.
+      # Refuse it instead.
+      filter/finance_require_owner:
+        metrics:
+          datapoint:
+            - attributes["owner"] == nil or attributes["owner"] == "" or attributes["owner"] == "_shared" or attributes["owner"] == "_admin"
+      {{- end }}
 
     exporters:
       debug/verbose:
@@ -377,6 +397,16 @@ data:
           X-Scope-OrgID: "ai"
         tls:
           insecure: true
+      {{- if .Values.finance.publish.enable }}
+      otlphttp/mimir_finance:
+        compression: gzip
+        encoding: proto
+        metrics_endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.metrics.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.metrics.ports.http.targetPort }}/otlp/v1/metrics
+        headers:
+          X-Scope-OrgID: {{ .Values.finance.publish.tenant | quote }}
+        tls:
+          insecure: true
+      {{- end }}
       otlphttp/loki:
         endpoint: http://{{ .Values.k8s.names.services.prefix }}{{ .Values.observability.logs.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.observability.logs.ports.http.targetPort }}/otlp
         # Per-tenant X-Scope-OrgID injected from request metadata (Loki auth_enabled).
@@ -412,6 +442,12 @@ data:
           receivers: [otlp]
           processors: [memory_limiter, filter/keep_node_collector, attributes/otlp, transform/owner, batch]
           exporters: [otlphttp/mimir]
+        {{- if .Values.finance.publish.enable }}
+        metrics/otlp_finance:
+          receivers: [otlp]
+          processors: [memory_limiter, filter/keep_finance, filter/finance_require_owner, attributes/otlp, transform/owner, batch]
+          exporters: [otlphttp/mimir_finance]
+        {{- end }}
         {{- if .Values.observability.otelCollector.receivers.jellyfinCustom.enable }}
         metrics/jellyfinCustom:
           receivers: [prometheus/jellyfinCustom]

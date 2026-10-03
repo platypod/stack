@@ -1,0 +1,17 @@
+{{- if and .Values.observability.dashboard.enable .Values.finance.publish.enable }}
+# Finance dashboards (PromQL over the `finance` Mimir tenant) live under
+# files/dashboards/finance/ and get their own Grafana folder ("Finance"). Only
+# shipped when finance.publish.enable, because their datasource (metrics-finance)
+# only exists then.
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.dashboard.label }}-dashboards-finance{{ .Values.k8s.names.configMaps.suffix }}
+
+data:
+{{- range $path, $_ := .Files.Glob "files/dashboards/finance/*.json" }}
+  {{ base $path }}: |
+{{ $.Files.Get $path | indent 4 }}
+{{- end }}
+{{- end }}

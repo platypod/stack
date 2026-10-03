@@ -18,6 +18,9 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/observability/grafana/config-map.yaml") . | sha256sum }}
         checksum/dashboards: {{ include (print $.Template.BasePath "/observability/grafana/dashboards-config-map.yaml") . | sha256sum }}
+        {{- if .Values.finance.publish.enable }}
+        checksum/dashboards-finance: {{ include (print $.Template.BasePath "/observability/grafana/dashboards-finance-config-map.yaml") . | sha256sum }}
+        {{- end }}
         checksum/dashboards-claude: {{ include (print $.Template.BasePath "/observability/grafana/dashboards-claude-config-map.yaml") . | sha256sum }}
     spec:
       priorityClassName: platypod-bulk
@@ -90,6 +93,10 @@ spec:
           mountPath: /var/lib/grafana/dashboards/platform
         - name: dashboards-claude
           mountPath: /var/lib/grafana/dashboards/claude
+        {{- if .Values.finance.publish.enable }}
+        - name: dashboards-finance
+          mountPath: /var/lib/grafana/dashboards/finance
+        {{- end }}
         - mountPath: /var/lib/grafana
           name: {{ $appVolume }}
           subPath: grafana/data
@@ -150,4 +157,9 @@ spec:
       - name: dashboards-claude
         configMap:
           name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.dashboard.label }}-dashboards-claude{{ .Values.k8s.names.configMaps.suffix }}
+      {{- if .Values.finance.publish.enable }}
+      - name: dashboards-finance
+        configMap:
+          name: {{ .Values.k8s.names.configMaps.prefix }}{{ .Values.observability.dashboard.label }}-dashboards-finance{{ .Values.k8s.names.configMaps.suffix }}
+      {{- end }}
 {{- end }}

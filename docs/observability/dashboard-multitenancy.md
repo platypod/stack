@@ -408,6 +408,23 @@ two ways by owner label.
   session cookie is present) — check what username Grafana's own profile menu
   shows if this resurfaces.
 
+## Status update (2026-10-03): finance (payslips) as a third owner-scoped signal
+
+Personal payslip figures use the same mechanism: `finance.payslip.*` gauges carry `owner=<login>` and are
+shown through the existing metrics shim + label proxy, so a non-admin sees only their own and admins see all.
+Differences worth knowing before reusing this for other historical data:
+
+- **Own Mimir tenant `finance`** (like `ai`): the gateway routes `finance.*` to it by name (new pipeline
+  `metrics/otlp_finance`, hardcoded `X-Scope-OrgID`), and drops any finance series whose owner is missing,
+  empty, `_shared` or `_admin`, because `transform/owner` would otherwise default it to `_shared` (visible to all).
+- **Per-tenant limits via a new Mimir `runtime.yaml`** (the global 1 y retention/out-of-order window would
+  reject 2020 data): wide out-of-order window, no block expiry, `max_query_parallelism: 2` (a 7-year dashboard
+  otherwise hits 429 `too_many_outstanding_requests`). Unknown keys in `runtime.yaml` stop Mimir from starting.
+- New datasource `Mimir (finance)` (uid `metrics-finance`) and a `Finance` dashboard folder; all gated by
+  `finance.publish.enable` (off: observability renders byte-identical).
+
+See `src/finance/README.md` (*Access model*) for evidence, limits and the purge-and-republish runbook.
+
 ## Rollout / testing note
 
 Prefer to validate on the **dev** cluster first. Dev has had OIDC trouble in the

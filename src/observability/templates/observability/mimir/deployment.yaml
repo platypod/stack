@@ -56,6 +56,11 @@ spec:
         - mountPath: /etc/mimir/mimir.yaml
           name: conf
           subPath: mimir.yaml
+        {{- if .Values.finance.publish.enable }}
+        - mountPath: /etc/mimir/runtime.yaml
+          name: conf
+          subPath: runtime.yaml
+        {{- end }}
         - mountPath: /storage
           name: {{ $appVolume }}
           subPath: mimir

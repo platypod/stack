@@ -100,4 +100,30 @@ data:
 
     usage_stats:
       enabled: false
+    {{- if .Values.finance.publish.enable }}
+
+    # Per-tenant overrides (see runtime.yaml below): the finance tenant keeps its data
+    # forever and accepts samples as old as the payslip archive.
+    runtime_config:
+      file: /etc/mimir/runtime.yaml
+    {{- end }}
+  {{- if .Values.finance.publish.enable }}
+
+  # Mimir re-reads this file on change (no restart). Only the finance tenant is
+  # overridden; every other tenant keeps the global `limits` above.
+  runtime.yaml: |
+    overrides:
+      {{ .Values.finance.publish.tenant }}:
+        out_of_order_time_window: {{ .Values.finance.publish.window }}
+        query_ingesters_within: {{ .Values.finance.publish.window }}
+        # 0 = never delete blocks. Payslips from 2020 must outlive the 1y metrics retention.
+        compactor_blocks_retention_period: 0s
+        # A 7-year dashboard range is split into ~2500 daily sub-queries per panel query.
+        # With the default parallelism (14) a dashboard's ~19 panel queries exceed the
+        # per-tenant queue (100) and Mimir answers 429 too_many_outstanding_requests
+        # (reproduced). 2 keeps a dashboard load well under it (40 concurrent 7y queries: all
+        # 200, 11 s). Unknown keys here make Mimir refuse to START, so only add limits
+        # that exist in Mimir's per-tenant `limits` (split_queries_by_interval does not).
+        max_query_parallelism: 2
+  {{- end }}
 {{- end }}
