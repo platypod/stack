@@ -25,26 +25,30 @@ events are stored in `ops.openlineage_event` (no backend yet).
 
 ## Enabling
 
-1. **Publish the image** `ghcr.io/platypod/finance-pipelines:<tag>` (built from
-   `finance-pipelines/`) and set `finance.image`.
-2. **Credentials**: set the four `finance.database.credentials.*.password` in
-   `platypod-sops` (`clusters/<env>/secrets.enc.yaml`). A placeholder fails the render.
-3. **prod only — database volume**: declare a local, node-pinned volume in
-   `storage.localDb.volumes` (e.g. `- {name: finance-db, node: <hostname>}`, enable
-   `storage.localDb`) and set `finance.database.storage.pvc: finance-db`. The default
-   (`apps`) is NFS on prod: unsafe for Postgres and unsnapshotted.
-4. Set `finance.enable: true` for the environment.
-5. Shared Grafana (recommended): see *Access model* (`finance.publish.*`).
-   Dedicated Grafana (optional): set `finance.grafana.enable: true` and the OIDC client
-   (`finance.grafana.oidc.clientId` / `clientSecret.plain` / `clientSecret.hashed`) in platypod-sops,
-   generate the hash with the `docker run … authelia crypto hash generate pbkdf2` command shown in
-   `apps/base/values/finance.yaml`, and make sure your LLDAP user is in `admins` (or `finance_user`).
-   Authelia registers the client only when `clientId` is set; the chart refuses to render without it.
-6. Payslips: set `finance.pipelines.payslips.enable: true`. **The Synology exports `homes` only to the
-   laptops, not to the cluster nodes** (`showmount -e <nas>`), so the default source is a read-only subPath of
-   the apps NFS volume (`finance/payslips`), filled by `make sync-payslips` in finance-pipelines (add-only
-   rsync of the archive; run it whenever a new payslip lands). A dedicated NFS PV (`source.type: nfs`) only
-   works if DSM lets the nodes mount the share.
+**State on prod (2026-10-03): enabled and run once** (heartbeat + all 79 payslips; 2243 data points published
+for owner `pittinic`). The settings live in `platypod-sops` `clusters/prd/secrets.enc.yaml`:
+`finance.enable`, the four database passwords, `finance.database.storage.pvc: finance-db`,
+`finance.publish.owner`, `finance.pipelines.payslips.enable`, and a `finance-db` entry in
+`storage.localDb.volumes` (node `mini4-w1`). Local: off (the overlay forces `finance.publish.enable: false`).
+
+To enable elsewhere:
+
+1. **Image**: `ghcr.io/platypod/finance-pipelines:<tag>` is built by that repo's CI on a `vX.Y.Z` tag
+   (multi-arch, public); set `finance.image`.
+2. **Credentials**: the four `finance.database.credentials.*.password` in `platypod-sops`. A placeholder fails the render.
+   Roles are created once, on first init of an empty data dir (changing a password later needs `ALTER ROLE`).
+3. **Database volume (prod)**: a node-pinned local volume in `storage.localDb.volumes` (e.g.
+   `- {name: finance-db, node: mini4-w1}`) and `finance.database.storage.pvc: finance-db`. The default (`apps`) is
+   NFS on prod: unsafe for Postgres and unsnapshotted.
+4. **Module**: `finance.enable: true`; `finance.publish.owner: <login>` (see *Access model*).
+5. **Payslips**: `finance.pipelines.payslips.enable: true`. The Synology exports `homes` only to the laptops, not to the
+   cluster nodes (`showmount -e <nas>`), so the source is a read-only subPath of the apps NFS volume
+   (`finance/payslips`), filled by `make sync-payslips` in finance-pipelines (add-only rsync). **Run it whenever a new
+   payslip lands**; the CronJob (Mondays 06:30) ingests it on its next run, or run it now with
+   `kubectl -n <ns> create job --from=cronjob/finance-payslips <name>`.
+6. **Optional dedicated Grafana**: `finance.grafana.enable`, its OIDC client, and the `finance` entry in
+   `security.accessGroups` (commented block in `apps/base/values/security.yaml`; inactive by default because it changes
+   Authelia's rules).
 
 ## Pitfalls
 
