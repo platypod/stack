@@ -7,18 +7,18 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "",
   "time": {
     "from": "now-7y",
     "to": "now"
   },
-  "description": "Payslip figures published by finance-pipelines into the `finance` Mimir tenant. Each viewer only sees series whose owner label is their own login (scope shim); admins see all owners.",
+  "description": "Payslip figures published by finance-pipelines into the `finance` Mimir tenant. The View switch picks the month, the calendar year to date, or the rolling 12 months for every flow. Each viewer only sees series whose owner label is their own login (scope shim); admins see all owners.",
   "panels": [
     {
       "id": 1,
       "type": "stat",
-      "title": "Net paid (last payslip)",
+      "title": "Net paid",
       "gridPos": {
         "x": 0,
         "y": 0,
@@ -36,7 +36,7 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum(last_over_time(finance_payslip_net_paid_eur[$__range]))",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}net_paid_eur\"}[$__range]))",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -75,12 +75,12 @@
         "graphMode": "none",
         "textMode": "auto"
       },
-      "description": "Last payslip inside the selected time range."
+      "description": "Latest payslip in the selected time range, in the selected view."
     },
     {
       "id": 2,
       "type": "stat",
-      "title": "Gross (last payslip)",
+      "title": "Gross",
       "gridPos": {
         "x": 4,
         "y": 0,
@@ -98,7 +98,7 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum(last_over_time(finance_payslip_gross_eur[$__range]))",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}gross_eur\"}[$__range]))",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -137,12 +137,12 @@
         "graphMode": "none",
         "textMode": "auto"
       },
-      "description": "Last payslip inside the selected time range."
+      "description": "Latest payslip in the selected time range, in the selected view."
     },
     {
       "id": 3,
       "type": "stat",
-      "title": "Tax withheld, year to date",
+      "title": "Bonuses",
       "gridPos": {
         "x": 8,
         "y": 0,
@@ -160,7 +160,7 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum(last_over_time(finance_payslip_ytd_tax_withheld_eur[$__range]))",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}pay_element_eur\", element=~\"bonus|bonus_exempt\"}[$__range]))",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -199,12 +199,12 @@
         "graphMode": "none",
         "textMode": "auto"
       },
-      "description": "Last payslip inside the selected time range."
+      "description": "Bonuses and commissions, plus the value-sharing bonus printed outside the gross."
     },
     {
       "id": 4,
       "type": "stat",
-      "title": "Net / gross (last)",
+      "title": "Tax withheld",
       "gridPos": {
         "x": 12,
         "y": 0,
@@ -222,7 +222,69 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum(last_over_time(finance_payslip_net_to_gross_ratio[$__range]))",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}tax_withheld_eur\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyEUR",
+          "custom": {},
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "description": "Latest payslip in the selected time range, in the selected view."
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Net / gross",
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "metrics-finance"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics-finance"
+          },
+          "editorMode": "code",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}net_paid_eur\"}[$__range])) / sum(last_over_time({__name__=~\"finance_payslip_${view}gross_eur\"}[$__range]))",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -261,73 +323,12 @@
         "graphMode": "none",
         "textMode": "auto"
       },
-      "description": "Last payslip inside the selected time range."
-    },
-    {
-      "id": 5,
-      "type": "stat",
-      "title": "Gross in selected range",
-      "gridPos": {
-        "x": 16,
-        "y": 0,
-        "w": 4,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "metrics-finance"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics-finance"
-          },
-          "editorMode": "code",
-          "expr": "sum(sum_over_time(finance_payslip_gross_eur[$__range]))",
-          "legendFormat": "",
-          "refId": "A",
-          "range": false,
-          "instant": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyEUR",
-          "custom": {},
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "blue"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
-      }
+      "description": "Latest payslip in the selected time range, in the selected view."
     },
     {
       "id": 6,
       "type": "stat",
-      "title": "Net paid in selected range",
+      "title": "Bonuses / gross",
       "gridPos": {
         "x": 20,
         "y": 0,
@@ -345,7 +346,7 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum(sum_over_time(finance_payslip_net_paid_eur[$__range]))",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}pay_element_eur\", element=~\"bonus|bonus_exempt\"}[$__range])) / sum(last_over_time({__name__=~\"finance_payslip_${view}gross_eur\"}[$__range]))",
           "legendFormat": "",
           "refId": "A",
           "range": false,
@@ -354,7 +355,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "currencyEUR",
+          "unit": "percentunit",
           "custom": {},
           "color": {
             "mode": "fixed",
@@ -383,12 +384,13 @@
         "colorMode": "value",
         "graphMode": "none",
         "textMode": "auto"
-      }
+      },
+      "description": "Latest payslip in the selected time range, in the selected view."
     },
     {
       "id": 7,
       "type": "timeseries",
-      "title": "Gross vs net",
+      "title": "Gross vs net (${view:text})",
       "gridPos": {
         "x": 0,
         "y": 4,
@@ -406,7 +408,7 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum(last_over_time(finance_payslip_gross_eur[45d]))",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}gross_eur\"}[45d]))",
           "legendFormat": "Gross",
           "refId": "A",
           "range": true,
@@ -418,7 +420,7 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum(last_over_time(finance_payslip_net_before_tax_eur[45d]))",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}net_before_tax_eur\"}[45d]))",
           "legendFormat": "Net before tax",
           "refId": "B",
           "range": true,
@@ -430,7 +432,7 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum(last_over_time(finance_payslip_net_paid_eur[45d]))",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}net_paid_eur\"}[45d]))",
           "legendFormat": "Net paid",
           "refId": "C",
           "range": true,
@@ -466,7 +468,7 @@
     {
       "id": 8,
       "type": "timeseries",
-      "title": "Income tax withheld and rate",
+      "title": "What the gross is made of (${view:text})",
       "gridPos": {
         "x": 12,
         "y": 4,
@@ -484,8 +486,69 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum(last_over_time(finance_payslip_tax_withheld_eur[45d]))",
-          "legendFormat": "Tax withheld",
+          "expr": "sum by (element) (last_over_time({__name__=~\"finance_payslip_${view}pay_element_eur\"}[45d]))",
+          "legendFormat": "{{element}}",
+          "refId": "A",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyEUR",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true,
+            "lineInterpolation": "stepAfter",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "description": "base_salary, bonus, time_off (leave, RTT, absences, sick pay), back_pay, other_pay add up to the gross. bonus_exempt (value-sharing bonus) is printed outside the gross, so it sits on top."
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Bonuses (${view:text})",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "metrics-finance"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics-finance"
+          },
+          "editorMode": "code",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}pay_element_eur\", element=\"bonus\"}[45d]))",
+          "legendFormat": "Bonuses and commissions",
           "refId": "A",
           "range": true,
           "instant": false
@@ -496,9 +559,21 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "avg(last_over_time(finance_payslip_tax_rate_percent[45d]))",
-          "legendFormat": "Rate (%)",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}pay_element_eur\", element=\"bonus_exempt\"}[45d]))",
+          "legendFormat": "Value-sharing bonus",
           "refId": "B",
+          "range": true,
+          "instant": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics-finance"
+          },
+          "editorMode": "code",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}pay_element_eur\", element=~\"bonus|bonus_exempt\"}[45d])) / sum(last_over_time({__name__=~\"finance_payslip_${view}gross_eur\"}[45d]))",
+          "legendFormat": "Share of gross",
+          "refId": "C",
           "range": true,
           "instant": false
         }
@@ -521,12 +596,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Rate (%)"
+              "options": "Share of gross"
             },
             "properties": [
               {
                 "id": "unit",
-                "value": "percent"
+                "value": "percentunit"
               },
               {
                 "id": "custom.axisPlacement",
@@ -551,11 +626,11 @@
       }
     },
     {
-      "id": 9,
+      "id": 10,
       "type": "timeseries",
-      "title": "Net-to-gross and contribution share",
+      "title": "Income tax withheld and effective rate (${view:text})",
       "gridPos": {
-        "x": 0,
+        "x": 12,
         "y": 12,
         "w": 12,
         "h": 8
@@ -571,7 +646,95 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "avg(last_over_time(finance_payslip_net_to_gross_ratio[45d]))",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}tax_withheld_eur\"}[45d]))",
+          "legendFormat": "Tax withheld",
+          "refId": "A",
+          "range": true,
+          "instant": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics-finance"
+          },
+          "editorMode": "code",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}tax_withheld_eur\"}[45d])) / sum(last_over_time({__name__=~\"finance_payslip_${view}taxable_net_eur\"}[45d]))",
+          "legendFormat": "Effective rate (tax / taxable net)",
+          "refId": "B",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyEUR",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "showPoints": "never",
+            "spanNulls": true,
+            "lineInterpolation": "stepAfter"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Effective rate (tax / taxable net)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "description": "Taxable net is missing for a few scanned 2020-21 months, so the rate has gaps there."
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Net-to-gross and contribution share (${view:text})",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "metrics-finance"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics-finance"
+          },
+          "editorMode": "code",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}net_paid_eur\"}[45d])) / sum(last_over_time({__name__=~\"finance_payslip_${view}gross_eur\"}[45d]))",
           "legendFormat": "Net / gross",
           "refId": "A",
           "range": true,
@@ -583,7 +746,7 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "avg(last_over_time(finance_payslip_contributions_to_gross_ratio[45d]))",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}employee_contributions_eur\"}[45d])) / sum(last_over_time({__name__=~\"finance_payslip_${view}gross_eur\"}[45d]))",
           "legendFormat": "Employee contributions / gross",
           "refId": "B",
           "range": true,
@@ -617,12 +780,12 @@
       }
     },
     {
-      "id": 10,
+      "id": 12,
       "type": "timeseries",
-      "title": "Year to date",
+      "title": "Employer cost (${view:text})",
       "gridPos": {
         "x": 12,
-        "y": 12,
+        "y": 20,
         "w": 12,
         "h": 8
       },
@@ -637,8 +800,8 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum(last_over_time(finance_payslip_ytd_gross_eur[45d]))",
-          "legendFormat": "Gross",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}employer_contributions_eur\"}[45d]))",
+          "legendFormat": "Employer contributions",
           "refId": "A",
           "range": true,
           "instant": false
@@ -649,21 +812,9 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum(last_over_time(finance_payslip_ytd_net_paid_eur[45d]))",
-          "legendFormat": "Net paid",
+          "expr": "sum(last_over_time({__name__=~\"finance_payslip_${view}employer_cost_eur\"}[45d]))",
+          "legendFormat": "Total employer cost",
           "refId": "B",
-          "range": true,
-          "instant": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics-finance"
-          },
-          "editorMode": "code",
-          "expr": "sum(last_over_time(finance_payslip_ytd_tax_withheld_eur[45d]))",
-          "legendFormat": "Tax withheld",
-          "refId": "C",
           "range": true,
           "instant": false
         }
@@ -693,135 +844,135 @@
           "mode": "multi"
         }
       },
-      "description": "Running totals within each calendar year (they drop back in January), computed from the months."
-    },
-    {
-      "id": 11,
-      "type": "timeseries",
-      "title": "Employee-side contributions by category",
-      "gridPos": {
-        "x": 0,
-        "y": 20,
-        "w": 12,
-        "h": 9
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "metrics-finance"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics-finance"
-          },
-          "editorMode": "code",
-          "expr": "sum by (category) (last_over_time(finance_payslip_contribution_eur{side=\"employee\"}[45d]) > 0)",
-          "legendFormat": "{{category}}",
-          "refId": "A",
-          "range": true,
-          "instant": false
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyEUR",
-          "custom": {
-            "lineWidth": 2,
-            "fillOpacity": 60,
-            "showPoints": "never",
-            "spanNulls": true,
-            "lineInterpolation": "stepAfter",
-            "stacking": {
-              "mode": "normal"
-            }
-          },
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 12,
-      "type": "timeseries",
-      "title": "Employer-side contributions by category",
-      "gridPos": {
-        "x": 12,
-        "y": 20,
-        "w": 12,
-        "h": 9
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "metrics-finance"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics-finance"
-          },
-          "editorMode": "code",
-          "expr": "sum by (category) (last_over_time(finance_payslip_contribution_eur{side=\"employer\"}[45d]) > 0)",
-          "legendFormat": "{{category}}",
-          "refId": "A",
-          "range": true,
-          "instant": false
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyEUR",
-          "custom": {
-            "lineWidth": 2,
-            "fillOpacity": 60,
-            "showPoints": "never",
-            "spanNulls": true,
-            "lineInterpolation": "stepAfter",
-            "stacking": {
-              "mode": "normal"
-            }
-          },
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
+      "description": "The total employer cost is not printed on payslips after 2025-10; its year-to-date and rolling views stay empty for the affected windows."
     },
     {
       "id": 13,
       "type": "timeseries",
-      "title": "Leave balances (days)",
+      "title": "Employee-side contributions by category (${view:text})",
       "gridPos": {
         "x": 0,
-        "y": 29,
+        "y": 28,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "metrics-finance"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics-finance"
+          },
+          "editorMode": "code",
+          "expr": "sum by (category) (last_over_time({__name__=~\"finance_payslip_${view}contribution_eur\", side=\"employee\"}[45d]) > 0)",
+          "legendFormat": "{{category}}",
+          "refId": "A",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyEUR",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true,
+            "lineInterpolation": "stepAfter",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Employer-side contributions by category (${view:text})",
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "metrics-finance"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics-finance"
+          },
+          "editorMode": "code",
+          "expr": "sum by (category) (last_over_time({__name__=~\"finance_payslip_${view}contribution_eur\", side=\"employer\"}[45d]) > 0)",
+          "legendFormat": "{{category}}",
+          "refId": "A",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyEUR",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true,
+            "lineInterpolation": "stepAfter",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Leave balances (days; not affected by the View)",
+      "gridPos": {
+        "x": 0,
+        "y": 37,
         "w": 24,
         "h": 7
       },
@@ -871,7 +1022,39 @@
     }
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "view",
+        "label": "View",
+        "type": "custom",
+        "query": "Monthly : (),Year to date : (ytd_),Rolling 12 months : (r12_)",
+        "current": {
+          "text": "Monthly",
+          "value": "()",
+          "selected": true
+        },
+        "options": [
+          {
+            "text": "Monthly",
+            "value": "()",
+            "selected": true
+          },
+          {
+            "text": "Year to date",
+            "value": "(ytd_)",
+            "selected": false
+          },
+          {
+            "text": "Rolling 12 months",
+            "value": "(r12_)",
+            "selected": false
+          }
+        ],
+        "includeAll": false,
+        "multi": false,
+        "hide": 0
+      }
+    ]
   },
   "annotations": {
     "list": []

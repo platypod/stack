@@ -123,6 +123,17 @@ platypod-sops (the chart refuses an empty owner). The publish step then runs at 
 `pp run payslips`, after the contract gate. Requires `observability.scopeShim.scopeMetrics: true` (the chart
 refuses otherwise: without the shim every Grafana user could read the tenant; prod has it on).
 
+**What is published** (per payslip, one sample per view): every flow figure (gross, net before tax, net paid, tax
+withheld, taxable net, employee/employer contributions, employer cost), the gross split into pay elements
+(`pay_element{element}`: base_salary, bonus, time_off, back_pay, other_pay, bonus_exempt) and the contributions
+by category (`contribution{category,side}`), each as `finance_payslip_[ytd_|r12_]<measure>_eur` (month, calendar
+year to date, rolling 12 months), plus the printed withholding rate, the two ratios and the leave balances. The
+dashboard's **View** switch picks the prefix; ratios and the effective tax rate are computed in the query from the
+selected view. Zero amounts are published too (a carried-forward series would otherwise show last month's value),
+and a year-to-date / rolling figure is absent, not wrong, when a month in its window has no printed figure (employer
+cost after 2025-10, a few scanned months' taxable net). The payslips CronJob sets `PAYSLIPS_REPARSE=1`, so a parser
+fix shipped in a new image corrects the already-ingested history on its next run.
+
 **Purge and republish** (a corrected historical value, or a wrong first publish). Verified locally;
 Mimir's tenant-deletion API only marks *blocks*, the ingester head must be removed too:
 

@@ -33,6 +33,10 @@ spec:
               value: finance-payslips
             - name: PAYSLIPS_DIR
               value: /data/payslips
+            # Re-parse files stored by an older parser version (a no-op when versions match): a
+            # parser fix in a new image corrects the already-ingested history on its next run.
+            - name: PAYSLIPS_REPARSE
+              value: "1"
             resources:
               {{- toYaml .Values.finance.pipelines.resources | nindent 14 }}
             volumeMounts:
