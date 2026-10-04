@@ -47,6 +47,8 @@ spec:
           value: {{ $s.secretHeader | quote }}
         - name: USER_HEADER
           value: {{ $s.userHeader | quote }}
+        - name: GROUP_OWNERS
+          value: {{ include "observability.groupOwners" $ | quote }}
         - name: SHARED_OWNER
           value: {{ $s.sharedOwner | quote }}
         - name: TENANT_PREFIX

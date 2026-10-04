@@ -26,6 +26,9 @@ data:
     # (see security.accessGroups in apps/base/values/security.yaml) without this script
     # knowing those names are related; it just checks for overlap.
     ADMIN_GROUPS = {g.strip() for g in os.environ.get("ADMIN_GROUPS", "admins").split(",") if g.strip()}
+    # "lldap_group=owner,..." -- members of the LLDAP group additionally see series stamped with that
+    # owner (e.g. finance_user=group:finance: bank accounts visible to a group, not one login).
+    GROUP_OWNERS = dict(p.split("=", 1) for p in os.environ.get("GROUP_OWNERS", "").split(",") if "=" in p)
     HEADER  = os.environ.get("USER_HEADER", "X-Grafana-User").lower()
     PREFIX  = os.environ.get("TENANT_PREFIX", "claude-")
     SHARED_OWNER = os.environ.get("SHARED_OWNER", "_shared")
@@ -127,7 +130,9 @@ data:
         # profile "Reivi" vs Authelia login "reivi" made her own data invisible
         # to everyone, herself included, until this was added. prom-label-proxy
         # forwards (?i) to Go's RE2, which supports it as an inline flag.
-        owner = "(?i)^(" + re.escape(user) + "|" + re.escape(SHARED_OWNER) + ")$"
+        grps = groups_of(user)
+        owners = [user, SHARED_OWNER] + [o for g, o in GROUP_OWNERS.items() if g in grps]
+        owner = "(?i)^(" + "|".join(re.escape(o) for o in owners) + ")$"
         return owner, tenant_id(user)
 
     # Hop-by-hop headers (+ ones we recompute) not forwarded verbatim.

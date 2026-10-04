@@ -76,6 +76,14 @@ finance:
         # Only for source.type: nfs. Defaults to the stack's NFS server (platypod-sops).
         server: "{{ .Values.storage.nfs.default.server }}"
         share: /volume1/homes/pittinic/bulletins-de-salaire
+    # Bank statements (Crédit Agricole CSV exports) + the private accounts.yaml / rules.yaml /
+    # overrides.csv, mirrored to <apps>/finance/bank-statements (`make sync-bank` in
+    # finance-pipelines). Weekly; a no-op unless a new file showed up. Off until the prod go-ahead.
+    bank:
+      enable: false
+      schedule: "45 6 * * 1"
+      source:
+        subPath: finance/bank-statements
   # OPTIONAL dedicated Grafana with a Postgres datasource (off by default). The default way
   # to view payslips is the shared Grafana via `finance.publish` below. Here the shared
   # Grafana never gets finance credentials. Access: Authelia forward-auth rule for `finance_user`/`admins` +

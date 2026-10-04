@@ -520,14 +520,17 @@ security:
       verified: true
       evidence: "bookstack-role-seed-job maps the admins group's display name to BookStack's built-in admin role — stack/docs/dev-tools/bookstack-role-seed-job.md. Already group-driven, just not per-tool (bookstack_admin) yet."
 
-    # --- finance (optional dedicated Grafana) ---
-    # NOT enabled by default: an entry here changes Authelia's rules (and restarts it) for a feature
-    # that is off. To enable finance.grafana, add it here and set its OIDC client (platypod-sops):
-    #   finance:
-    #     valuesPath: finance.grafana
-    #     roles: [user]
-    #     categories: []
-    # See src/finance/README.md (Access model, last section).
+    # --- finance ---
+    # `finance_user`: who may see the bank-account series (shared Grafana, via the scope shim's
+    # observability.scopeShim.groupOwners) and, if enabled, the detail Grafana. No Authelia rule of
+    # its own (authelia: false): the group only labels people. Members are declared per env
+    # (dev: admin only; prod: see platypod-sops). To enable the optional finance.grafana, switch
+    # `authelia` to true and add `valuesPath: finance.grafana` (this changes Authelia's rules and
+    # restarts it); then set its OIDC client in platypod-sops. See src/finance/README.md.
+    finance:
+      roles: [user]
+      categories: []
+      authelia: false
 
     wikijs:
       roles: [user]

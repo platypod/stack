@@ -1,0 +1,53 @@
+{{- if and .Values.finance.enable .Values.finance.pipelines.bank.enable }}
+{{- $secret := print .Values.k8s.names.services.prefix .Values.finance.label .Values.k8s.names.services.suffix "-pipeline-env" }}
+apiVersion: batch/v1
+kind: CronJob
+
+metadata:
+  name: {{ .Values.finance.label }}-bank
+
+spec:
+  schedule: {{ .Values.finance.pipelines.bank.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+          containers:
+          - name: bank
+            image: {{ .Values.finance.image }}
+            args: ["run", "bank"]
+            envFrom:
+            - secretRef:
+                name: {{ $secret }}
+            env:
+            - name: OTEL_SERVICE_NAME
+              value: finance-bank
+            # statements (*.csv) + the private accounts.yaml / rules.yaml / overrides.csv
+            - name: BANK_DIR
+              value: /data/bank-statements
+            # Re-parse files stored by an older parser version (a no-op when versions match).
+            - name: BANK_REPARSE
+              value: "1"
+            resources:
+              {{- toYaml .Values.finance.pipelines.resources | nindent 14 }}
+            volumeMounts:
+            - name: bank-statements
+              mountPath: /data/bank-statements
+              readOnly: true
+              subPath: {{ .Values.finance.pipelines.bank.source.subPath }}
+          volumes:
+          # The Synology exports `homes` only to the laptops: the statements are mirrored into the
+          # apps share (`make sync-bank` in finance-pipelines). Read-only here, like the payslips.
+          - name: bank-statements
+            persistentVolumeClaim:
+              claimName: {{ tpl .Values.storage.defaultVolumes.apps . }}
+              readOnly: true
+{{- end }}

@@ -252,6 +252,10 @@ observability:
     # Admin-granting groups are generated (observability.grafanaAdminGroups in
     # src/observability/templates/_helpers.tpl) off
     # security.accessGroups in apps/base/values/security.yaml — no adminGroup value needed here.
+    # LLDAP group -> extra `owner` its members may read (on top of their own login and sharedOwner).
+    # The finance bank-account series are stamped owner="group:finance"; admins still see everything.
+    groupOwners:
+      finance_user: "group:finance"
     # Header Grafana sends when [dataproxy] send_user_header = true.
     userHeader: X-Grafana-User
     # Owner label value stamped on all non-personal (shared/infra) metrics, so

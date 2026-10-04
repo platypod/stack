@@ -1,24 +1,24 @@
 {
-  "uid": "finance-payslips",
-  "title": "Finance - Payslips",
+  "uid": "finance-bank",
+  "title": "Finance - Bank",
   "tags": [
     "finance",
-    "payslips"
+    "bank"
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 3,
+  "version": 1,
   "refresh": "",
   "time": {
-    "from": "now-7y",
+    "from": "now-13M",
     "to": "now"
   },
-  "description": "Payslip figures published by finance-pipelines into the `finance` Mimir tenant. The View switch picks the month, the calendar year to date, or the rolling 12 months for every flow. Series carry `owner` (who may see them: scope shim) and `person` (whose figures: the Person filter; pick several or All).",
+  "description": "Bank-statement figures published by finance-pipelines into the `finance` Mimir tenant, by category, necessity and person. Series carry `owner` (who may see them: scope shim, login or the finance group) and `person` (whose figures: the Person filter). Transfers between own accounts and savings are excluded.",
   "panels": [
     {
       "id": 1,
       "type": "stat",
-      "title": "Net paid",
+      "title": "Spend (selected range)",
       "gridPos": {
         "x": 0,
         "y": 0,
@@ -36,7 +36,7 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}net_paid_eur\", person=~\"${person}\"}[$__range]))",
+          "expr": "sum by (person) (sum_over_time({__name__=\"finance_bank_spend_eur\", person=~\"${person}\"}[$__range]))",
           "legendFormat": "{{person}}",
           "refId": "A",
           "range": false,
@@ -50,15 +50,6 @@
           "color": {
             "mode": "fixed",
             "fixedColor": "blue"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
           }
         },
         "overrides": []
@@ -75,12 +66,12 @@
         "graphMode": "none",
         "textMode": "auto"
       },
-      "description": "Latest payslip in the selected time range, in the selected view."
+      "description": "Sum of the monthly figures in the time range, whatever the View. Excludes transfers between own accounts and savings."
     },
     {
       "id": 2,
       "type": "stat",
-      "title": "Gross",
+      "title": "Income (selected range)",
       "gridPos": {
         "x": 4,
         "y": 0,
@@ -98,7 +89,7 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}gross_eur\", person=~\"${person}\"}[$__range]))",
+          "expr": "sum by (person) (sum_over_time({__name__=\"finance_bank_income_eur\", person=~\"${person}\"}[$__range]))",
           "legendFormat": "{{person}}",
           "refId": "A",
           "range": false,
@@ -112,15 +103,6 @@
           "color": {
             "mode": "fixed",
             "fixedColor": "blue"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
           }
         },
         "overrides": []
@@ -137,12 +119,12 @@
         "graphMode": "none",
         "textMode": "auto"
       },
-      "description": "Latest payslip in the selected time range, in the selected view."
+      "description": "Salary, reimbursements, interest and other income."
     },
     {
       "id": 3,
       "type": "stat",
-      "title": "Bonuses",
+      "title": "Savings rate",
       "gridPos": {
         "x": 8,
         "y": 0,
@@ -160,7 +142,7 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}pay_element_eur\", person=~\"${person}\", element=~\"bonus|bonus_exempt\"}[$__range]))",
+          "expr": "1 - sum by (person) (sum_over_time({__name__=\"finance_bank_spend_eur\", person=~\"${person}\"}[$__range])) / sum by (person) (sum_over_time({__name__=\"finance_bank_income_eur\", person=~\"${person}\"}[$__range]))",
           "legendFormat": "{{person}}",
           "refId": "A",
           "range": false,
@@ -169,20 +151,11 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "currencyEUR",
+          "unit": "percentunit",
           "custom": {},
           "color": {
             "mode": "fixed",
             "fixedColor": "blue"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
           }
         },
         "overrides": []
@@ -199,12 +172,12 @@
         "graphMode": "none",
         "textMode": "auto"
       },
-      "description": "Bonuses and commissions, plus the value-sharing bonus printed outside the gross."
+      "description": "(income - spend) / income over the selected range."
     },
     {
       "id": 4,
       "type": "stat",
-      "title": "Tax withheld",
+      "title": "Uncategorized share",
       "gridPos": {
         "x": 12,
         "y": 0,
@@ -222,7 +195,7 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}tax_withheld_eur\", person=~\"${person}\"}[$__range]))",
+          "expr": "sum by (person) (sum_over_time({__name__=\"finance_bank_spend_eur\", person=~\"${person}\", category=\"uncategorized\"}[$__range])) / sum by (person) (sum_over_time({__name__=\"finance_bank_spend_eur\", person=~\"${person}\"}[$__range]))",
           "legendFormat": "{{person}}",
           "refId": "A",
           "range": false,
@@ -231,20 +204,11 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "currencyEUR",
+          "unit": "percentunit",
           "custom": {},
           "color": {
             "mode": "fixed",
             "fixedColor": "blue"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
           }
         },
         "overrides": []
@@ -261,12 +225,12 @@
         "graphMode": "none",
         "textMode": "auto"
       },
-      "description": "Latest payslip in the selected time range, in the selected view."
+      "description": "Spend no rule classified yet: add a rule or an override (see the finance README)."
     },
     {
       "id": 5,
       "type": "stat",
-      "title": "Net / gross",
+      "title": "Luxury share",
       "gridPos": {
         "x": 16,
         "y": 0,
@@ -284,7 +248,7 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}net_paid_eur\", person=~\"${person}\"}[$__range])) / sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}gross_eur\", person=~\"${person}\"}[$__range]))",
+          "expr": "sum by (person) (sum_over_time({__name__=\"finance_bank_spend_necessity_eur\", person=~\"${person}\", necessity=\"luxury\"}[$__range])) / sum by (person) (sum_over_time({__name__=\"finance_bank_spend_eur\", person=~\"${person}\"}[$__range]))",
           "legendFormat": "{{person}}",
           "refId": "A",
           "range": false,
@@ -298,15 +262,6 @@
           "color": {
             "mode": "fixed",
             "fixedColor": "blue"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
           }
         },
         "overrides": []
@@ -323,12 +278,12 @@
         "graphMode": "none",
         "textMode": "auto"
       },
-      "description": "Latest payslip in the selected time range, in the selected view."
+      "description": "Share of spend tagged luxury (by rule, or by an override)."
     },
     {
       "id": 6,
       "type": "stat",
-      "title": "Bonuses / gross",
+      "title": "Balances (latest)",
       "gridPos": {
         "x": 20,
         "y": 0,
@@ -346,7 +301,7 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}pay_element_eur\", person=~\"${person}\", element=~\"bonus|bonus_exempt\"}[$__range])) / sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}gross_eur\", person=~\"${person}\"}[$__range]))",
+          "expr": "sum by (person) (last_over_time(finance_bank_balance_eur{person=~\"${person}\"}[$__range]))",
           "legendFormat": "{{person}}",
           "refId": "A",
           "range": false,
@@ -355,20 +310,11 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit",
+          "unit": "currencyEUR",
           "custom": {},
           "color": {
             "mode": "fixed",
             "fixedColor": "blue"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
           }
         },
         "overrides": []
@@ -385,15 +331,139 @@
         "graphMode": "none",
         "textMode": "auto"
       },
-      "description": "Latest payslip in the selected time range, in the selected view."
+      "description": "Sum of the latest month-end balance of every account in range (current + savings), per person."
     },
     {
       "id": 7,
       "type": "timeseries",
-      "title": "Gross vs net (${view:text})",
+      "title": "Spend by category (${view:text})",
       "gridPos": {
         "x": 0,
         "y": 4,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "metrics-finance"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics-finance"
+          },
+          "editorMode": "code",
+          "expr": "sum by (category) (last_over_time({__name__=~\"finance_bank_${view}spend_eur\", person=~\"${person}\"}[45d]))",
+          "legendFormat": "{{category}}",
+          "refId": "A",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyEUR",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true,
+            "lineInterpolation": "stepAfter",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "description": "Stacks the selected persons. Pick a single person to see only theirs."
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Spend by necessity (${view:text})",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "metrics-finance"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics-finance"
+          },
+          "editorMode": "code",
+          "expr": "sum by (necessity) (last_over_time({__name__=~\"finance_bank_${view}spend_necessity_eur\", person=~\"${person}\"}[45d]))",
+          "legendFormat": "{{necessity}}",
+          "refId": "A",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyEUR",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": true,
+            "lineInterpolation": "stepAfter",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "description": "essential / comfort / luxury, from the rules (or an override). Cash and uncategorized have none."
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Income vs spend (${view:text})",
+      "gridPos": {
+        "x": 0,
+        "y": 13,
         "w": 12,
         "h": 8
       },
@@ -408,8 +478,8 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}gross_eur\", person=~\"${person}\"}[45d]))",
-          "legendFormat": "Gross · {{person}}",
+          "expr": "sum by (person) (last_over_time({__name__=~\"finance_bank_${view}income_eur\", person=~\"${person}\"}[45d]))",
+          "legendFormat": "Income",
           "refId": "A",
           "range": true,
           "instant": false
@@ -420,21 +490,9 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}net_before_tax_eur\", person=~\"${person}\"}[45d]))",
-          "legendFormat": "Net before tax · {{person}}",
+          "expr": "sum by (person) (last_over_time({__name__=~\"finance_bank_${view}spend_eur\", person=~\"${person}\"}[45d]))",
+          "legendFormat": "Spend",
           "refId": "B",
-          "range": true,
-          "instant": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics-finance"
-          },
-          "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}net_paid_eur\", person=~\"${person}\"}[45d]))",
-          "legendFormat": "Net paid · {{person}}",
-          "refId": "C",
           "range": true,
           "instant": false
         }
@@ -466,172 +524,12 @@
       }
     },
     {
-      "id": 8,
-      "type": "timeseries",
-      "title": "What the gross is made of (${view:text})",
-      "gridPos": {
-        "x": 12,
-        "y": 4,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "metrics-finance"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics-finance"
-          },
-          "editorMode": "code",
-          "expr": "sum by (person, element) (last_over_time({__name__=~\"finance_payslip_${view}pay_element_eur\", person=~\"${person}\"}[45d]))",
-          "legendFormat": "{{element}} · {{person}}",
-          "refId": "A",
-          "range": true,
-          "instant": false
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyEUR",
-          "custom": {
-            "lineWidth": 2,
-            "fillOpacity": 60,
-            "showPoints": "never",
-            "spanNulls": true,
-            "lineInterpolation": "stepAfter",
-            "stacking": {
-              "mode": "normal"
-            }
-          },
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      },
-      "description": "base_salary, bonus, time_off (leave, RTT, absences, sick pay), back_pay, other_pay add up to the gross. bonus_exempt (value-sharing bonus) is printed outside the gross, so it sits on top."
-    },
-    {
-      "id": 9,
-      "type": "timeseries",
-      "title": "Bonuses (${view:text})",
-      "gridPos": {
-        "x": 0,
-        "y": 12,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "metrics-finance"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics-finance"
-          },
-          "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}pay_element_eur\", person=~\"${person}\", element=\"bonus\"}[45d]))",
-          "legendFormat": "Bonuses and commissions · {{person}}",
-          "refId": "A",
-          "range": true,
-          "instant": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics-finance"
-          },
-          "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}pay_element_eur\", person=~\"${person}\", element=\"bonus_exempt\"}[45d]))",
-          "legendFormat": "Value-sharing bonus · {{person}}",
-          "refId": "B",
-          "range": true,
-          "instant": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics-finance"
-          },
-          "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}pay_element_eur\", person=~\"${person}\", element=~\"bonus|bonus_exempt\"}[45d])) / sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}gross_eur\", person=~\"${person}\"}[45d]))",
-          "legendFormat": "Share of gross · {{person}}",
-          "refId": "C",
-          "range": true,
-          "instant": false
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyEUR",
-          "custom": {
-            "lineWidth": 2,
-            "fillOpacity": 25,
-            "showPoints": "never",
-            "spanNulls": true,
-            "lineInterpolation": "stepAfter"
-          },
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "Share of gross.*"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "percentunit"
-              },
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 0
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
       "id": 10,
       "type": "timeseries",
-      "title": "Income tax withheld and effective rate (${view:text})",
+      "title": "Savings rate (${view:text})",
       "gridPos": {
         "x": 12,
-        "y": 12,
+        "y": 13,
         "w": 12,
         "h": 8
       },
@@ -646,109 +544,9 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}tax_withheld_eur\", person=~\"${person}\"}[45d]))",
-          "legendFormat": "Tax withheld · {{person}}",
+          "expr": "1 - sum by (person) (last_over_time({__name__=~\"finance_bank_${view}spend_eur\", person=~\"${person}\"}[45d])) / sum by (person) (last_over_time({__name__=~\"finance_bank_${view}income_eur\", person=~\"${person}\"}[45d]))",
+          "legendFormat": "Savings rate",
           "refId": "A",
-          "range": true,
-          "instant": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics-finance"
-          },
-          "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}tax_withheld_eur\", person=~\"${person}\"}[45d])) / sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}taxable_net_eur\", person=~\"${person}\"}[45d]))",
-          "legendFormat": "Effective rate (tax / taxable net) · {{person}}",
-          "refId": "B",
-          "range": true,
-          "instant": false
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyEUR",
-          "custom": {
-            "lineWidth": 2,
-            "fillOpacity": 25,
-            "showPoints": "never",
-            "spanNulls": true,
-            "lineInterpolation": "stepAfter"
-          },
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "Effective rate.*"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "percentunit"
-              },
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 0
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      },
-      "description": "Taxable net is missing for a few scanned 2020-21 months, so the rate has gaps there."
-    },
-    {
-      "id": 11,
-      "type": "timeseries",
-      "title": "Net-to-gross and contribution share (${view:text})",
-      "gridPos": {
-        "x": 0,
-        "y": 20,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "metrics-finance"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics-finance"
-          },
-          "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}net_paid_eur\", person=~\"${person}\"}[45d])) / sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}gross_eur\", person=~\"${person}\"}[45d]))",
-          "legendFormat": "Net / gross · {{person}}",
-          "refId": "A",
-          "range": true,
-          "instant": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics-finance"
-          },
-          "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}employee_contributions_eur\", person=~\"${person}\"}[45d])) / sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}gross_eur\", person=~\"${person}\"}[45d]))",
-          "legendFormat": "Employee contributions / gross · {{person}}",
-          "refId": "B",
           "range": true,
           "instant": false
         }
@@ -777,15 +575,16 @@
         "tooltip": {
           "mode": "multi"
         }
-      }
+      },
+      "description": "(income - spend) / income. Credits from other people (transfers) are not income here."
     },
     {
-      "id": 12,
+      "id": 11,
       "type": "timeseries",
-      "title": "Employer cost (${view:text})",
+      "title": "Spend by person (${view:text})",
       "gridPos": {
-        "x": 12,
-        "y": 20,
+        "x": 0,
+        "y": 21,
         "w": 12,
         "h": 8
       },
@@ -800,21 +599,64 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}employer_contributions_eur\", person=~\"${person}\"}[45d]))",
-          "legendFormat": "Employer contributions · {{person}}",
+          "expr": "sum by (person) (last_over_time({__name__=~\"finance_bank_${view}spend_eur\", person=~\"${person}\"}[45d]))",
+          "legendFormat": "Spend",
           "refId": "A",
           "range": true,
           "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyEUR",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "showPoints": "never",
+            "spanNulls": true,
+            "lineInterpolation": "stepAfter"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
         },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "description": "`joint` is the shared account. Each person's own accounts are theirs."
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Account balances (month end)",
+      "gridPos": {
+        "x": 12,
+        "y": 21,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "metrics-finance"
+      },
+      "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum by (person) (last_over_time({__name__=~\"finance_payslip_${view}employer_cost_eur\", person=~\"${person}\"}[45d]))",
-          "legendFormat": "Total employer cost · {{person}}",
-          "refId": "B",
+          "expr": "sum by (account) (last_over_time(finance_bank_balance_eur{person=~\"${person}\"}[45d]))",
+          "legendFormat": "{{account}}",
+          "refId": "A",
           "range": true,
           "instant": false
         }
@@ -837,24 +679,28 @@
       },
       "options": {
         "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "sum"
+          ]
         },
         "tooltip": {
           "mode": "multi"
         }
       },
-      "description": "The total employer cost is not printed on payslips after 2025-10; its year-to-date and rolling views stay empty for the affected windows."
+      "description": "Reconstructed backwards from the balance printed on each export; the pipeline checks the exports agree."
     },
     {
       "id": 13,
       "type": "timeseries",
-      "title": "Employee-side contributions by category (${view:text})",
+      "title": "Uncategorized spend (monthly)",
       "gridPos": {
         "x": 0,
-        "y": 28,
+        "y": 29,
         "w": 12,
-        "h": 9
+        "h": 8
       },
       "datasource": {
         "type": "prometheus",
@@ -867,8 +713,8 @@
             "uid": "metrics-finance"
           },
           "editorMode": "code",
-          "expr": "sum by (person, category) (last_over_time({__name__=~\"finance_payslip_${view}contribution_eur\", person=~\"${person}\", side=\"employee\"}[45d]) > 0)",
-          "legendFormat": "{{category}} · {{person}}",
+          "expr": "sum by (person) (last_over_time({__name__=\"finance_bank_spend_eur\", category=\"uncategorized\", person=~\"${person}\"}[45d]))",
+          "legendFormat": "Uncategorized",
           "refId": "A",
           "range": true,
           "instant": false
@@ -882,127 +728,8 @@
             "fillOpacity": 60,
             "showPoints": "never",
             "spanNulls": true,
-            "lineInterpolation": "stepAfter",
-            "stacking": {
-              "mode": "normal"
-            }
-          },
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 14,
-      "type": "timeseries",
-      "title": "Employer-side contributions by category (${view:text})",
-      "gridPos": {
-        "x": 12,
-        "y": 28,
-        "w": 12,
-        "h": 9
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "metrics-finance"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics-finance"
-          },
-          "editorMode": "code",
-          "expr": "sum by (person, category) (last_over_time({__name__=~\"finance_payslip_${view}contribution_eur\", person=~\"${person}\", side=\"employer\"}[45d]) > 0)",
-          "legendFormat": "{{category}} · {{person}}",
-          "refId": "A",
-          "range": true,
-          "instant": false
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyEUR",
-          "custom": {
-            "lineWidth": 2,
-            "fillOpacity": 60,
-            "showPoints": "never",
-            "spanNulls": true,
-            "lineInterpolation": "stepAfter",
-            "stacking": {
-              "mode": "normal"
-            }
-          },
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 15,
-      "type": "timeseries",
-      "title": "Leave balances (days; not affected by the View)",
-      "gridPos": {
-        "x": 0,
-        "y": 37,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "metrics-finance"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "metrics-finance"
-          },
-          "editorMode": "code",
-          "expr": "sum by (person, kind) (last_over_time(finance_payslip_leave_days{person=~\"${person}\"}[45d]))",
-          "legendFormat": "{{kind}} · {{person}}",
-          "refId": "A",
-          "range": true,
-          "instant": false
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "custom": {
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": true,
-            "lineInterpolation": "stepAfter"
+            "lineInterpolation": "linear",
+            "drawStyle": "bars"
           },
           "color": {
             "mode": "palette-classic"
@@ -1018,7 +745,71 @@
         "tooltip": {
           "mode": "multi"
         }
-      }
+      },
+      "description": "Should trend to ~0 as rules are added. Details are in the SQL view / overrides.csv."
+    },
+    {
+      "id": 14,
+      "type": "table",
+      "title": "Spend by category and subcategory (selected range)",
+      "gridPos": {
+        "x": 12,
+        "y": 29,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "metrics-finance"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "metrics-finance"
+          },
+          "editorMode": "code",
+          "expr": "sum by (category, subcategory) (sum_over_time({__name__=\"finance_bank_spend_eur\", person=~\"${person}\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyEUR",
+          "custom": {},
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Value",
+            "desc": true
+          }
+        ]
+      },
+      "description": "Whatever the View: the sum of the months in the time range.",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value": "Spend (EUR)"
+            }
+          }
+        }
+      ]
     }
   ],
   "templating": {
@@ -1063,10 +854,10 @@
           "uid": "metrics-finance"
         },
         "query": {
-          "query": "label_values({__name__=~\"finance_payslip_gross_eur\"}, person)",
+          "query": "label_values({__name__=~\"finance_bank_spend_eur\"}, person)",
           "refId": "person"
         },
-        "definition": "label_values({__name__=~\"finance_payslip_gross_eur\"}, person)",
+        "definition": "label_values({__name__=~\"finance_bank_spend_eur\"}, person)",
         "includeAll": true,
         "allValue": ".+",
         "multi": true,

@@ -30,3 +30,15 @@ Call with the root context: {{ include "observability.grafanaAdminGroups" . }}
 {{- $groups = append $groups "admins" -}}
 {{- join "," $groups -}}
 {{- end -}}
+
+{{/*
+GROUP_OWNERS for the scope shim: "lldap_group=owner,..." from observability.scopeShim.groupOwners
+(map of LLDAP group -> extra `owner` value its members may read).
+*/}}
+{{- define "observability.groupOwners" -}}
+{{- $pairs := list -}}
+{{- range $group, $owner := .Values.observability.scopeShim.groupOwners -}}
+{{- $pairs = append $pairs (printf "%s=%s" $group $owner) -}}
+{{- end -}}
+{{- join "," (sortAlpha $pairs) -}}
+{{- end -}}
