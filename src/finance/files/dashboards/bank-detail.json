@@ -7,18 +7,18 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "",
   "time": {
     "from": "now-13M",
     "to": "now"
   },
-  "description": "Operations with their category, and the review queue of what no rule explains yet. Postgres: gold.bank_transaction_detail.",
+  "description": "Every operation, filterable by person, account, category, subcategory, necessity, kind, decided-by, amount, label and date; plus the review queue of what no rule explains yet. Postgres: gold.bank_transaction_detail.",
   "panels": [
     {
       "id": 1,
       "type": "stat",
-      "title": "Operations to review",
+      "title": "Operations in the selection",
       "gridPos": {
         "x": 0,
         "y": 0,
@@ -38,7 +38,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(*) AS \"to review\" FROM gold.bank_transaction_detail WHERE needs_review",
+          "rawSql": "SELECT count(*) AS operations FROM gold.bank_transaction_detail WHERE person IN ($person) AND account IN ($account) AND category IN ($category) AND subcategory IN ($subcategory) AND coalesce(necessity, 'none') IN ($necessity) AND family IN ($family) AND source IN ($source) AND abs(amount) BETWEEN ${min_amount} AND ${max_amount} AND label ILIKE '%${search}%' AND $__timeFilter(spend_date)",
           "refId": "A"
         }
       ],
@@ -65,12 +65,12 @@
         "graphMode": "none",
         "textMode": "auto"
       },
-      "description": "Uncategorized, or a transfer to/from another person that no rule or override has explained."
+      "description": "Every filter above and the time range apply (on the reporting date)."
     },
     {
       "id": 2,
       "type": "stat",
-      "title": "Amount to review (EUR, absolute)",
+      "title": "Money out",
       "gridPos": {
         "x": 6,
         "y": 0,
@@ -90,7 +90,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT coalesce(sum(abs(amount)), 0) AS amount FROM gold.bank_transaction_detail WHERE needs_review",
+          "rawSql": "SELECT coalesce(-sum(amount) FILTER (WHERE amount < 0), 0) AS out FROM gold.bank_transaction_detail WHERE person IN ($person) AND account IN ($account) AND category IN ($category) AND subcategory IN ($subcategory) AND coalesce(necessity, 'none') IN ($necessity) AND family IN ($family) AND source IN ($source) AND abs(amount) BETWEEN ${min_amount} AND ${max_amount} AND label ILIKE '%${search}%' AND $__timeFilter(spend_date)",
           "refId": "A"
         }
       ],
@@ -117,12 +117,12 @@
         "graphMode": "none",
         "textMode": "auto"
       },
-      "description": "Sum of the absolute amounts: money out and in."
+      "description": "Sum of the debits in the selection. Transfers between own accounts are included here: filter them out with Category."
     },
     {
       "id": 3,
       "type": "stat",
-      "title": "Classified by rule or override",
+      "title": "Money in",
       "gridPos": {
         "x": 12,
         "y": 0,
@@ -142,13 +142,13 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT round(100.0 * count(*) FILTER (WHERE source <> 'default') / nullif(count(*), 0), 1) AS \"%\" FROM gold.bank_transaction_detail",
+          "rawSql": "SELECT coalesce(sum(amount) FILTER (WHERE amount > 0), 0) AS income FROM gold.bank_transaction_detail WHERE person IN ($person) AND account IN ($account) AND category IN ($category) AND subcategory IN ($subcategory) AND coalesce(necessity, 'none') IN ($necessity) AND family IN ($family) AND source IN ($source) AND abs(amount) BETWEEN ${min_amount} AND ${max_amount} AND label ILIKE '%${search}%' AND $__timeFilter(spend_date)",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
+          "unit": "currencyEUR",
           "custom": {},
           "color": {
             "mode": "fixed",
@@ -169,12 +169,12 @@
         "graphMode": "none",
         "textMode": "auto"
       },
-      "description": "Share of operations decided by a rule, an override or a paired internal transfer."
+      "description": "Sum of the credits in the selection."
     },
     {
       "id": 4,
       "type": "stat",
-      "title": "Operations",
+      "title": "Net",
       "gridPos": {
         "x": 18,
         "y": 0,
@@ -194,13 +194,13 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(*) AS operations FROM gold.bank_transaction_detail",
+          "rawSql": "SELECT coalesce(sum(amount), 0) AS net FROM gold.bank_transaction_detail WHERE person IN ($person) AND account IN ($account) AND category IN ($category) AND subcategory IN ($subcategory) AND coalesce(necessity, 'none') IN ($necessity) AND family IN ($family) AND source IN ($source) AND abs(amount) BETWEEN ${min_amount} AND ${max_amount} AND label ILIKE '%${search}%' AND $__timeFilter(spend_date)",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
+          "unit": "currencyEUR",
           "custom": {},
           "color": {
             "mode": "fixed",
@@ -221,15 +221,126 @@
         "graphMode": "none",
         "textMode": "auto"
       },
-      "description": "All de-duplicated operations loaded."
+      "description": "Credits minus debits."
     },
     {
       "id": 5,
+      "type": "barchart",
+      "title": "Selection by month (money out, by category)",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "finance"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "finance"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT date_trunc('month', spend_date) AS time, category, -sum(amount) FILTER (WHERE amount < 0) AS out FROM gold.bank_transaction_detail WHERE person IN ($person) AND account IN ($account) AND category IN ($category) AND subcategory IN ($subcategory) AND coalesce(necessity, 'none') IN ($necessity) AND family IN ($family) AND source IN ($source) AND abs(amount) BETWEEN ${min_amount} AND ${max_amount} AND label ILIKE '%${search}%' AND $__timeFilter(spend_date) GROUP BY 1, 2 ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyEUR",
+          "custom": {},
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "xField": "time",
+        "stacking": "normal",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "description": "Follows the filters. For 'all car operations', pick Category = car."
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Operations (every line of the selection)",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 24,
+        "h": 16
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "finance"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "finance"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT spend_date AS date, account, person, amount, label, category, subcategory, necessity, family, source, rule_id, txn_id FROM gold.bank_transaction_detail WHERE person IN ($person) AND account IN ($account) AND category IN ($category) AND subcategory IN ($subcategory) AND coalesce(necessity, 'none') IN ($necessity) AND family IN ($family) AND source IN ($source) AND abs(amount) BETWEEN ${min_amount} AND ${max_amount} AND label ILIKE '%${search}%' AND $__timeFilter(spend_date) ORDER BY spend_date DESC, abs(amount) DESC",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {},
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "amount"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyEUR"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "fields": [
+            "amount"
+          ]
+        }
+      },
+      "description": "Click a column header to sort, or use the filters above. txn_id is what overrides.csv needs to fix one operation."
+    },
+    {
+      "id": 7,
       "type": "table",
       "title": "Review queue: what no rule explains yet (largest first)",
       "gridPos": {
         "x": 0,
-        "y": 4,
+        "y": 28,
         "w": 24,
         "h": 10
       },
@@ -279,15 +390,15 @@
           "show": false
         }
       },
-      "description": "Fix it once for all similar operations with a rule in rules.yaml (match on the label), or for this one operation with a line in overrides.csv (use txn_id). Both live next to the statements; then run `make sync-bank`."
+      "description": "Not affected by the filters. Fix it once for all similar operations with a rule in rules.yaml (match on the label), or for this one operation with a line in overrides.csv (use txn_id); then `make sync-bank`."
     },
     {
-      "id": 6,
+      "id": 8,
       "type": "table",
-      "title": "Where the money goes: top labels not yet covered by a rule",
+      "title": "Top labels not yet covered by a rule",
       "gridPos": {
         "x": 0,
-        "y": 14,
+        "y": 38,
         "w": 12,
         "h": 9
       },
@@ -340,12 +451,12 @@
       "description": "Grouped by cleaned label: a good rule candidate has many operations or a large amount."
     },
     {
-      "id": 7,
+      "id": 9,
       "type": "barchart",
       "title": "How operations were classified",
       "gridPos": {
         "x": 12,
-        "y": 14,
+        "y": 38,
         "w": 12,
         "h": 9
       },
@@ -383,64 +494,6 @@
         "xField": "source"
       },
       "description": "rule, override, transfer_pair (own-account transfers) or default (nothing matched)."
-    },
-    {
-      "id": 8,
-      "type": "table",
-      "title": "Transactions",
-      "gridPos": {
-        "x": 0,
-        "y": 23,
-        "w": 24,
-        "h": 14
-      },
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "finance"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "finance"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT spend_date AS date, account, person, amount, label, category, subcategory, necessity, source, rule_id, txn_id FROM gold.bank_transaction_detail WHERE person in ($person) AND account in ($account) AND category in ($category) AND label ILIKE '%${search}%' AND $__timeFilter(spend_date) ORDER BY spend_date DESC, abs(amount) DESC",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {},
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "amount"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "currencyEUR"
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "showHeader": true,
-        "footer": {
-          "show": false
-        }
-      },
-      "description": "Filter with the variables above (person, account, category, label search) and the time range (on the reporting date)."
     }
   ],
   "templating": {
@@ -503,6 +556,108 @@
         },
         "refresh": 2,
         "sort": 1,
+        "hide": 0
+      },
+      {
+        "name": "subcategory",
+        "label": "Subcategory",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "finance"
+        },
+        "query": "SELECT DISTINCT subcategory FROM gold.bank_transaction_detail WHERE category IN ($category) ORDER BY 1",
+        "definition": "SELECT DISTINCT subcategory FROM gold.bank_transaction_detail WHERE category IN ($category) ORDER BY 1",
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0
+      },
+      {
+        "name": "necessity",
+        "label": "Necessity",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "finance"
+        },
+        "query": "SELECT DISTINCT coalesce(necessity, 'none') FROM gold.bank_transaction_detail ORDER BY 1",
+        "definition": "SELECT DISTINCT coalesce(necessity, 'none') FROM gold.bank_transaction_detail ORDER BY 1",
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0
+      },
+      {
+        "name": "family",
+        "label": "Kind",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "finance"
+        },
+        "query": "SELECT DISTINCT family FROM gold.bank_transaction_detail ORDER BY 1",
+        "definition": "SELECT DISTINCT family FROM gold.bank_transaction_detail ORDER BY 1",
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0
+      },
+      {
+        "name": "source",
+        "label": "Decided by",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "finance"
+        },
+        "query": "SELECT DISTINCT source FROM gold.bank_transaction_detail ORDER BY 1",
+        "definition": "SELECT DISTINCT source FROM gold.bank_transaction_detail ORDER BY 1",
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0
+      },
+      {
+        "name": "min_amount",
+        "label": "Min amount (abs)",
+        "type": "textbox",
+        "query": "0",
+        "current": {
+          "text": "0",
+          "value": "0"
+        },
+        "hide": 0
+      },
+      {
+        "name": "max_amount",
+        "label": "Max amount (abs)",
+        "type": "textbox",
+        "query": "10000000",
+        "current": {
+          "text": "10000000",
+          "value": "10000000"
+        },
         "hide": 0
       },
       {
