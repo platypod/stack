@@ -134,6 +134,11 @@ admin-ness live from the LLDAP `admins` group instead (the bearer-authz path was
 rejected on feasibility). The `admins` group therefore also governs dashboard
 scope.
 
+**Group-owned series.** `observability.scopeShim.groupOwners` maps an LLDAP group to an extra `owner`
+value its members may read (today `finance_user` → `group:finance`: the bank-account series are visible to the
+finance group, not to one login). The group is created with `security.accessGroups.finance` (`authelia: false`: it
+labels people, it adds no Authelia rule). `admins` still see everything.
+
 → Full design + rationale: [observability/dashboard-multitenancy.md](observability/dashboard-multitenancy.md).
 
 ## Adding a new OIDC client
