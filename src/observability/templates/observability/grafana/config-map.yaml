@@ -226,6 +226,26 @@ data:
       {{- fail "finance.publish.enable requires observability.scopeShim.scopeMetrics: without the scope shim every Grafana user could read the finance tenant" }}
       {{- end }}
     {{- end }}
+    {{- if and .Values.finance.publish.enable .Values.finance.enable }}
+
+    - name: Finance (Postgres)
+      # Row-level bank operations for the "Finance - Bank detail" dashboard: the finance database, as the
+      # read-only finance_grafana role (gold schema only). NOT scoped per user: unlike the Mimir datasources
+      # there is no shim in front, so ANY user able to log in to this Grafana can query it (Grafana OSS has no
+      # datasource permissions). Keep Grafana access (grafana_user/dev_user/admins) to people who may see all finance data.
+      uid: finance-pg
+      type: grafana-postgresql-datasource
+      access: proxy
+      url: {{ .Values.k8s.names.services.prefix }}{{ tpl .Values.finance.database.label . }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.finance.database.ports.http.targetPort }}
+      user: {{ .Values.finance.database.credentials.grafana.username }}
+      editable: false
+      jsonData:
+        database: {{ .Values.finance.database.name }}
+        sslmode: disable
+        postgresVersion: 1700
+      secureJsonData:
+        password: '{{ .Values.finance.database.credentials.grafana.password }}'
+    {{- end }}
 
   jellyfin.json: |
     {

@@ -27,13 +27,13 @@
       },
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "finance"
+        "uid": "finance-pg"
       },
       "targets": [
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "finance"
+            "uid": "finance-pg"
           },
           "editorMode": "code",
           "format": "table",
@@ -79,13 +79,13 @@
       },
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "finance"
+        "uid": "finance-pg"
       },
       "targets": [
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "finance"
+            "uid": "finance-pg"
           },
           "editorMode": "code",
           "format": "table",
@@ -131,13 +131,13 @@
       },
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "finance"
+        "uid": "finance-pg"
       },
       "targets": [
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "finance"
+            "uid": "finance-pg"
           },
           "editorMode": "code",
           "format": "table",
@@ -183,13 +183,13 @@
       },
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "finance"
+        "uid": "finance-pg"
       },
       "targets": [
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "finance"
+            "uid": "finance-pg"
           },
           "editorMode": "code",
           "format": "table",
@@ -235,13 +235,13 @@
       },
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "finance"
+        "uid": "finance-pg"
       },
       "targets": [
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "finance"
+            "uid": "finance-pg"
           },
           "editorMode": "code",
           "format": "table",
@@ -282,13 +282,13 @@
       },
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "finance"
+        "uid": "finance-pg"
       },
       "targets": [
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "finance"
+            "uid": "finance-pg"
           },
           "editorMode": "code",
           "format": "table",
@@ -346,13 +346,13 @@
       },
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "finance"
+        "uid": "finance-pg"
       },
       "targets": [
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "finance"
+            "uid": "finance-pg"
           },
           "editorMode": "code",
           "format": "table",
@@ -404,13 +404,13 @@
       },
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "finance"
+        "uid": "finance-pg"
       },
       "targets": [
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "finance"
+            "uid": "finance-pg"
           },
           "editorMode": "code",
           "format": "table",
@@ -462,13 +462,13 @@
       },
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "finance"
+        "uid": "finance-pg"
       },
       "targets": [
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "finance"
+            "uid": "finance-pg"
           },
           "editorMode": "code",
           "format": "table",
@@ -504,7 +504,7 @@
         "type": "query",
         "datasource": {
           "type": "grafana-postgresql-datasource",
-          "uid": "finance"
+          "uid": "finance-pg"
         },
         "query": "SELECT DISTINCT person FROM gold.bank_transaction_detail ORDER BY 1",
         "definition": "SELECT DISTINCT person FROM gold.bank_transaction_detail ORDER BY 1",
@@ -524,7 +524,7 @@
         "type": "query",
         "datasource": {
           "type": "grafana-postgresql-datasource",
-          "uid": "finance"
+          "uid": "finance-pg"
         },
         "query": "SELECT DISTINCT account FROM gold.bank_transaction_detail WHERE person IN ($person) ORDER BY 1",
         "definition": "SELECT DISTINCT account FROM gold.bank_transaction_detail WHERE person IN ($person) ORDER BY 1",
@@ -544,7 +544,7 @@
         "type": "query",
         "datasource": {
           "type": "grafana-postgresql-datasource",
-          "uid": "finance"
+          "uid": "finance-pg"
         },
         "query": "SELECT DISTINCT category FROM gold.bank_transaction_detail ORDER BY 1",
         "definition": "SELECT DISTINCT category FROM gold.bank_transaction_detail ORDER BY 1",
@@ -564,7 +564,7 @@
         "type": "query",
         "datasource": {
           "type": "grafana-postgresql-datasource",
-          "uid": "finance"
+          "uid": "finance-pg"
         },
         "query": "SELECT DISTINCT subcategory FROM gold.bank_transaction_detail WHERE category IN ($category) ORDER BY 1",
         "definition": "SELECT DISTINCT subcategory FROM gold.bank_transaction_detail WHERE category IN ($category) ORDER BY 1",
@@ -584,7 +584,7 @@
         "type": "query",
         "datasource": {
           "type": "grafana-postgresql-datasource",
-          "uid": "finance"
+          "uid": "finance-pg"
         },
         "query": "SELECT DISTINCT coalesce(necessity, 'none') FROM gold.bank_transaction_detail ORDER BY 1",
         "definition": "SELECT DISTINCT coalesce(necessity, 'none') FROM gold.bank_transaction_detail ORDER BY 1",
@@ -604,7 +604,7 @@
         "type": "query",
         "datasource": {
           "type": "grafana-postgresql-datasource",
-          "uid": "finance"
+          "uid": "finance-pg"
         },
         "query": "SELECT DISTINCT family FROM gold.bank_transaction_detail ORDER BY 1",
         "definition": "SELECT DISTINCT family FROM gold.bank_transaction_detail ORDER BY 1",
@@ -624,7 +624,7 @@
         "type": "query",
         "datasource": {
           "type": "grafana-postgresql-datasource",
-          "uid": "finance"
+          "uid": "finance-pg"
         },
         "query": "SELECT DISTINCT source FROM gold.bank_transaction_detail ORDER BY 1",
         "definition": "SELECT DISTINCT source FROM gold.bank_transaction_detail ORDER BY 1",

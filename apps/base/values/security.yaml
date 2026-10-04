@@ -521,14 +521,13 @@ security:
       evidence: "bookstack-role-seed-job maps the admins group's display name to BookStack's built-in admin role — stack/docs/dev-tools/bookstack-role-seed-job.md. Already group-driven, just not per-tool (bookstack_admin) yet."
 
     # --- finance ---
-    # `finance_user`: who may see the bank-account series (shared Grafana, via the scope shim's
-    # observability.scopeShim.groupOwners) and the dedicated finance Grafana (finance.grafana: SQL
-    # detail, review queue), which has its own Authelia rule for this group + `admins`.
+    # `finance_user`: who may read the bank-account series (shared Grafana, via the scope shim's
+    # observability.scopeShim.groupOwners). It labels people only (authelia: false: no rule of its own).
     # Members are declared per env (dev: admin only; prod: platypod-sops).
     finance:
-      valuesPath: finance.grafana
       roles: [user]
       categories: []
+      authelia: false
 
     wikijs:
       roles: [user]

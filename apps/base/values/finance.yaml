@@ -84,32 +84,6 @@ finance:
       schedule: "45 6 * * 1"
       source:
         subPath: finance/bank-statements
-  # OPTIONAL dedicated Grafana with a Postgres datasource (off by default). The default way
-  # to view payslips is the shared Grafana via `finance.publish` below. Here the shared
-  # Grafana never gets finance credentials. Access: Authelia forward-auth rule for `finance_user`/`admins` +
-  # OIDC login with strict role mapping. See src/finance/README.md "Access model".
-  grafana:
-    enable: false
-    label: finance-grafana   # plain: it is embedded in the registry host template
-    image: "{{ .Values.observability.dashboard.image }}"
-    ports:
-      http:
-        name: http
-        targetPort: 3000
-    # Placeholders: the client is only registered in Authelia when clientId is set
-    # (platypod-sops). Hash the secret with:
-    #   docker run --rm authelia/authelia authelia crypto hash generate pbkdf2 --variant sha512 --password '<secret>'
-    oidc:
-      clientId: ""
-      clientSecret:
-        plain: ""
-        hashed: ""
-    resources:
-      requests:
-        cpu: 50m
-        memory: 128Mi
-      limits:
-        memory: 384Mi
   # Nightly logical backup (pg_dump -Fc) to the NFS apps share, in addition to the
   # generic file-level `localDb` tar. Restore: see src/finance/README.md.
   backup:

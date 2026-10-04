@@ -89,6 +89,6 @@ instances consumed by the apps above, plus the NFS-backed PVCs
 Personal-finance data platform (phase 0, **disabled by default**): a dedicated
 PostgreSQL (`finance-db`, own roles; separate from `transverse-db` and the auth
 DBs) plus CronJobs running the `finance-pipelines` image and nightly logical backups. Figures are shown in
-the shared Grafana (per-user `owner` scoping, own Mimir tenant `finance`); an optional dedicated Grafana
-(`finance-grafana`) exists, off by default. See
+the shared Grafana (per-user `owner` scoping, own Mimir tenant `finance`; row-level detail through a Postgres
+datasource, not scoped per user). See
 [`src/finance/README.md`](../src/finance/README.md).

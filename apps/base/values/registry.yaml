@@ -53,12 +53,6 @@ whoami:
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.whoami.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
   label: whoami
 
-# finance: only the Traefik-routed part (the dedicated Grafana). Implementation
-# tier (image, oidc, db, pipelines) lives in finance.yaml.
-finance:
-  grafana:
-    host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.finance.grafana.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"
-
 wikijs:
   enable: true
   host: "{{ .Values.k8s.names.urls.prefix }}{{ .Values.wikijs.label }}{{ .Values.k8s.names.urls.suffix }}.{{ .Values.traefik.domain }}"

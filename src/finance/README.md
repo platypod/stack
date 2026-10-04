@@ -16,7 +16,6 @@ code, contracts and dbt project: [`finance-pipelines/`](../../../finance-pipelin
 | `finance-pipeline-env` (Secret) | `FINANCE_PG_*` per-role credentials, OTLP endpoint (observability gateway), OpenLineage settings. |
 | `finance-migrate` (post-install/upgrade hook Job) | `pp migrate`: schemas, grants, `ops` tables and contract-generated DDL. Idempotent. |
 | `finance-payslips` (CronJob, weekly, **off by default**) + read-only NFS PV/PVC `finance-payslips` | Payslip pipeline on the NAS home share (`finance.pipelines.payslips`). Image carries tesseract/poppler for the scanned months. |
-| `finance-grafana` (Deployment, Service, IngressRoute, ConfigMaps, Secret; **off by default**) | Optional dedicated Grafana with a Postgres datasource. See *Access model*, last section. |
 | `finance-bank` (CronJob, weekly Mon 06:45; off by default, **on in prod**) | Bank pipeline: CA statements + private `accounts.yaml`/`rules.yaml`/`overrides.csv` (read-only subPath `finance/bank-statements` of the apps share, filled by `make sync-bank`) → bronze/silver/gold → published to Mimir. See finance-pipelines README *Bank statements*. |
 | `finance-db-dump` (CronJob, nightly) | Logical `pg_dump -Fc` to the NFS `apps` share, verified with `pg_restore --list`, 14-day retention. See *Backups*. |
 | `finance-heartbeat` (CronJob, daily) | Canary pipeline: ingest → dbt → contract tests, with traces/metrics/logs and OpenLineage events. |
@@ -50,10 +49,11 @@ To enable elsewhere:
 6. **Bank statements**: `finance.pipelines.bank.enable: true`; mirror the inputs with `make sync-bank` in finance-pipelines,
    then `kubectl -n <ns> create job --from=cronjob/finance-bank <name>`. Account visibility (`group:finance` = LLDAP group
    `finance_user`) and the person of each account are in the private `accounts.yaml`.
-7. **Dedicated Grafana (detail view; on in prod)**: `finance.grafana.enable`, its OIDC client (`clientId`, `clientSecret.plain`
-   and `.hashed`, hash made with `authelia crypto hash generate pbkdf2 --variant sha512`) in platypod-sops, and the `finance`
-   entry in `security.accessGroups` (generates the Authelia rule for `finance_user` + `admins`). Its dashboard "Finance - Bank
-   detail" (SQL on `gold.bank_transaction_detail`) holds the transactions table and the review queue.
+7. **Detail dashboard**: "Finance - Bank detail" (every operation, filters, review queue) is in the shared Grafana's
+   Finance folder. It queries Postgres through the `Finance (Postgres)` datasource (uid `finance-pg`, role `finance_grafana`,
+   `gold` only), provisioned when `finance.enable` and `finance.publish.enable` are both true. **That datasource is not scoped
+   per user** (no shim in front of Postgres, and Grafana OSS has no datasource permissions): anyone who can log in to the
+   shared Grafana can query all finance rows. Keep Grafana access to people who may see everything.
 
 **Backup TODO**: the nightly `pg_dump` is not encrypted yet; bank data makes that worth doing (e.g. `age` to a public key kept
 in platypod-sops) before the dumps leave the NFS share.
@@ -74,9 +74,8 @@ in platypod-sops) before the dumps leave the NFS share.
 **Decision: payslips are shown in the *shared* Grafana, isolated per user by the same mechanism
 Jellyfin uses** (`docs/observability/dashboard-multitenancy.md`): data carries an `owner` label,
 the scope shim injects the caller's own `owner` matcher into every query, `prom-label-proxy`
-enforces it. This supersedes the 2026-10-02 decision (a dedicated Grafana); that chart stays as
-an optional, off-by-default alternative (`finance.grafana.*`, Postgres datasource, Postgres
-dashboard) for ad-hoc SQL.
+enforces it. This supersedes the 2026-10-02 decision (a dedicated Grafana), which was built and then removed (2026-10-04):
+one Grafana only. Row-level detail uses a Postgres datasource in the shared Grafana (see *Enabling*, step 7).
 
 ```
 Postgres gold ──pp run payslips──▶ finance.* gauges (owner=<login>, historical timestamps)
@@ -156,16 +155,6 @@ Other tenants are untouched. Cost of the whole approach: the figures exist twice
 source of truth, Mimir a derived copy), the tenant grows unbounded (negligible: ~2.2 k samples),
 and PromQL over monthly gauges is less natural than SQL (hence `last_over_time(x[45d])`
 carry-forward and `sum_over_time(x[$__range])` range totals).
-
-### Alternative kept, off by default: dedicated Grafana
-
-A second Grafana (`finance-grafana`) behind Authelia forward-auth (`finance_user`/`admins`), OIDC with
-`role_attribute_strict`, a `gold`-only Postgres role, secrets in a Secret. Verified on
-`grafana-oss:13.0.2` (provisions datasource + dashboard, queries `gold`, denied on `silver`, 401 to
-anonymous). Use it when you want SQL over the full model without the Mimir copy. Enable with
-`finance.grafana.enable`, its OIDC client, and the `finance` entry in `security.accessGroups` (commented block in
-`apps/base/values/security.yaml`; not active by default because it changes Authelia's rules) (hash with the `docker run … authelia crypto hash` command in
-`apps/base/values/finance.yaml`).
 
 ## Backups (decided 2026-10-02)
 
