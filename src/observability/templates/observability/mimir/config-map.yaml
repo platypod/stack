@@ -106,6 +106,12 @@ data:
     # forever and accepts samples as old as the payslip archive.
     runtime_config:
       file: /etc/mimir/runtime.yaml
+
+    # A 13-month or 7-year dashboard range is split into one sub-query per day. Cold, that is ~45 s per panel at
+    # parallelism 2 (Grafana gives up after 30 s). The finance tenant now runs 8 splits in parallel, which would
+    # overflow the default per-tenant scheduler queue (100: HTTP 429) with ~15 panels loading at once.
+    query_scheduler:
+      max_outstanding_requests_per_tenant: 1000
     {{- end }}
   {{- if .Values.finance.publish.enable }}
 
@@ -120,10 +126,10 @@ data:
         compactor_blocks_retention_period: 0s
         # A 7-year dashboard range is split into ~2500 daily sub-queries per panel query.
         # With the default parallelism (14) a dashboard's ~19 panel queries exceed the
-        # per-tenant queue (100) and Mimir answers 429 too_many_outstanding_requests
-        # (reproduced). 2 keeps a dashboard load well under it (40 concurrent 7y queries: all
-        # 200, 11 s). Unknown keys here make Mimir refuse to START, so only add limits
+        # default per-tenant queue (100) and Mimir answers 429 too_many_outstanding_requests
+        # (reproduced). The queue is now 1000 (query_scheduler above), so 8 is safe: ~20 panels x 8 = 160. Unknown keys here make Mimir refuse to START, so only add limits
         # that exist in Mimir's per-tenant `limits` (split_queries_by_interval does not).
-        max_query_parallelism: 2
+        # Was 2 (against the default queue of 100, see query_scheduler above); a cold 13-month panel took 45 s.
+        max_query_parallelism: 8
   {{- end }}
 {{- end }}
