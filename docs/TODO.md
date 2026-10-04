@@ -5,6 +5,9 @@ Consolidated backlog for the service stack. Cluster/infra TODOs live under
 
 ## Soon
 
+- **Encrypt the finance `pg_dump`** (`finance-db-dump`, nightly to the NFS apps share): the dumps now hold bank
+  transactions. `age` to a public key kept in platypod-sops; restore needs the private key. See
+  [src/finance/README.md](../src/finance/README.md).
 - **Validate Shelfmark in `local`, then re-tag `prd` to actually deploy it there.**
   Wired to Hardcover + Prowlarr + Transmission (qBittorrent/Deluge scaffolded,
   inactive) and enabled on both `local` and `prd` in `platypod-sops`, readarr

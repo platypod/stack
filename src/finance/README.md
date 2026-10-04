@@ -17,6 +17,7 @@ code, contracts and dbt project: [`finance-pipelines/`](../../../finance-pipelin
 | `finance-migrate` (post-install/upgrade hook Job) | `pp migrate`: schemas, grants, `ops` tables and contract-generated DDL. Idempotent. |
 | `finance-payslips` (CronJob, weekly, **off by default**) + read-only NFS PV/PVC `finance-payslips` | Payslip pipeline on the NAS home share (`finance.pipelines.payslips`). Image carries tesseract/poppler for the scanned months. |
 | `finance-grafana` (Deployment, Service, IngressRoute, ConfigMaps, Secret; **off by default**) | Optional dedicated Grafana with a Postgres datasource. See *Access model*, last section. |
+| `finance-bank` (CronJob, weekly Mon 06:45; off by default, **on in prod**) | Bank pipeline: CA statements + private `accounts.yaml`/`rules.yaml`/`overrides.csv` (read-only subPath `finance/bank-statements` of the apps share, filled by `make sync-bank`) → bronze/silver/gold → published to Mimir. See finance-pipelines README *Bank statements*. |
 | `finance-db-dump` (CronJob, nightly) | Logical `pg_dump -Fc` to the NFS `apps` share, verified with `pg_restore --list`, 14-day retention. See *Backups*. |
 | `finance-heartbeat` (CronJob, daily) | Canary pipeline: ingest → dbt → contract tests, with traces/metrics/logs and OpenLineage events. |
 
@@ -46,9 +47,16 @@ To enable elsewhere:
    (`finance/payslips`), filled by `make sync-payslips` in finance-pipelines (add-only rsync). **Run it whenever a new
    payslip lands**; the CronJob (Mondays 06:30) ingests it on its next run, or run it now with
    `kubectl -n <ns> create job --from=cronjob/finance-payslips <name>`.
-6. **Optional dedicated Grafana**: `finance.grafana.enable`, its OIDC client, and the `finance` entry in
-   `security.accessGroups` (commented block in `apps/base/values/security.yaml`; inactive by default because it changes
-   Authelia's rules).
+6. **Bank statements**: `finance.pipelines.bank.enable: true`; mirror the inputs with `make sync-bank` in finance-pipelines,
+   then `kubectl -n <ns> create job --from=cronjob/finance-bank <name>`. Account visibility (`group:finance` = LLDAP group
+   `finance_user`) and the person of each account are in the private `accounts.yaml`.
+7. **Dedicated Grafana (detail view; on in prod)**: `finance.grafana.enable`, its OIDC client (`clientId`, `clientSecret.plain`
+   and `.hashed`, hash made with `authelia crypto hash generate pbkdf2 --variant sha512`) in platypod-sops, and the `finance`
+   entry in `security.accessGroups` (generates the Authelia rule for `finance_user` + `admins`). Its dashboard "Finance - Bank
+   detail" (SQL on `gold.bank_transaction_detail`) holds the transactions table and the review queue.
+
+**Backup TODO**: the nightly `pg_dump` is not encrypted yet; bank data makes that worth doing (e.g. `age` to a public key kept
+in platypod-sops) before the dumps leave the NFS share.
 
 ## Pitfalls
 
