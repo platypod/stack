@@ -9,7 +9,7 @@ finance:
   label: finance
   # Pinned; built by github.com/platypod/finance-pipelines CI on a vX.Y.Z tag (multi-arch,
   # GHCR, public). No Flux ImagePolicy yet: bump this by hand.
-  image: ghcr.io/platypod/finance-pipelines:v0.4.1
+  image: ghcr.io/platypod/finance-pipelines:v0.4.3
   database:
     image: postgres:17
     label: "{{ .Values.finance.label }}-db"
