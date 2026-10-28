@@ -84,14 +84,17 @@ spec:
         # trade-off as the *arr apps; single replica, single writer.
         # SPRING_APPLICATION_JSON because the relaxed env binding for the
         # "tasks-db" property segment does not resolve reliably. Also carries
-        # the OIDC (Authelia) client registration when oidc.clientId is set:
-        # oauth2-account-creation auto-creates a Komga USER account on first
-        # OIDC login (matched by email thereafter).
+        # the OIDC (Authelia) client registration when oidc.clientId is set.
+        # oauth2-account-creation is OFF: an auto-created account would see
+        # every library until the next reconcile. The komga-setup Job /
+        # komga-reconcile CronJob pre-create accounts (with the right library
+        # access) for LLDAP users in a komga.access group; an OIDC login then
+        # matches that account by email, and unknown emails are refused.
         - name: SPRING_APPLICATION_JSON
           value: >-
             {"komga":{"database":{"check-local-filesystem":false},"tasks-db":{"check-local-filesystem":false}
             {{- if .Values.komga.oidc.clientId -}}
-            ,"oauth2-account-creation":true},
+            ,"oauth2-account-creation":false},
             "spring":{"security":{"oauth2":{"client":{
             "registration":{"authelia":{"client-id":"{{ .Values.komga.oidc.clientId }}","client-secret":"{{ .Values.komga.oidc.clientSecret.plain }}","client-name":"Authelia","scope":"openid,profile,email","authorization-grant-type":"authorization_code","redirect-uri":"{baseUrl}/login/oauth2/code/authelia"}},
             "provider":{"authelia":{"issuer-uri":"https://{{ tpl .Values.authelia.host . }}","user-name-attribute":"preferred_username"}}

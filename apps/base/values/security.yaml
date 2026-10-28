@@ -112,7 +112,9 @@ lldap:
     pvc: "{{ .Values.storage.defaultVolumes.apps }}"
   # Post-install/upgrade hook that pre-creates groups and users via the LLDAP
   # REST/GraphQL API. Idempotent: skips already-existing groups/users.
-  # Passwords are only set on user creation — existing users keep theirs.
+  # A user entry's `password` is (re)applied on every run; an entry with NO
+  # `password` key never has its password touched -- for users created by hand
+  # in LLDAP and recorded here only for their group membership.
   # The built-in LLDAP 'admin' user is always skipped (its password comes from
   # the LLDAP_LDAP_USER_PASS env var, not this job).
   seed:
@@ -128,6 +130,10 @@ lldap:
         password: "{{ .Values.lldap.adminPassword }}"
         groups:
           - admins
+          # Komga library access (komga.access.groups in media.yaml).
+          - komga_bds
+          - komga_ebooks
+          - komga_mangas
       - id: dave
         email: dave.thedev@gmail.com
         displayName: dave

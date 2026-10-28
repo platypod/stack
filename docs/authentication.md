@@ -38,9 +38,9 @@ bootstrap admin). Each has an Authelia OIDC client registered.
 | Vaultwarden | dev-tools | SSO via OIDC (`response_types: [code]`, offline_access) |
 | RomM | games | OIDC; account provisioning on first login |
 | Reclaimerr | media | OIDC |
-| Kavita | media | OIDC config pushed via settings API by the setup Job |
 | Audiobookshelf | media | OIDC config pushed via `PATCH /api/auth-settings` by the setup Job (undocumented endpoint, found by reading the app's source) |
-| ~~Komga~~ | media | **Disabled** (`enable: false`) — replaced by Kavita |
+| Komga | media | OIDC client registered via env (`SPRING_APPLICATION_JSON`); auto-creation is off: the setup Job / daily CronJob pre-create accounts for LLDAP users in a `komga_*` group (library access = their groups), grant admin roles to `admins` members (matched by email), and hide the local login form |
+| ~~Kavita~~ | media | **Disabled** (`enable: false`) — replaced by Komga. OIDC config is pushed via settings API by its setup Job when enabled |
 
 ## 2. Services with their own user management
 

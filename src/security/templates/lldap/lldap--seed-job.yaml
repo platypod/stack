@@ -9,6 +9,12 @@
          - Create the user if absent, then set its initial password via the
            lldap_set_password binary (resetUserPasswordAsAdmin was removed in current LLDAP).
          - Assign the user to its declared groups (skips existing memberships).
+           A group may be a generated one or any group that already exists in
+           LLDAP (e.g. legacy names created by hand).
+       A user entry WITHOUT a `password` key never has its password touched
+       (nor is one set on creation) -- use that for users managed outside the
+       seed, e.g. hand-created ones recorded here only for their group
+       membership.
     5. The built-in LLDAP admin user is skipped entirely — its password is
        managed by the LLDAP_LDAP_USER_PASS env var on the LLDAP pod.
 
@@ -163,19 +169,24 @@ spec:
                       )
                       print(f"Created user '{uid}'.")
 
-                  # Always set password (idempotent; also fixes users created before
-                  # the password step ran). resetUserPasswordAsAdmin was removed in
-                  # current LLDAP; lldap_set_password is the supported replacement.
-                  subprocess.run(
-                      ["/tools/lldap_set_password",
-                       "--base-url", BASE,
-                       "--admin-username", ADMIN,
-                       "--admin-password", PASSWD,
-                       "--username", uid,
-                       "--password", user["password"]],
-                      check=True,
-                  )
-                  print(f"Password set for '{uid}'.")
+                  # Set the password whenever one is declared (idempotent; also
+                  # fixes users created before the password step ran). No
+                  # `password` key = managed outside the seed, leave it alone.
+                  # resetUserPasswordAsAdmin was removed in current LLDAP;
+                  # lldap_set_password is the supported replacement.
+                  if "password" in user:
+                      subprocess.run(
+                          ["/tools/lldap_set_password",
+                           "--base-url", BASE,
+                           "--admin-username", ADMIN,
+                           "--admin-password", PASSWD,
+                           "--username", uid,
+                           "--password", user["password"]],
+                          check=True,
+                      )
+                      print(f"Password set for '{uid}'.")
+                  else:
+                      print(f"No password declared for '{uid}' — left untouched.")
 
               # Assign groups (idempotent)
               current_gids = {
@@ -185,7 +196,7 @@ spec:
                   )["user"]["groups"]
               }
               for gname in user.get("groups", []):
-                  gid = group_ids.get(gname)
+                  gid = group_ids.get(gname) or existing.get(gname)
                   if gid is None:
                       print(f"  Warning: group '{gname}' not found, skipping.")
                   elif gid in current_gids:

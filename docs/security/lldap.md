@@ -25,5 +25,10 @@ exposed port — see [../media/jellyfin-ldap.md](../media/jellyfin-ldap.md) for
 the full rationale and the `IngressRouteTCP`.
 
 ## Gotchas
-- Passwords are only set on **user creation**; existing users keep theirs (re-running
-  the seed won't reset a password).
+- A seed user **with** a `password` key has it (re)applied on every seed run — the
+  seed does *not* leave existing users' passwords alone (an older version of this doc
+  said it did; the code never did). A seed user **without** a `password` key never
+  has its password touched: use that to record hand-created LLDAP users (e.g. prod's
+  `corvus`, `gege`, …) in the seed for their group membership only.
+- Seed group lists may name any group that already exists in LLDAP (e.g. legacy
+  `media`/`dev`/`download`/`otel-writers`), not only the generated ones.

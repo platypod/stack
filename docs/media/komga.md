@@ -30,4 +30,7 @@ Comics/manga server (JVM-based).
   Editing a root in Git is therefore a no-op on a live instance, and doing it in
   the UI loses the library unless the new path is a parent of the old one —
   migrate with [comics-layout-migration](comics-layout-migration.md) instead.
+- **Access:** per-library, by LLDAP group (`komga_bds`, `komga_ebooks`,
+  `komga_mangas`), reconciled from live LLDAP at deploy and daily — see
+  [komga-setup](komga-setup-job.md#users-and-library-access).
 - **Setup:** [komga-setup](komga-setup-job.md).

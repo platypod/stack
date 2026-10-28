@@ -447,6 +447,31 @@ komga:
       root: "{{ .Values.media.system.data.path }}/bds"
     - name: mangas
       root: "{{ .Values.media.system.data.path }}/mangas"
+    - name: ebooks
+      root: "{{ .Values.media.system.data.path }}/books"
+  # Who reads what. Keys are LLDAP groups (generated into LLDAP by the
+  # security module, see security.allGroupNames), values are the library names
+  # (komga.libraries above) that group's members can read. A user's access is
+  # the union over their groups. The komga-setup Job / komga-reconcile CronJob
+  # read each user's groups from LIVE LLDAP and, per user:
+  #   - in at least one group below -> create the Komga account ahead of their
+  #     first login if missing (OIDC auto-creation is OFF: an auto-created
+  #     account would see every library until the next reconcile), then pin its
+  #     shared libraries to exactly that union;
+  #   - in none -> no account is created; an existing one is left alone.
+  # Admin-ness is separate: LLDAP `admins` members get Komga's admin roles
+  # (add-only) but NOT extra libraries -- those still come from the groups.
+  # Accounts whose email is not in LLDAP (e.g. the komga.credentials bootstrap
+  # account) are never touched.
+  access:
+    groups:
+      komga_bds: [bds]
+      komga_ebooks: [ebooks]
+      komga_mangas: [mangas]
+  # Re-runs the komga-setup script (library create-if-missing + user/access
+  # reconcile) so a change made in LLDAP or values converges without a deploy.
+  reconcile:
+    schedule: "17 4 * * *"
   ports:
     http:
       name: komga-http

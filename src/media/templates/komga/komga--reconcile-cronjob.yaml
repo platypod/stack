@@ -1,0 +1,27 @@
+{{- if and .Values.komga.enable .Values.komga.credentials.email .Values.komga.credentials.password }}
+{{- /*
+  Daily re-run of the komga-setup script (see _setup.tpl), so a change in LLDAP
+  group membership or komga.access.groups reaches Komga without a deploy.
+  New users are NOT waiting on this: their first login lands on an account the
+  previous run (or the deploy hook) already created and restricted.
+*/ -}}
+apiVersion: batch/v1
+kind: CronJob
+
+metadata:
+  name: komga-reconcile
+
+spec:
+  schedule: {{ .Values.komga.reconcile.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          {{- include "komga.setupContainer" . | nindent 10 }}
+{{- end }}
