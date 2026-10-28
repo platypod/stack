@@ -23,7 +23,7 @@ Returns an already-JSON-serialized array (the caller doesn't need to toJson it).
 {{- $groups = append $groups (printf "%s_%s" $tool $role) -}}
 {{- end -}}
 {{- end -}}
-{{- range $group, $_ := .Values.komga.access.groups -}}
+{{- range $group, $_ := (default dict (default dict .Values.komga.access).groups) -}}
 {{- $groups = append $groups $group -}}
 {{- end -}}
 {{- range $cat, $catCfg := .Values.security.categories -}}

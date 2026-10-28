@@ -12,7 +12,7 @@ metadata:
   name: komga-reconcile
 
 spec:
-  schedule: {{ .Values.komga.reconcile.schedule | quote }}
+  schedule: {{ (default "17 4 * * *" (default dict .Values.komga.reconcile).schedule) | quote }}
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3

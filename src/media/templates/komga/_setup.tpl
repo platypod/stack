@@ -29,7 +29,7 @@
   - name: LIBRARIES
     value: {{ $libraries | toJson | quote }}
   - name: ACCESS_GROUPS
-    value: {{ .Values.komga.access.groups | toJson | quote }}
+    value: {{ (default dict (default dict .Values.komga.access).groups) | toJson | quote }}
   - name: LLDAP_URL
     value: "http://{{ $lldapSvc }}:{{ .Values.lldap.ports.http.targetPort }}"
   - name: LLDAP_ADMIN_USER
