@@ -44,7 +44,7 @@ refers to the model described in [authentication.md](authentication.md).
 | Mediarvester | Media tooling | `mediarvester_user`; `mediarvester_admin`/`media_admin`/`admins` grants in-app admin |
 | Tdarr | Media transcoding / normalization | `media_user` |
 | Reclaimerr | *arr cleanup | **OIDC** (`media_user`) |
-| Komga | Comic/manga reader | **OIDC** (`media_user`); LLDAP `komga_*` groups → library access, `admins` → Komga admin ([how](media/komga-setup-job.md)) |
+| Komga | Comic/manga reader | **OIDC** (`media_user`); LLDAP `komga_*` groups → library access, `komga_admin` → Komga admin (sees all libraries) ([how](media/komga-setup-job.md)) |
 | Audiobookshelf | Audiobook/podcast server | **OIDC** (`media_user`) |
 | Suwayomi | Manga downloader (feeds Komga) | none / forwardauth (`media_user`) |
 | ~~Kavita~~ | Comic/book reader | **disabled** (SIGILL on the ARM guest; replaced by Komga) |

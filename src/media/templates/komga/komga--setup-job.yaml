@@ -28,7 +28,9 @@
          - in a komga.access.groups group: create the Komga account if
            missing, then pin its shared libraries to the union of those
            groups' libraries (sharedAllLibraries=false);
-         - in LLDAP `admins`: add the full admin roles (never removes roles);
+         - in komga.access.adminGroup (komga_admin): add the full admin roles
+           (never removes roles). NOT the global `admins`: a Komga admin
+           bypasses the shared-libraries list and sees every library;
          - an account whose email is not in LLDAP is never touched, and nothing
            is ever deleted or disabled.
        A failure reaching LLDAP skips this step (warn, exit 0).

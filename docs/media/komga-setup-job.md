@@ -24,12 +24,17 @@ email:
 
 - in a group of `komga.access.groups` (`komga_bds` → `bds`, `komga_ebooks` →
   `ebooks`, `komga_mangas` → `mangas`): create the account if missing (random
-  password, OIDC-only login; admin roles too if in `admins`), then pin its
+  password, OIDC-only login; admin roles too if in `komga_admin`), then pin its
   shared libraries to the **union** of its groups' libraries
   (`sharedAllLibraries: false`). An OIDC login later matches that account by
   email; an unknown email is refused.
-- in LLDAP `admins`: add the full admin roles. This grants **no** extra
-  libraries — those only come from the `komga_*` groups.
+- in `komga.access.adminGroup` (`komga_admin`): add the full admin roles.
+  This is deliberately **not** the global LLDAP `admins` group: a Komga admin
+  bypasses the shared-libraries list and sees **every** library (verified on
+  1.25.0), so admin must be handed out only to people who may see everything.
+  Library pinning for such an account is moot. Roles are add-only: taking
+  someone out of `komga_admin` does not demote them — remove the role by hand
+  in Komga (Settings → Users).
 - in no `komga_*` group: no account is created, an existing one is left alone.
 
 It never deletes, disables or demotes anything, and never touches an account

@@ -30,6 +30,8 @@
     value: {{ $libraries | toJson | quote }}
   - name: ACCESS_GROUPS
     value: {{ (default dict (default dict .Values.komga.access).groups) | toJson | quote }}
+  - name: ADMIN_GROUP
+    value: {{ (default dict .Values.komga.access).adminGroup | default "" | quote }}
   - name: LLDAP_URL
     value: "http://{{ $lldapSvc }}:{{ .Values.lldap.ports.http.targetPort }}"
   - name: LLDAP_ADMIN_USER
@@ -54,7 +56,7 @@
     LLDAP_ADMIN_USER = os.environ["LLDAP_ADMIN_USER"]
     LLDAP_ADMIN_PASS = os.environ["LLDAP_ADMIN_PASS"]
     OIDC_ENABLED = os.environ["OIDC_ENABLED"].lower() == "true"
-    ADMIN_GROUP = "admins"
+    ADMIN_GROUP = os.environ["ADMIN_GROUP"]
     FULL_ADMIN_ROLES = {"ADMIN", "FILE_DOWNLOAD", "KOBO_SYNC", "KOREADER_SYNC", "PAGE_STREAMING", "USER"}
     BASE_ROLES = {"FILE_DOWNLOAD", "PAGE_STREAMING", "USER"}
     BASIC_AUTH = "Basic " + base64.b64encode(f"{EMAIL}:{PASSWORD}".encode()).decode()
@@ -180,7 +182,7 @@
                 continue
             groups = {g["displayName"] for g in lu["groups"]}
             komga_groups = sorted(groups & set(ACCESS_GROUPS))
-            is_admin = ADMIN_GROUP in groups
+            is_admin = bool(ADMIN_GROUP) and ADMIN_GROUP in groups
             user = by_email.get(email.lower())
 
             if user is None and not komga_groups:

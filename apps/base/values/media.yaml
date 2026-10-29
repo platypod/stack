@@ -459,11 +459,15 @@ komga:
   #     account would see every library until the next reconcile), then pin its
   #     shared libraries to exactly that union;
   #   - in none -> no account is created; an existing one is left alone.
-  # Admin-ness is separate: LLDAP `admins` members get Komga's admin roles
-  # (add-only) but NOT extra libraries -- those still come from the groups.
+  # Admin-ness is separate and driven by adminGroup (NOT the global LLDAP
+  # `admins`): its members get Komga's admin roles (add-only). A Komga admin
+  # bypasses the shared-libraries list and sees EVERY library (verified on
+  # 1.25.0), so only put people there who may see everything -- that is why
+  # this is its own group rather than `admins`.
   # Accounts whose email is not in LLDAP (e.g. the komga.credentials bootstrap
   # account) are never touched.
   access:
+    adminGroup: komga_admin
     groups:
       komga_bds: [bds]
       komga_ebooks: [ebooks]
