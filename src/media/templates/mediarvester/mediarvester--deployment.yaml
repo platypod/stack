@@ -72,6 +72,18 @@ spec:
           value: {{ include "media.mediarvesterAdminGroups" . | quote }}
         - name: DOWNLOAD_CONCURRENCY
           value: {{ .Values.mediarvester.downloadConcurrency | quote }}
+        {{- if and .Values.jellyfin.enable .Values.jellyfin.apiKey }}
+        # "Open in Jellyfin" on the Library cards (mediarvester services/jellyfin.py).
+        # Off when jellyfin.apiKey is unset (local), so nothing renders there.
+        - name: JELLYFIN_URL
+          value: "http://{{ .Values.k8s.names.services.prefix }}{{ .Values.jellyfin.label }}{{ .Values.k8s.names.services.suffix }}:{{ .Values.jellyfin.ports.http.targetPort }}"
+        - name: JELLYFIN_API_KEY
+          value: {{ .Values.jellyfin.apiKey | quote }}
+        - name: JELLYFIN_PUBLIC_URL
+          value: "https://{{ tpl .Values.jellyfin.host . }}"
+        - name: JELLYFIN_MEDIA_ROOT
+          value: {{ .Values.mediarvester.jellyfinMediaRoot | quote }}
+        {{- end }}
         - name: LOG_LEVEL
           value: {{ .Values.mediarvester.logLevel | quote }}
         - name: UMASK

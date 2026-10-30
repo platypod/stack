@@ -753,6 +753,9 @@ mediarvester:
     defaultUser: anonymous
   downloadConcurrency: 2
   logLevel: INFO
+  # /app/downloads (the `replays` share) as JELLYFIN sees it -- prod's Jellyfin is
+  # host-native on mini4, so this matches the `Replays - *` library paths above.
+  jellyfinMediaRoot: /Users/pittinic/synology/replays
   # 000, not media.system.umask (002): the replays share is historically
   # world-writable (2777 dirs, 666 files) — it's touched by the mac client over
   # NFS, Synology's own indexer, and this pod, none of which share a common
