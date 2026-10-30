@@ -56,8 +56,8 @@ Komga's home page layout is a *client setting*: `webui.recommended.all` (and
 The web UI reads `{...global, ...user}`, so a **global** value is the default for
 everyone who hasn't edited their own dashboard (pencil icon, a per-user
 setting that wins over it). `komga.dashboard.sections` in values is that default
-(order matters); it currently keeps only `KEEP_READING`, `ON_DECK` and
-`RECENTLY_READ_BOOKS` (the "Recently Added/Released/Updated" ones are left out). The Job rewrites it only when it differs; an empty list
+(order matters); it currently keeps only `KEEP_READING` and `ON_DECK` (all the
+"Recently ..." ones are left out). The Job rewrites it only when it differs; an empty list
 leaves Komga's default (all seven sections) alone. Which libraries the "all"
 dashboard draws from follows each user's *pinned* libraries, a user-only setting
 (no global equivalent found in the web UI code). Untested
