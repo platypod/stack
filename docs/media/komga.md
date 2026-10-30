@@ -33,4 +33,7 @@ Comics/manga server (JVM-based).
 - **Access:** per-library, by LLDAP group (`komga_bds`, `komga_ebooks`,
   `komga_mangas`), reconciled from live LLDAP at deploy and daily — see
   [komga-setup](komga-setup-job.md#users-and-library-access).
+- **Dashboard:** default sections are set globally by `komga.dashboard.sections`
+  (no "Recently Added"); users can still override their own — see
+  [komga-setup](komga-setup-job.md#dashboard-default-global).
 - **Setup:** [komga-setup](komga-setup-job.md).

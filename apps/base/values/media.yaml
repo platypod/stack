@@ -472,6 +472,21 @@ komga:
       komga_bds: [bds]
       komga_ebooks: [ebooks]
       komga_mangas: [mangas]
+  # Default dashboard (home page) layout for everyone, as the ordered list of
+  # sections to show -- written by the setup script to the GLOBAL client setting
+  # `webui.recommended.all`. A user who edited their own dashboard (pencil icon)
+  # keeps their own layout; this is only the default. The two "Recently Added"
+  # sections are left out on purpose. All names: KEEP_READING, ON_DECK,
+  # RECENTLY_RELEASED_BOOKS, RECENTLY_ADDED_BOOKS, RECENTLY_ADDED_SERIES,
+  # RECENTLY_UPDATED_SERIES, RECENTLY_READ_BOOKS. Empty list = leave Komga's
+  # own default (all seven) alone.
+  dashboard:
+    sections:
+      - KEEP_READING
+      - ON_DECK
+      - RECENTLY_RELEASED_BOOKS
+      - RECENTLY_UPDATED_SERIES
+      - RECENTLY_READ_BOOKS
   # Re-runs the komga-setup script (library create-if-missing + user/access
   # reconcile) so a change made in LLDAP or values converges without a deploy.
   reconcile:

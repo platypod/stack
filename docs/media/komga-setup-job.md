@@ -46,7 +46,21 @@ generated into LLDAP from it. To give someone access: add them to the group in
 LLDAP (and, if you want it in Git, in the seed); it takes effect on the next
 deploy or the daily run (`komga.reconcile.schedule`, 04:17).
 
-A failure reaching LLDAP skips the user step (warn, exit 0). Untested
+A failure reaching LLDAP (HTTP error or connection refused) skips the user step
+(warn, exit 0) and the rest of the script still runs.
+
+## Dashboard default (global)
+
+Komga's home page layout is a *client setting*: `webui.recommended.all` (and
+`webui.recommended.<libraryId>` per library view), a JSON `{"sections": [...]}`.
+The web UI reads `{...global, ...user}`, so a **global** value is the default for
+everyone who hasn't edited their own dashboard (pencil icon, a per-user
+setting that wins over it). `komga.dashboard.sections` in values is that default
+(order matters); it currently omits `RECENTLY_ADDED_BOOKS` and
+`RECENTLY_ADDED_SERIES`. The Job rewrites it only when it differs; an empty list
+leaves Komga's default (all seven sections) alone. Which libraries the "all"
+dashboard draws from follows each user's *pinned* libraries, a user-only setting
+(no global equivalent found in the web UI code). Untested
 end-to-end: a real OIDC login landing on a pre-created account.
 
 See [komga](komga.md).

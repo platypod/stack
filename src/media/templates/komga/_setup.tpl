@@ -30,6 +30,8 @@
     value: {{ $libraries | toJson | quote }}
   - name: ACCESS_GROUPS
     value: {{ (default dict (default dict .Values.komga.access).groups) | toJson | quote }}
+  - name: DASHBOARD_SECTIONS
+    value: {{ (default dict .Values.komga.dashboard).sections | default list | toJson | quote }}
   - name: ADMIN_GROUP
     value: {{ (default dict .Values.komga.access).adminGroup | default "" | quote }}
   - name: LLDAP_URL
@@ -56,6 +58,7 @@
     LLDAP_ADMIN_USER = os.environ["LLDAP_ADMIN_USER"]
     LLDAP_ADMIN_PASS = os.environ["LLDAP_ADMIN_PASS"]
     OIDC_ENABLED = os.environ["OIDC_ENABLED"].lower() == "true"
+    DASHBOARD_SECTIONS = json.loads(os.environ["DASHBOARD_SECTIONS"])
     ADMIN_GROUP = os.environ["ADMIN_GROUP"]
     FULL_ADMIN_ROLES = {"ADMIN", "FILE_DOWNLOAD", "KOBO_SYNC", "KOREADER_SYNC", "PAGE_STREAMING", "USER"}
     BASE_ROLES = {"FILE_DOWNLOAD", "PAGE_STREAMING", "USER"}
@@ -153,6 +156,14 @@
 
     # 5. users: roles + library access, driven by LIVE LLDAP group membership
     def lldap_users():
+        try:
+            return lldap_users_unsafe()
+        except Exception as e:
+            # connection refused / timeout etc.: warn, never crash the Job
+            print(f"  WARN: LLDAP unreachable ({e}) — skipping user sync.")
+            return None
+
+    def lldap_users_unsafe():
         s, b = call("POST", "/auth/simple/login", {"username": LLDAP_ADMIN_USER, "password": LLDAP_ADMIN_PASS}, base=LLDAP_URL)
         if s != 200 or not isinstance(b, dict) or "token" not in b:
             print(f"  WARN: LLDAP login failed [{s}] — skipping user sync.")
@@ -227,23 +238,34 @@
             else:
                 print(f"  WARN: failed to update '{email}' [{s}]: {b}")
 
-    # 6. hide local login + auto-redirect into OIDC, only when OIDC is configured
+    # 6. global client settings (a free-form key-value store the webui reads;
+    #    NOT server settings). Wanted values are compared as parsed JSON where
+    #    they are JSON, so formatting differences don't cause a rewrite.
+    wanted = {}
     if OIDC_ENABLED:
-        s, current = call("GET", "/api/v1/client-settings/global/list")
+        # hide the local login form and auto-redirect into OIDC; read by the
+        # (unauthenticated) login page, hence allowUnauthorized.
+        wanted["webui.oauth2.hide_login"] = ("true", True)
+        wanted["webui.oauth2.auto_login"] = ("true", True)
+    if DASHBOARD_SECTIONS:
+        # default dashboard layout for everyone; a user's own layout overrides it.
+        layout = json.dumps({"sections": [{"section": n} for n in DASHBOARD_SECTIONS]})
+        wanted["webui.recommended.all"] = (layout, False)
+    if wanted:
+        s, current = call("GET", "/api/v1/client-settings/global/list", headers={"Authorization": BASIC_AUTH})
         if s != 200 or not isinstance(current, dict):
             print(f"  WARN: GET client-settings failed [{s}]: {current} — skipping.")
         else:
-            wanted = {
-                "webui.oauth2.hide_login": "true",
-                "webui.oauth2.auto_login": "true",
-            }
+            def same(a, b):
+                try:    return json.loads(a) == json.loads(b)
+                except Exception: return a == b
             patch = {
-                k: {"value": v, "allowUnauthorized": True}
-                for k, v in wanted.items()
-                if current.get(k, {}).get("value") != v
+                k: {"value": v, "allowUnauthorized": unauth}
+                for k, (v, unauth) in wanted.items()
+                if not same(current.get(k, {}).get("value", ""), v)
             }
             if not patch:
-                print("  OIDC hide-login/auto-login already set, skipping.")
+                print("  global client settings already set, skipping.")
             else:
                 s, b = call("PATCH", "/api/v1/client-settings/global", patch,
                             headers={"Authorization": BASIC_AUTH})

@@ -34,8 +34,9 @@
          - an account whose email is not in LLDAP is never touched, and nothing
            is ever deleted or disabled.
        A failure reaching LLDAP skips this step (warn, exit 0).
-    6. If OIDC is configured, hide the local login form and auto-redirect
-       into it. These are NOT server settings (checked /api/v1/settings —
+    6. Global client settings: the default dashboard layout
+       (komga.dashboard.sections -> webui.recommended.all) and, if OIDC is
+       configured, hide the local login form and auto-redirect into it. These are NOT server settings (checked /api/v1/settings —
        nothing there) — they're free-form "global client settings"
        (webui.oauth2.hide_login / webui.oauth2.auto_login, boolean strings),
        a separate key-value store the webui itself reads
