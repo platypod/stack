@@ -419,7 +419,7 @@ komga:
     clientSecret:
       plain: ""
       hashed: ""
-  image: gotson/komga:1.25.0
+  image: gotson/komga:1.29.2
   # First-boot admin, claimed by the komga-setup Job (POST /api/v1/claim) if the
   # server isn't already claimed. If Komga was already claimed by hand (e.g. from
   # before this Job existed), set these to match the REAL existing admin login —
