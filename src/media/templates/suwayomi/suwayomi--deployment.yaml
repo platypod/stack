@@ -43,11 +43,10 @@ spec:
       # The app-volume data dir is root-owned on first mount — chown it to
       # suwayomi's uid, never the whole volume.
       #
-      # The media library folder is deliberately NOT chowned. It is shared with
-      # comix-downloader and managed by hand from the laptop, so a recursive
-      # chown here would take it over on every pod start — which is exactly what
-      # used to happen, and why 116GB of BD parked under this path ended up
-      # 1000:1000 and unmanageable (see docs/media/comics-layout-migration.md).
+      # The media library folder is deliberately NOT chowned. It is managed by
+      # hand from the laptop, so a recursive chown here would take it over on
+      # every pod start — which is exactly what used to happen, and why 116GB of BD
+      # parked under this path ended up 1000:1000 and unmanageable (see docs/media/comics-layout-migration.md).
       # Only the mountpoint's own mode is asserted, non-recursively: 2777 so any
       # uid can write, +setgid so everything created beneath inherits
       # media.system.groupId and stays group-writable for the other writers.
@@ -75,7 +74,7 @@ spec:
         image: {{ .Values.suwayomi.image }}
         # Upstream entrypoint is `tini -- /home/suwayomi/startup_script.sh`, run
         # under the image's default umask 0022 — which is what made every new
-        # series directory 0755 and locked the laptop (and comix-downloader) out
+        # series directory 0755 and locked the laptop out
         # of anything Suwayomi created. Re-exec it under media.system.umask so
         # new content is group-writable like the rest of the share. tini is kept
         # as PID 1: Suwayomi forks a headless Chromium per update and needs the

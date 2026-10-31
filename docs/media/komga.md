@@ -16,7 +16,7 @@ Comics/manga server (JVM-based).
   | Library | Root | Written by |
   |---|---|---|
   | `bds` | `/data/bds` | by hand, from the laptop |
-  | `mangas` | `/data/mangas` | Suwayomi (and comix-downloader, when enabled) |
+  | `mangas` | `/data/mangas` | Suwayomi |
   | `ebooks` | `/data/books` | Readarr/Bookshelf |
 
   `bds` and `mangas` are siblings at the top level of the share, and neither
