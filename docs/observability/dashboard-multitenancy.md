@@ -1,8 +1,12 @@
 # Per-user dashboard data isolation
 
-**Status:** implemented & verified on **dev** (read-side scoping, Loki multitenancy,
-and per-user ingest hardening). Not yet rolled to prod — see the prod caveats in the
-migration + rollout notes below.
+**Status:** implemented and **running on prod** (read-side scoping, Loki multitenancy,
+and per-user ingest hardening). `grafana-scope-shim`, `grafana-scope-shim-logs`,
+`prom-label-proxy` and `tenant-guard` are deployed in `prd-platypod`, with
+`scopeMetrics: true`; the finance data was verified isolated through the prod
+label proxy (2026-10-03). Originally verified on dev (the local cluster); the
+migration notes below still describe the one-off data caveats of that rollout.
+**Not verified on prod:** the Grafana UI login path through the live shim.
 
 How we let several users share the Grafana dashboards (Claude usage, Jellyfin,
 …) while each one sees **only their own data**, and admins see **everyone's**.
