@@ -66,11 +66,71 @@
       "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
     },
     {
+      "type": "stat",
+      "title": "YouTube canary",
+      "description": "1 when the latest anonymous canary probe (mediarvester services/canary.py) downloaded real stream data through the same options as real downloads, else 0. FAILING = YouTube changed something; a yt-dlp bump usually follows within days.",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 4 },
+      "targets": [{ "refId": "A", "expr": "max(mediarvester_canary_healthy)" }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "no run yet",
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "FAILING" }, "1": { "text": "OK" } } }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "value": null, "color": "red" }, { "value": 1, "color": "green" }]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Cookies healthy",
+      "description": "1 when every owner's cookies file is a YouTube login and its latest canary probe worked; 0 = someone needs to re-export cookies (the Cookies page says who).",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 4 },
+      "targets": [{ "refId": "A", "expr": "min(mediarvester_canary_cookies_healthy)" }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "no run yet",
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "RE-EXPORT" }, "1": { "text": "OK" } } }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "value": null, "color": "yellow" }, { "value": 1, "color": "green" }]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Canary probes and retries by error kind",
+      "description": "Canary outcomes, plus auto-retries (and items deliberately not retried) by the error kind that triggered them -- mediarvester services/ytdlp_errors.py.",
+      "datasource": { "type": "prometheus", "uid": "metrics" },
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (identity, outcome, kind) (increase(mediarvester_canary_probe[$__interval]))", "legendFormat": "canary {{identity}} {{outcome}} {{kind}}" },
+        { "refId": "B", "expr": "sum by (kind) (increase(mediarvester_download_retry[$__interval]))", "legendFormat": "retry {{kind}}" },
+        { "refId": "C", "expr": "sum by (kind) (increase(mediarvester_download_retry_skipped[$__interval]))", "legendFormat": "not retried {{kind}}" }
+      ],
+      "fieldConfig": {
+        "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 80, "stacking": { "mode": "normal" } } },
+        "overrides": []
+      }
+    },
+    {
       "type": "state-timeline",
       "title": "Now downloading",
       "description": "One bar per download, from when it starts to when it finishes -- same idea as the Jellyfin dashboard's now-playing panel, but for downloads instead of playback sessions. A row appears per owner.",
       "datasource": { "type": "prometheus", "uid": "metrics" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 4 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
       "targets": [
         {
           "refId": "A",
@@ -105,7 +165,7 @@
       "title": "Errors",
       "description": "mediarvester's own error-level log lines (stdout/stderr scraped straight from the pod, not a separate log pipeline). Loki auto-detects the level from each line's text.",
       "datasource": { "type": "loki", "uid": "logs" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
       "targets": [
         {
           "refId": "A",
@@ -128,7 +188,7 @@
       "title": "Success rate",
       "description": "% of finished downloads that completed without error, over the last 15 minutes.",
       "datasource": { "type": "prometheus", "uid": "metrics" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
       "targets": [
         {
           "refId": "A",
@@ -142,7 +202,7 @@
       "type": "timeseries",
       "title": "Downloads started: single videos vs. playlists/channels",
       "datasource": { "type": "prometheus", "uid": "metrics" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
       "targets": [
         {
           "refId": "A",
@@ -162,7 +222,7 @@
       "title": "How long downloads take: typical vs. worst case",
       "description": "Typical = median: half of downloads finish faster than this. Worst case = 95th percentile: only 1 in 20 downloads takes longer than this. Split by outcome (done/error).",
       "datasource": { "type": "prometheus", "uid": "metrics" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
       "targets": [
         {
           "refId": "A",
@@ -182,7 +242,7 @@
       "title": "Retries needed before giving up",
       "description": "How many failed downloads get auto-requeued, broken down by which attempt it is (up to 3 before mediarvester gives up for good -- see downloader.py's _MAX_AUTO_RETRIES). A rising 3rd-attempt count means items are exhausting all retries and staying failed.",
       "datasource": { "type": "prometheus", "uid": "metrics" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
       "targets": [
         {
           "refId": "A",
@@ -197,7 +257,7 @@
       "title": "Checking followed channels/playlists for new videos",
       "description": "How often mediarvester checks a followed source for new content, and whether the check itself worked (\"degraded\" = it worked but recent downloads from it have been failing a lot).",
       "datasource": { "type": "prometheus", "uid": "metrics" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
       "targets": [
         {
           "refId": "A",
@@ -211,7 +271,7 @@
       "type": "timeseries",
       "title": "New videos discovered from followed sources",
       "datasource": { "type": "prometheus", "uid": "metrics" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 36 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
       "targets": [
         {
           "refId": "A",
@@ -226,7 +286,7 @@
       "title": "New videos: placed in an existing playlist folder, or new location",
       "description": "When a followed creator posts a new video, mediarvester checks whether it belongs in a playlist folder already downloaded. This shows how often that lookup finds a match vs. falls back to the default location (see poller.py's _matching_known_playlist / folder_hint).",
       "datasource": { "type": "prometheus", "uid": "metrics" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 44 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 48 },
       "targets": [
         {
           "refId": "A",
